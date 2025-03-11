@@ -233,7 +233,6 @@ unsigned int MeshGroupData<group_size, Group, name, snap>::addBondedGroup(Group 
 
     unsigned int max_tag = this->m_pdata->getMaximumTag();
 
-    unsigned int group_size_half = group_size / 2;
     // validate user input
     for (unsigned int i = 0; i < group_size; ++i)
         {
@@ -247,7 +246,7 @@ unsigned int MeshGroupData<group_size, Group, name, snap>::addBondedGroup(Group 
             throw runtime_error(oss.str());
             }
 
-        for (unsigned int j = 0; j < group_size_half; ++j)
+        for (unsigned int j = 0; j < 2; ++j)
             {
             if (i != j && members_tags.tag[i] == members_tags.tag[j])
                 {
@@ -364,8 +363,6 @@ MeshGroupData<group_size, Group, name, snap>::takeSnapshot(snap& snapshot) const
     // map to lookup snapshot index by tag
     std::map<unsigned int, unsigned int> index;
 
-    unsigned int group_size_half = group_size / 2;
-
     std::map<unsigned int, unsigned int> rtag_map;
 
     for (unsigned int group_idx = 0; group_idx < this->getN(); group_idx++)
@@ -454,7 +451,7 @@ MeshGroupData<group_size, Group, name, snap>::takeSnapshot(snap& snapshot) const
                 unsigned int idx = rank_idx.second;
 
                 snapshot.type_id[snap_id] = typevals_proc[rank][idx].type;
-                for (unsigned int i = 0; i < group_size_half; i++)
+                for (unsigned int i = 0; i < 2; i++)
                     {
                     snapshot.groups[snap_id].tag[i] = members_proc[rank][idx].tag[i];
                     }
@@ -493,7 +490,7 @@ MeshGroupData<group_size, Group, name, snap>::takeSnapshot(snap& snapshot) const
             unsigned int group_idx = rtag_it->second;
             typename BondedGroupData<group_size, Group, name, true>::members_t member
                 = this->m_groups[group_idx];
-            for (unsigned int i = 0; i < group_size_half; i++)
+            for (unsigned int i = 0; i < 2; i++)
                 {
                 snapshot.groups[snap_id].tag[i] = member.tag[i];
                 }
