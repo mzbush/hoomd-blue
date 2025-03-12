@@ -131,6 +131,16 @@ void MeshDefinition::setTriangulationData(pybind11::dict triangulation)
     m_meshbond_data = std::shared_ptr<MeshBondData>(
         new MeshBondData(m_sysdef->getParticleData(), triangle_data));
 
+    GPUArray<uint3> neigh_to_triag(len_triang, m_sysdef->getParticleData()->getExecConf());
+    m_neigh_to_triag.swap(neigh_to_triag);
+
+    unsigned int len_bond =  m_meshbond_data->getNGlobal();
+    GPUArray<uint2> neigh_to_bond(len_bond, m_sysdef->getParticleData()->getExecConf());
+    m_neigh_to_bond.swap(neigh_to_bond);
+
+    createMeshNeighborhood();
+
+
 #ifdef ENABLE_MPI
     if (m_sysdef->isDomainDecomposed())
         {
@@ -142,6 +152,89 @@ void MeshDefinition::setTriangulationData(pybind11::dict triangulation)
         comm->updateMeshDefinition();
         }
 #endif
+    }
+
+void MeshDefinition::createMeshNeighborhood()
+    {
+    ArrayHandle<uint2> h_neigh_to_bond(m_neigh_to_bond, access_location::host, access_mode::overwrite);
+
+    ArrayHandle<uint3> h_neigh_to_triag(m_neigh_to_triag, access_location::host, access_mode::overwrite);
+
+    ArrayHandle<typename MeshBond::members_t> h_bonds(
+        m_meshbond_data->getMembersArray(),
+        access_location::host,
+        access_mode::read);
+
+    ArrayHandle<typename Angle::members_t> h_triangles(
+        m_meshtriangle_data->getMembersArray(),
+        access_location::host,
+        access_mode::read);
+
+    std::vector<uint2> bonds(3);
+
+    unsigned int bond_length = m_meshbond_data->getNGlobal();
+
+ 	for (unsigned int j = 0; j < bond_length; ++j)
+	{
+         	h_neigh_to_bond.data[j] = make_uint2(bond_length,bond_length);
+	}
+
+    for (unsigned int i = 0; i < m_meshtriangle_data->getNGlobal(); i++)
+	{
+        const typename Angle::members_t& triangle = h_triangles.data[i];
+
+	if(triangle.tag[0] < triangle.tag[1])
+        	bonds[0] = make_uint2(triangle.tag[0],triangle.tag[1]);
+	else
+        	bonds[0] = make_uint2(triangle.tag[1],triangle.tag[0]);
+
+	if(triangle.tag[1] < triangle.tag[2])
+        	bonds[1] = make_uint2(triangle.tag[1],triangle.tag[2]);
+	else
+        	bonds[1] = make_uint2(triangle.tag[2],triangle.tag[1]);
+
+	if(triangle.tag[0] < triangle.tag[2])
+        	bonds[2] = make_uint2(triangle.tag[0],triangle.tag[2]);
+	else
+        	bonds[2] = make_uint2(triangle.tag[2],triangle.tag[0]);
+
+	unsigned int counter = 0;
+	std::vector<unsigned int> t_idx;
+	std::vector<unsigned int> b_done(bond_length);
+
+ 	for (unsigned int j = 0; j < bond_length; ++j)
+		b_done[j]=false;
+
+ 	for (unsigned int j = 0; j < bond_length; ++j)
+		{
+		if( b_done[j])
+			continue;
+
+        	const typename MeshBond::members_t& meshbond = h_bonds.data[j];
+		for (unsigned int k = 0; k < bonds.size(); ++k)
+			{
+			 if (bonds[k].x == meshbond.tag[0]
+			     && bonds[k].y == meshbond.tag[1])
+			     {
+			     t_idx.push_back(j);
+        		     h_neigh_to_bond.data[j].y = i;
+			     if(h_neigh_to_bond.data[j].x != bond_length)
+				b_done[j] = true;
+			     else
+        		     	h_neigh_to_bond.data[j].x = i;
+			     counter++;
+			     break;
+			     }
+			}
+		if( counter == 3)
+			{
+			h_neigh_to_triag.data[i].x = t_idx[0];
+			h_neigh_to_triag.data[i].y = t_idx[1];
+			h_neigh_to_triag.data[i].z = t_idx[2];
+			break;
+			}
+		}
+	}
     }
 
 namespace detail

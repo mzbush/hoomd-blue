@@ -14,7 +14,6 @@
 
 #ifdef ENABLE_HIP
 #include "CachedAllocator.h"
-// #include "MeshGroupData.cuh"
 #endif
 
 using namespace std;
@@ -167,7 +166,6 @@ void MeshGroupData<group_size, Group, name, snap>::initializeFromTriangleSnapsho
                  if (bonds[j].tag[0] == all_helper[i].tag[0]
                      && bonds[j].tag[1] == all_helper[i].tag[1])
                      {
-                     // all_helper[i].tag[3] = group_idx;
                      all_helper[i].tag[3] = bonds[j].tag[2];
                      bonds.erase(bonds.begin() + j);
                      break;
