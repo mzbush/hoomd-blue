@@ -123,12 +123,14 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
         unsigned int idx_d = h_rtag.data[tag_d];
 
 	unsigned int tr_idx1 = h_neigh_bonds.data[i].tag[0];
+	unsigned int tr_idx2 = h_neigh_bonds.data[i].tag[1];
 
         const typename MeshTriangle::members_t& triangle1 = h_triangles.data[tr_idx1];
 
         unsigned int iterator = 0;
 
         bool a_before_b = false;
+        bool tr1_with_c = false;
 
         while (tag_a != triangle1.tag[iterator])
             iterator++;
@@ -136,7 +138,13 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
         iterator = (iterator + 1) % 3;
 
         if (tag_b == triangle1.tag[iterator])
+	    {
             a_before_b = true;
+            iterator = (iterator + 1) % 3;
+	    }
+	
+	if(tag_c == triangle1.tag[iterator])
+	    tr1_with_c = true;
 
         unsigned int type_id = h_typeval.data[i].type;
 
@@ -165,8 +173,7 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
 	   std::vector<unsigned int> tr_idx(6);
 	   counter = 2;
 	   tr_idx[0] = tr_idx1;
-	   tr_idx[1] = h_neigh_bonds.data[i].tag[1];
-
+	   tr_idx[1] = tr_idx2;
 
 	   for(unsigned int j = 0; j < 2; ++j)
 	   	{
@@ -196,6 +203,30 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
         if (exp(-m_inv_T * energyDifference) > uniform(rng))
             {
             changeDetected = true;
+
+	    h_bonds.data[i]; // bond a,b to c,d
+
+	    h_triangles[tr_idx1]; // triangle a,b,c/d to a,c,d 
+	    h_triangles[tr_id2]; // triangle a,b,c/d to b,c,d 
+	
+	    h_bonds.data[b_idx1]; // bond a,c,b,x to a,c,d,x
+	    h_bonds.data[b_idx2]; // bond a,d,b,x to a,d,c,x
+
+	    h_bonds.data[b_idx3]; // bond b,c,b,x to b,c,d,x
+	    h_bonds.data[b_idx4]; // bond b,d,b,x to b,d,c,x
+				  //
+	    h_neight_bonds.data[b_idx1]; // nbond tr1/2,trx,try to tr1,trx,try
+	    h_neight_bonds.data[b_idx2]; // nbond tr1/2,trx,try to tr1,trx,try 
+
+	    h_neight_bonds.data[b_idx3]; // nbond tr1/2,trx,try to tr2,trx,try
+	    h_neight_bonds.data[b_idx4]; // nbond tr1/2,trx,try to tr2,trx,try 
+					 //
+	    h_neight_triags.data[tr_idx1]; // nbond i,b_idx1/2,b_idx3/4 to i,b_idx1,b_idx2 
+	    h_neight_triags.data[tr_idx2]; // nbond i,b_idx2/1,b_idx4/3 to i,b_idx3,b_idx4
+	
+			
+
+
 
             changed.push_back(tag_a);
             changed.push_back(tag_b);
