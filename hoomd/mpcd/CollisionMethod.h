@@ -59,6 +59,10 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
      */
     void setEmbeddedGroup(std::shared_ptr<ParticleGroup> embed_group)
         {
+        if (embed_group != m_embed_group)
+            {
+            m_checked_collision_warnings = false;
+            }
         m_embed_group = embed_group;
         if (m_cl)
             {
@@ -103,8 +107,19 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
     uint64_t m_period;        //!< Number of timesteps between collisions
     uint64_t m_next_timestep; //!< Timestep next collision should be performed
 
+    bool m_checked_collision_warnings; //!< True if collision related warnings have been checked
+
     //! Check if a collision should occur and advance the timestep counter
     virtual bool shouldCollide(uint64_t timestep);
+
+    //! Begin process of applying collisions to rigid bodies
+    virtual void beginRigidBodyCollision(uint64_t timestep);
+
+    //! Finish process of applying collisions to rigid bodies
+    virtual void finishRigidBodyCollision(uint64_t timestep);
+
+    //! Check for issues related to applying collision to rigid bodies
+    virtual void checkCollisionWarnings(uint64_t timestep);
 
     //! Call the collision rule
     virtual void rule(uint64_t timestep) { }
