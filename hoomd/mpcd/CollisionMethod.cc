@@ -63,39 +63,44 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
         {
         return;
         }
-    std::unique_ptr<ArrayHandle<unsigned int>> h_embed_group;
-    std::unique_ptr<ArrayHandle<Scalar4>> h_vel_embed;
-    std::unique_ptr<ArrayHandle<unsigned int>> h_bodies_embed;
-    std::unique_ptr<ArrayHandle<unsigned int>> h_rtag_embed;
     if (m_embed_group)
         {
         unsigned int N_tot = m_embed_group->getNumMembers();
-        h_embed_group.reset(new ArrayHandle<unsigned int>(m_embed_group->getIndexArray(),
+        ArrayHandle<unsigned int> h_embed_group(m_embed_group->getIndexArray(),
                                                           access_location::host,
-                                                          access_mode::read));
-        h_vel_embed.reset(new ArrayHandle<Scalar4>(m_pdata->getVelocities(),
+                                                          access_mode::read);
+       ArrayHandle<Scalar4> h_vel_embed(m_pdata->getVelocities(),
                                                    access_location::host,
-                                                   access_mode::read));
-        h_bodies_embed.reset(new ArrayHandle<unsigned int>(m_pdata->getBodies(),
+                                                   access_mode::read);
+       ArrayHandle<unsigned int> h_bodies_embed(m_pdata->getBodies(),
                                                            access_location::host,
-                                                           access_mode::read));
-        h_embed_group.reset(new ArrayHandle<unsigned int>(m_pdata->getRTags(),
+                                                           access_mode::read);
+       ArrayHandle<unsigned int> h_embed_group(m_pdata->getRTags(),
                                                           access_location::host,
-                                                          access_mode::read));
+                                                          access_mode::read);
 
         // check if some of the masses are less or equal to 0
-        for (unsigned int idx = 0; idx < N_tot; ++idx)
+        bool invalid_mass = false;
+        for (unsigned int idx = 0; idx < N_tot && !invalid_mass; ++idx)
             {
-            unsigned int particle_index = h_embed_group->data[idx];
-            const Scalar4 vel_mass = h_vel_embed->data[particle_index];
+            unsigned int particle_index = h_embed_group.data[idx];
+            const Scalar4 vel_mass = h_vel_embed.data[particle_index];
             const Scalar mass = vel_mass.w;
-            if (mass <= 0)
+            if (mass <= Scalar(0))
                 {
+                invalid_mass = true;
+                }
+            }
+
+        #ifdef ENABLE_MPI
+        // MPI_Reduce invalid_mass using logical or if communicating
+        #endif // ENABLE_MPI
+
+        if (invalid_mass)
+            {
                 m_exec_conf->msg->warning() << "Some particles have a mass <= 0, may lead to "
                                                "invalid results during momentum transfer."
                                             << std::endl;
-                break;
-                }
             }
         }
     m_checked_collision_warnings = true;
