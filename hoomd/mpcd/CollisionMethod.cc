@@ -167,7 +167,11 @@ void mpcd::CollisionMethod::finishRigidBodyCollision(uint64_t timestep)
     if (m_embed_group)
         {
         unsigned int N_tot = m_embed_group->getNumMembers();
-        m_initial_velocity.resize(N_tot);
+        if (N_tot > m_initial_velocity.getNumElements())
+            {
+            GPUArray<Scalar4> initial_velocity(N_tot, m_exec_conf);
+            m_initial_velocity.swap(initial_velocity);
+            }
         ArrayHandle<Scalar4> h_initial_vel(m_initial_velocity,
                                            access_location::host,
                                            access_mode::overwrite);
