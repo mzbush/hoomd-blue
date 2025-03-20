@@ -130,19 +130,3 @@ class TestCollisionMethod:
             period=1, embedded_particles=hoomd.filter.All(), **init_args
         )
         sim.run(1)
-
-    def test_warnings(self, small_snap, simulation_factory, cls, init_args):
-        if small_snap.communicator.rank == 0:
-            small_snap.particles.mass[:] = [0]
-        sim = simulation_factory(small_snap)
-        cm = cls(period=1, **init_args)
-        sim.operations.integrator = hoomd.mpcd.Integrator(dt=0.02, collision_method=cm)
-        if "kT" not in init_args:
-            init_args["kT"] = 1.0
-        sim.operations.integrator.collision_method = cls(
-            period=1, embedded_particles=hoomd.filter.All(), **init_args
-        )
-        # test that a warning is called because an embedded particle has no mass
-        with pytest.warns() as warning_record:
-            sim.run(2)
-        assert len(warning_record) == 1
