@@ -123,7 +123,7 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
         if (invalid_mass)
             {
             m_exec_conf->msg->warning() << "Some particles have a mass <= 0, may lead to "
-                                           "invalid results during momentum transfer."
+                                           "invalid results during MPCD collision."
                                         << std::endl;
             }
         if (central_interacting)
