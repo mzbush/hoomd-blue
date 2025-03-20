@@ -84,18 +84,18 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
         // check if some of the masses are less or equal to 0
         bool invalid_mass = false;
         bool central_interacting = false;
-        for (unsigned int idx = 0; idx < N_tot && !invalid_mass; ++idx)
+        for (unsigned int idx = 0; idx < N_tot && !invalid_mass && !central_interacting; ++idx)
             {
+            // get the index from the embedded group
             unsigned int particle_index = h_embed_group.data[idx];
+            // check mass
             const Scalar4 vel_mass = h_vel_embed.data[particle_index];
             const Scalar mass = vel_mass.w;
             if (mass <= Scalar(0))
                 {
                 invalid_mass = true;
                 }
-            // get the index from the embedded group
-            particle_index = h_embed_group.data[idx];
-            // get the index of the central particle
+            // check if particle is central particle in rigid body
             unsigned int central_tag = h_body_embed.data[particle_index];
             assert(central_tag <= m_pdata->getMaximumTag());
             if (central_tag < MIN_FLOPPY)
