@@ -157,7 +157,7 @@ void mpcd::CollisionMethod::beginRigidBodyCollision(uint64_t timestep)
                                          access_mode::read);
         for (unsigned int idx = 0; idx < N_tot; ++idx)
             {
-            unsigned int particle_index = h_embed_group.data[idx];
+            const unsigned int particle_index = h_embed_group.data[idx];
             h_initial_vel.data[idx] = h_vel_embed.data[particle_index];
             }
         }
