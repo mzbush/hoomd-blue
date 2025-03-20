@@ -141,8 +141,6 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
 
 void mpcd::CollisionMethod::beginRigidBodyCollision(uint64_t timestep)
     {
-    if (m_embed_group)
-        {
         unsigned int N_tot = m_embed_group->getNumMembers();
         m_initial_velocity.resize(N_tot);
         ArrayHandle<Scalar4> h_initial_vel(m_initial_velocity,
