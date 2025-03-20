@@ -108,7 +108,7 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
             const unsigned int central_tag = h_body_embed.data[particle_index];
             if (central_tag < MIN_FLOPPY)
                 {
-                unsigned int central_idx = h_rtag_embed.data[central_tag];
+                const unsigned int central_idx = h_rtag_embed.data[central_tag];
                 if (particle_index == central_idx)
                     {
                     central_interacting = true;
