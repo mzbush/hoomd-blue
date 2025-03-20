@@ -216,6 +216,8 @@ void mpcd::CollisionMethod::finishRigidBodyCollision(uint64_t timestep)
             const Scalar mass_central = vel_mass_central.w;
 
             // update central particle velocity
+            // TO DO: Momentum transfer to central particle incorrect, rewrite to
+            // correctly apply the change in angular and linear momentum
             vec3<Scalar> updated_vel(vel_mass_central);
             vec3<Scalar> change_mom = (mass_const / mass_central)
                                       * (vec3<Scalar>(h_velocity.data[particle_index])
