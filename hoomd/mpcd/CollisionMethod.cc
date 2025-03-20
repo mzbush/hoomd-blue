@@ -103,8 +103,9 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
                 {
                 invalid_mass = true;
                 }
+
             // check if particle is central particle in rigid body
-            unsigned int central_tag = h_body_embed.data[particle_index];
+            const unsigned int central_tag = h_body_embed.data[particle_index];
             assert(central_tag <= m_pdata->getMaximumTag());
             if (central_tag < MIN_FLOPPY)
                 {
