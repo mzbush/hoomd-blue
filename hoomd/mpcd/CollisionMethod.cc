@@ -67,7 +67,10 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
     rule(timestep);
 
     // apply collisions to rigid bodies
-    finishRigidBodyCollision(timestep);
+    if (m_embed_group)
+        {
+        finishRigidBodyCollision(timestep);
+        }
     }
 
 void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
