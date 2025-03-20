@@ -152,12 +152,6 @@ void mpcd::CollisionMethod::beginRigidBodyCollision(uint64_t timestep)
         ArrayHandle<Scalar4> h_vel_embed(m_pdata->getVelocities(),
                                          access_location::host,
                                          access_mode::read);
-        ArrayHandle<unsigned int> h_body_embed(m_pdata->getBodies(),
-                                               access_location::host,
-                                               access_mode::read);
-        ArrayHandle<unsigned int> h_rtag_embed(m_pdata->getRTags(),
-                                               access_location::host,
-                                               access_mode::read);
         for (unsigned int idx = 0; idx < N_tot; ++idx)
             {
             unsigned int particle_index = h_embed_group.data[idx];
