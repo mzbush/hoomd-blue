@@ -36,7 +36,6 @@ set(_md_sources module-md.cc
                    ManifoldXYPlane.cc
                    ManifoldPrimitive.cc
                    ManifoldSphere.cc
-                   MeshForceCompute.cc
                    MolecularForceCompute.cc
                    MuellerPlatheFlow.cc
                    NeighborListBinned.cc
@@ -155,7 +154,6 @@ set(_md_headers ActiveForceComputeGPU.h
                 ManifoldXYPlane.h
                 ManifoldPrimitive.h
                 ManifoldSphere.h
-                MeshForceCompute.h
                 MolecularForceCompute.cuh
                 MolecularForceCompute.h
                 MuellerPlatheFlowEnum.h

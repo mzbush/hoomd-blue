@@ -36,7 +36,6 @@ void export_NeighborList(pybind11::module& m);
 void export_NeighborListBinned(pybind11::module& m);
 void export_NeighborListStencil(pybind11::module& m);
 void export_NeighborListTree(pybind11::module& m);
-void export_MeshForceCompute(pybind11::module& m);
 void export_MolecularForceCompute(pybind11::module& m);
 void export_ForceDistanceConstraint(pybind11::module& m);
 void export_ForceComposite(pybind11::module& m);
@@ -415,7 +414,6 @@ PYBIND11_MODULE(_md, m)
     export_NeighborListBinned(m);
     export_NeighborListStencil(m);
     export_NeighborListTree(m);
-    export_MeshForceCompute(m);
     export_MolecularForceCompute(m);
     export_ForceDistanceConstraint(m);
     export_ForceComposite(m);
