@@ -50,7 +50,7 @@ class PYBIND11_EXPORT VolumeConservationMeshForceComputeGPU
     virtual void computeForces(uint64_t timestep);
 
     //! compute volumes
-    virtual void computeVolume();
+    virtual void precomputeParameter();
     };
 
 namespace detail

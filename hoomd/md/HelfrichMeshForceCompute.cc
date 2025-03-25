@@ -91,7 +91,7 @@ pybind11::dict HelfrichMeshForceCompute::getParams(std::string type)
  */
 void HelfrichMeshForceCompute::computeForces(uint64_t timestep)
     {
-    computeSigma(); // precompute sigmas
+    precomputeParameter();
 
     assert(m_pdata);
     // access the particle data arrays
@@ -386,7 +386,7 @@ void HelfrichMeshForceCompute::computeForces(uint64_t timestep)
         }
     }
 
-void HelfrichMeshForceCompute::computeSigma()
+void HelfrichMeshForceCompute::precomputeParameter()
     {
     ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
 

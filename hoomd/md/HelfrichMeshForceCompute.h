@@ -74,7 +74,7 @@ class PYBIND11_EXPORT HelfrichMeshForceCompute : public ForceCompute
     virtual void computeForces(uint64_t timestep);
 
     //! compute sigmas
-    virtual void computeSigma();
+    virtual void precomputeParameter();
     };
 
 namespace detail

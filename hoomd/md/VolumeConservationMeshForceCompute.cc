@@ -95,7 +95,7 @@ void VolumeConservationMeshForceCompute::computeForces(uint64_t timestep)
     {
     unsigned int triN = m_mesh_data->getSize();
 
-    computeVolume(); // precompute volume
+    precomputeParameter();
 
     assert(m_pdata);
     ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
@@ -262,7 +262,7 @@ void VolumeConservationMeshForceCompute::computeForces(uint64_t timestep)
         }
     }
 
-void VolumeConservationMeshForceCompute::computeVolume()
+void VolumeConservationMeshForceCompute::precomputeParameter()
     {
     ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
     ArrayHandle<unsigned int> h_rtag(m_pdata->getRTags(), access_location::host, access_mode::read);
