@@ -75,6 +75,9 @@ class PYBIND11_EXPORT ForceCompute : public Compute
     //! Computes the forces
     virtual void compute(uint64_t timestep);
 
+    //! Computes the parameters for meshes
+    virtual void precomputeParameter(){};
+
     //! Total the potential energy
     Scalar calcEnergySum();
 
