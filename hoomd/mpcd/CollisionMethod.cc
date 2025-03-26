@@ -199,7 +199,10 @@ void mpcd::CollisionMethod::finishRigidBodyCollision(uint64_t timestep)
                                        access_mode::readwrite);
     ArrayHandle<Scalar4> h_velocity(m_pdata->getVelocities(),
                                     access_location::host,
-                                    access_mode::read);
+                                    access_mode::readwrite);
+    ArrayHandle<Scalar4> h_angmom(m_pdata->getAngularMomentumArray(),
+                                  access_location::host,
+                                  access_mode::readwrite);
     ArrayHandle<unsigned int> h_body(m_pdata->getBodies(),
                                      access_location::host,
                                      access_mode::read);
@@ -236,6 +239,7 @@ void mpcd::CollisionMethod::finishRigidBodyCollision(uint64_t timestep)
         const vec3<Scalar> pos_const(postype_const);
         vec3<Scalar> displacement = pos_const - pos_central;
         // update central particle velocity
+        // note: need to be sure that vector -> quaternion angular momentum conversion is correct
         vec3<Scalar> linmom_change = mass_const
                                      * (vec3<Scalar>(h_velocity.data[particle_index])
                                         - vec3<Scalar>(h_initial_vel.data[idx]));
@@ -243,15 +247,37 @@ void mpcd::CollisionMethod::finishRigidBodyCollision(uint64_t timestep)
         quat<Scalar> angmom_change = Scalar(2.0) * orientation * quat(0.0, angmom_change_vec);
 
         // get the current accumulated momentum
-        Scalar3 linear_momentum = h_linmom_change.data[central_idx];
-        Scalar4 angular_momentum = h_angmom_change.data[central_idx];
-        vec3<Scalar> linmom(linear_momentum);
-        quat<Scalar> angmom(angular_momentum);
-        linmom += linmom_change;
-        angmom += angmom_change;
+        vec3<Scalar> linmom_accum(h_linmom_change.data[central_idx]);
+        quat<Scalar> angmom_accum(h_angmom.data[central_idx]);
+        linmom_accum += linmom_change;
+        angmom_accum += angmom_change;
         // update the alternative arrays
-        h_linmom_change.data[central_idx] = make_scalar3(linmom.x, linmom.y, linmom.z);
-        h_angmom_change.data[central_idx] = quat_to_scalar4(angmom);
+        h_linmom_change.data[central_idx]
+            = make_scalar3(linmom_accum.x, linmom_accum.y, linmom_accum.z);
+        h_angmom_change.data[central_idx] = quat_to_scalar4(angmom_accum);
+        }
+    unsigned int Np_tot = m_pdata->getN();
+    for (unsigned int idx = 0; idx < Np_tot; ++idx)
+        {
+        vec3<Scalar> linmom_accum(h_linmom_change.data[idx]);
+        quat<Scalar> angmom_accum(h_angmom_change.data[idx]);
+        Scalar4 vel_mass = h_velocity.data[idx];
+        quat<Scalar> angmom(h_angmom.data[idx]);
+        vec3<Scalar> vel(vel_mass);
+        const Scalar mass = vel_mass.w;
+        // update velocity and angular momentum
+        vec3<Scalar> updated_vel = vel;
+        if (mass > 0)
+            {
+            updated_vel += linmom_accum / mass;
+            }
+        quat<Scalar> updated_angmom = angmom + angmom_accum;
+        // save update
+        h_angmom.data[idx] = quat_to_scalar4(updated_angmom);
+        h_velocity.data[idx] = make_scalar4(updated_vel.x, updated_vel.y, updated_vel.z, mass);
+        // clear accumulation
+        h_linmom_change.data[idx] = make_scalar3(0, 0, 0);
+        h_angmom_change.data[idx] = make_scalar4(0, 0, 0, 0);
         }
     }
 /*!
