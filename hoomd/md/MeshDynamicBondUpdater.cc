@@ -326,7 +326,7 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
 
             for (auto& force : forces)
                 {
-                force->postcompute(idx_a, idx_b, idx_cc, idx_dd);
+                force->postcomputeParameter(idx_a, idx_b, idx_cc, idx_dd, type_id);
                 }
             m_mesh->getMeshBondData()->meshChanged();
             m_mesh->getMeshTriangleData()->meshChanged();

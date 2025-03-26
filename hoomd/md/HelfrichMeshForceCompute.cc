@@ -824,7 +824,8 @@ Scalar HelfrichMeshForceCompute::energyDiff(unsigned int idx_a,
 void HelfrichMeshForceCompute::postcomputeParameter(unsigned int idx_a,
                                                     unsigned int idx_b,
                                                     unsigned int idx_c,
-                                                    unsigned int idx_d)
+                                                    unsigned int idx_d,
+                                                    unsigned int type_id)
     {
     ArrayHandle<Scalar> h_sigma(m_sigma, access_location::host, access_mode::readwrite);
     ArrayHandle<Scalar3> h_sigma_dash(m_sigma_dash, access_location::host, access_mode::readwrite);

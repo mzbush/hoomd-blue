@@ -95,7 +95,8 @@ class PYBIND11_EXPORT HelfrichMeshForceCompute : public ForceCompute
     virtual void postcomputeParameter(unsigned int idx_a,
 			    	      unsigned int idx_b,
 				      unsigned int idx_c,
-				      unsigned int idx_d);
+				      unsigned int idx_d,
+			              unsigned int type_id);
     };
 
 namespace detail
