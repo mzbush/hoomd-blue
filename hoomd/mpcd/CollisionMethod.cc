@@ -67,6 +67,14 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
             GPUArray<Scalar4> initial_velocity(N_tot, m_exec_conf);
             m_initial_velocity.swap(initial_velocity);
             }
+        unsigned int Np_tot = m_pdata->getN();
+        if (Np_tot > m_linmom_change.getNumElements())
+            {
+            GPUArray<Scalar3> linmom_change(Np_tot, m_exec_conf);
+            m_linmom_change.swap(linmom_change);
+            GPUArray<Scalar4> angmom_change(Np_tot, m_exec_conf);
+            m_angmom_change.swap(angmom_change);
+            }
         beginRigidBodyCollision(timestep);
         }
 
@@ -163,6 +171,7 @@ void mpcd::CollisionMethod::beginRigidBodyCollision(uint64_t timestep)
                                      access_mode::read);
     for (unsigned int idx = 0; idx < N_tot; ++idx)
         {
+        // collect the initial velocities of the embedded particles
         const unsigned int particle_index = h_embed_group.data[idx];
         h_initial_vel.data[idx] = h_vel_embed.data[particle_index];
         }
@@ -172,10 +181,22 @@ void mpcd::CollisionMethod::finishRigidBodyCollision(uint64_t timestep)
     unsigned int N_tot = m_embed_group->getNumMembers();
     ArrayHandle<Scalar4> h_initial_vel(m_initial_velocity,
                                        access_location::host,
-                                       access_mode::overwrite);
+                                       access_mode::read);
+    ArrayHandle<Scalar3> h_linmom_change(m_linmom_change,
+                                         access_location::host,
+                                         access_mode::readwrite);
+    ArrayHandle<Scalar4> h_angmom_change(m_angmom_change,
+                                         access_location::host,
+                                         access_mode::readwrite);
     ArrayHandle<unsigned int> h_embed_group(m_embed_group->getIndexArray(),
                                             access_location::host,
                                             access_mode::read);
+    ArrayHandle<Scalar4> h_postype(m_pdata->getPositions(),
+                                   access_location::host,
+                                   access_mode::read);
+    ArrayHandle<Scalar4> h_orientation(m_pdata->getOrientationArray(),
+                                       access_location::host,
+                                       access_mode::readwrite);
     ArrayHandle<Scalar4> h_velocity(m_pdata->getVelocities(),
                                     access_location::host,
                                     access_mode::read);
@@ -189,7 +210,6 @@ void mpcd::CollisionMethod::finishRigidBodyCollision(uint64_t timestep)
         unsigned int particle_index = h_embed_group.data[idx];
         // check if particle is in a rigid body
         unsigned int central_tag = h_body.data[particle_index];
-        assert(central_tag <= m_pdata->getMaximumTag());
         if (central_tag >= MIN_FLOPPY)
             {
             continue;
@@ -208,19 +228,30 @@ void mpcd::CollisionMethod::finishRigidBodyCollision(uint64_t timestep)
         // get velocities and masses
         const Scalar4 vel_mass_const = h_velocity.data[particle_index];
         const Scalar mass_const = vel_mass_const.w;
-        Scalar4 vel_mass_central = h_velocity.data[central_idx];
-        const Scalar mass_central = vel_mass_central.w;
-
+        const quat<Scalar> orientation(h_orientation.data[central_idx]);
+        // get displacement
+        const Scalar4 postype_central = h_postype.data[central_idx];
+        const vec3<Scalar> pos_central(postype_central);
+        const Scalar4 postype_const = h_postype.data[particle_index];
+        const vec3<Scalar> pos_const(postype_const);
+        vec3<Scalar> displacement = pos_const - pos_central;
         // update central particle velocity
-        // TO DO: Momentum transfer to central particle incorrect, rewrite to
-        // correctly apply the change in angular and linear momentum
-        vec3<Scalar> updated_vel(vel_mass_central);
-        vec3<Scalar> change_mom = (mass_const / mass_central)
-                                  * (vec3<Scalar>(h_velocity.data[particle_index])
-                                     - vec3<Scalar>(h_initial_vel.data[idx]));
-        updated_vel += change_mom;
-        h_velocity.data[central_idx]
-            = make_scalar4(updated_vel.x, updated_vel.y, updated_vel.z, mass_central);
+        vec3<Scalar> linmom_change = mass_const
+                                     * (vec3<Scalar>(h_velocity.data[particle_index])
+                                        - vec3<Scalar>(h_initial_vel.data[idx]));
+        vec3<Scalar> angmom_change_vec = cross(displacement, linmom_change);
+        quat<Scalar> angmom_change = Scalar(2.0) * orientation * quat(0.0, angmom_change_vec);
+
+        // get the current accumulated momentum
+        Scalar3 linear_momentum = h_linmom_change.data[central_idx];
+        Scalar4 angular_momentum = h_angmom_change.data[central_idx];
+        vec3<Scalar> linmom(linear_momentum);
+        quat<Scalar> angmom(angular_momentum);
+        linmom += linmom_change;
+        angmom += angmom_change;
+        // update the alternative arrays
+        h_linmom_change.data[central_idx] = make_scalar3(linmom.x, linmom.y, linmom.z);
+        h_angmom_change.data[central_idx] = quat_to_scalar4(angmom);
         }
     }
 /*!
