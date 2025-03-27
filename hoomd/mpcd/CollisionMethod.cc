@@ -150,6 +150,7 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
                                            "invalid results during MPCD collision."
                                         << std::endl;
             }
+
         if (central_interacting)
             {
             m_exec_conf->msg->warning() << "Central particle of rigid body included in "
