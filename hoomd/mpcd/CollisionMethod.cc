@@ -180,6 +180,7 @@ void mpcd::CollisionMethod::beginRigidBodyCollision(uint64_t timestep)
         h_initial_vel.data[idx] = h_vel_embed.data[particle_index];
         }
     }
+
 void mpcd::CollisionMethod::finishRigidBodyCollision(uint64_t timestep)
     {
     unsigned int N_tot = m_embed_group->getNumMembers();
