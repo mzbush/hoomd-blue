@@ -98,7 +98,7 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
 
     if (m_embed_group)
         {
-        unsigned int N_tot = m_embed_group->getNumMembers();
+        const unsigned int N_tot = m_embed_group->getNumMembers();
         ArrayHandle<unsigned int> h_embed_group(m_embed_group->getIndexArray(),
                                                 access_location::host,
                                                 access_mode::read);
