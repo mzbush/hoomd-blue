@@ -110,8 +110,8 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
     bool m_checked_collision_warnings; //!< True if collision related warnings have been checked
 
     GPUArray<Scalar4> m_initial_velocity; //!< Initial velocities of the embedded particles
-    GPUArray<Scalar3> m_linmom_change;    //!< Accumulated change in linear momentum of rigid bodies
-    GPUArray<Scalar4> m_angmom_change; //!< Accumulated change in angular momentum of rigid bodies
+    GPUArray<Scalar3> m_linmom_accum;     //!< Accumulated change in linear momentum of rigid bodies
+    GPUArray<Scalar4> m_angmom_accum; //!< Accumulated change in angular momentum of rigid bodies
 
     //! Check if a collision should occur and advance the timestep counter
     virtual bool shouldCollide(uint64_t timestep);

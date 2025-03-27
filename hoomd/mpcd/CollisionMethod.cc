@@ -69,12 +69,12 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
             }
 
         const unsigned int num_total = m_pdata->getN();
-        if (num_total > m_linmom_change.getNumElements())
+        if (num_total > m_linmom_accum.getNumElements())
             {
-            GPUArray<Scalar3> linmom_change(num_total, m_exec_conf);
-            m_linmom_change.swap(linmom_change);
-            GPUArray<Scalar4> angmom_change(num_total, m_exec_conf);
-            m_angmom_change.swap(angmom_change);
+            GPUArray<Scalar3> linmom_accum(num_total, m_exec_conf);
+            m_linmom_accum.swap(linmom_accum);
+            GPUArray<Scalar4> angmom_accum(num_total, m_exec_conf);
+            m_angmom_accum.swap(angmom_accum);
             }
         beginRigidBodyCollision(timestep);
         }
@@ -98,7 +98,7 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
 
     if (m_embed_group)
         {
-        const unsigned int N_tot = m_embed_group->getNumMembers();
+        const unsigned int num_group = m_embed_group->getNumMembers();
         ArrayHandle<unsigned int> h_embed_group(m_embed_group->getIndexArray(),
                                                 access_location::host,
                                                 access_mode::read);
@@ -115,7 +115,7 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
         // check if some of the masses are less or equal to 0
         bool invalid_mass = false;
         bool central_interacting = false;
-        for (unsigned int idx = 0; idx < N_tot && !(invalid_mass && central_interacting); ++idx)
+        for (unsigned int idx = 0; idx < num_group && !(invalid_mass && central_interacting); ++idx)
             {
             // get the index from the embedded group
             const unsigned int particle_index = h_embed_group.data[idx];
@@ -163,7 +163,7 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
 
 void mpcd::CollisionMethod::beginRigidBodyCollision(uint64_t timestep)
     {
-    unsigned int N_tot = m_embed_group->getNumMembers();
+    unsigned int num_group = m_embed_group->getNumMembers();
     ArrayHandle<Scalar4> h_initial_vel(m_initial_velocity,
                                        access_location::host,
                                        access_mode::overwrite);
@@ -173,7 +173,7 @@ void mpcd::CollisionMethod::beginRigidBodyCollision(uint64_t timestep)
     ArrayHandle<Scalar4> h_vel_embed(m_pdata->getVelocities(),
                                      access_location::host,
                                      access_mode::read);
-    for (unsigned int idx = 0; idx < N_tot; ++idx)
+    for (unsigned int idx = 0; idx < num_group; ++idx)
         {
         // collect the initial velocities of the embedded particles
         const unsigned int particle_index = h_embed_group.data[idx];
@@ -183,16 +183,16 @@ void mpcd::CollisionMethod::beginRigidBodyCollision(uint64_t timestep)
 
 void mpcd::CollisionMethod::finishRigidBodyCollision(uint64_t timestep)
     {
-    unsigned int N_tot = m_embed_group->getNumMembers();
+    unsigned int num_group = m_embed_group->getNumMembers();
     ArrayHandle<Scalar4> h_initial_vel(m_initial_velocity,
                                        access_location::host,
                                        access_mode::read);
-    ArrayHandle<Scalar3> h_linmom_change(m_linmom_change,
-                                         access_location::host,
-                                         access_mode::readwrite);
-    ArrayHandle<Scalar4> h_angmom_change(m_angmom_change,
-                                         access_location::host,
-                                         access_mode::readwrite);
+    ArrayHandle<Scalar3> h_linmom_accum(m_linmom_accum,
+                                        access_location::host,
+                                        access_mode::readwrite);
+    ArrayHandle<Scalar4> h_angmom_accum(m_angmom_accum,
+                                        access_location::host,
+                                        access_mode::readwrite);
     ArrayHandle<unsigned int> h_embed_group(m_embed_group->getIndexArray(),
                                             access_location::host,
                                             access_mode::read);
@@ -212,7 +212,7 @@ void mpcd::CollisionMethod::finishRigidBodyCollision(uint64_t timestep)
                                      access_location::host,
                                      access_mode::read);
     ArrayHandle<unsigned int> h_rtag(m_pdata->getRTags(), access_location::host, access_mode::read);
-    for (unsigned int idx = 0; idx < N_tot; ++idx)
+    for (unsigned int idx = 0; idx < num_group; ++idx)
         {
         // get the index from the embedded group
         unsigned int particle_index = h_embed_group.data[idx];
@@ -243,6 +243,7 @@ void mpcd::CollisionMethod::finishRigidBodyCollision(uint64_t timestep)
         const Scalar4 postype_const = h_postype.data[particle_index];
         const vec3<Scalar> pos_const(postype_const);
         vec3<Scalar> displacement = pos_const - pos_central;
+
         // update central particle velocity
         // note: need to be sure that vector -> quaternion angular momentum conversion is correct
         vec3<Scalar> linmom_change = mass_const
@@ -252,24 +253,30 @@ void mpcd::CollisionMethod::finishRigidBodyCollision(uint64_t timestep)
         quat<Scalar> angmom_change = Scalar(2.0) * orientation * quat(0.0, angmom_change_vec);
 
         // get the current accumulated momentum
-        vec3<Scalar> linmom_accum(h_linmom_change.data[central_idx]);
-        quat<Scalar> angmom_accum(h_angmom.data[central_idx]);
+        vec3<Scalar> linmom_accum(h_linmom_accum.data[central_idx]);
+        quat<Scalar> angmom_accum(h_angmom_accum.data[central_idx]);
         linmom_accum += linmom_change;
         angmom_accum += angmom_change;
         // update the alternative arrays
-        h_linmom_change.data[central_idx]
+        h_linmom_accum.data[central_idx]
             = make_scalar3(linmom_accum.x, linmom_accum.y, linmom_accum.z);
-        h_angmom_change.data[central_idx] = quat_to_scalar4(angmom_accum);
+        h_angmom_accum.data[central_idx] = quat_to_scalar4(angmom_accum);
         }
-    unsigned int Np_tot = m_pdata->getN();
-    for (unsigned int idx = 0; idx < Np_tot; ++idx)
+
+    // add accumulated momentum to the central particle
+    unsigned int num_total = m_pdata->getN();
+    for (unsigned int idx = 0; idx < num_total; ++idx)
         {
-        vec3<Scalar> linmom_accum(h_linmom_change.data[idx]);
-        quat<Scalar> angmom_accum(h_angmom_change.data[idx]);
+        // get accumulated momentum for particle
+        vec3<Scalar> linmom_accum(h_linmom_accum.data[idx]);
+        quat<Scalar> angmom_accum(h_angmom_accum.data[idx]);
+
+        // get velocity, mass, and angular momentum
         Scalar4 vel_mass = h_velocity.data[idx];
         quat<Scalar> angmom(h_angmom.data[idx]);
         vec3<Scalar> vel(vel_mass);
         const Scalar mass = vel_mass.w;
+
         // update velocity and angular momentum
         vec3<Scalar> updated_vel = vel;
         if (mass > 0)
@@ -277,12 +284,13 @@ void mpcd::CollisionMethod::finishRigidBodyCollision(uint64_t timestep)
             updated_vel += linmom_accum / mass;
             }
         quat<Scalar> updated_angmom = angmom + angmom_accum;
+
         // save update
         h_angmom.data[idx] = quat_to_scalar4(updated_angmom);
         h_velocity.data[idx] = make_scalar4(updated_vel.x, updated_vel.y, updated_vel.z, mass);
         // clear accumulation
-        h_linmom_change.data[idx] = make_scalar3(0, 0, 0);
-        h_angmom_change.data[idx] = make_scalar4(0, 0, 0, 0);
+        h_linmom_accum.data[idx] = make_scalar3(0, 0, 0);
+        h_angmom_accum.data[idx] = make_scalar4(0, 0, 0, 0);
         }
     }
 /*!
