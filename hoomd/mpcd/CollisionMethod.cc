@@ -85,6 +85,7 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
     // apply collisions to rigid bodies
     if (m_embed_group)
         {
+        accumulateRigidBodyMomenta(timestep);
         finishRigidBodyCollision(timestep);
         }
     }
@@ -192,7 +193,7 @@ void mpcd::CollisionMethod::beginRigidBodyCollision(uint64_t timestep)
         }
     }
 
-void mpcd::CollisionMethod::finishRigidBodyCollision(uint64_t timestep)
+void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
     {
     unsigned int num_group = m_embed_group->getNumMembers();
     ArrayHandle<Scalar4> h_initial_vel(m_initial_velocity,
@@ -212,13 +213,10 @@ void mpcd::CollisionMethod::finishRigidBodyCollision(uint64_t timestep)
                                    access_mode::read);
     ArrayHandle<Scalar4> h_orientation(m_pdata->getOrientationArray(),
                                        access_location::host,
-                                       access_mode::readwrite);
+                                       access_mode::read);
     ArrayHandle<Scalar4> h_velocity(m_pdata->getVelocities(),
                                     access_location::host,
-                                    access_mode::readwrite);
-    ArrayHandle<Scalar4> h_angmom(m_pdata->getAngularMomentumArray(),
-                                  access_location::host,
-                                  access_mode::readwrite);
+                                    access_mode::read);
     ArrayHandle<unsigned int> h_body(m_pdata->getBodies(),
                                      access_location::host,
                                      access_mode::read);
@@ -273,6 +271,18 @@ void mpcd::CollisionMethod::finishRigidBodyCollision(uint64_t timestep)
             = make_scalar3(linmom_accum.x, linmom_accum.y, linmom_accum.z);
         h_angmom_accum.data[central_idx] = quat_to_scalar4(angmom_accum);
         }
+    }
+
+void mpcd::CollisionMethod::finishRigidBodyCollision(uint64_t timestep)
+    {
+    ArrayHandle<Scalar3> h_linmom_accum(m_linmom_accum, access_location::host, access_mode::read);
+    ArrayHandle<Scalar4> h_angmom_accum(m_angmom_accum, access_location::host, access_mode::read);
+    ArrayHandle<Scalar4> h_velocity(m_pdata->getVelocities(),
+                                    access_location::host,
+                                    access_mode::readwrite);
+    ArrayHandle<Scalar4> h_angmom(m_pdata->getAngularMomentumArray(),
+                                  access_location::host,
+                                  access_mode::readwrite);
 
     // add accumulated momentum to the central particle
     unsigned int num_total = m_pdata->getN();
