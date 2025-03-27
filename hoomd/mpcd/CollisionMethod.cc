@@ -61,18 +61,19 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
     if (m_embed_group)
         {
         // resize initial velocity array
-        unsigned int N_tot = m_embed_group->getNumMembers();
-        if (N_tot > m_initial_velocity.getNumElements())
+        const unsigned int num_group = m_embed_group->getNumMembers();
+        if (num_group > m_initial_velocity.getNumElements())
             {
-            GPUArray<Scalar4> initial_velocity(N_tot, m_exec_conf);
+            GPUArray<Scalar4> initial_velocity(num_group, m_exec_conf);
             m_initial_velocity.swap(initial_velocity);
             }
-        unsigned int Np_tot = m_pdata->getN();
-        if (Np_tot > m_linmom_change.getNumElements())
+
+        const unsigned int num_total = m_pdata->getN();
+        if (num_total > m_linmom_change.getNumElements())
             {
-            GPUArray<Scalar3> linmom_change(Np_tot, m_exec_conf);
+            GPUArray<Scalar3> linmom_change(num_total, m_exec_conf);
             m_linmom_change.swap(linmom_change);
-            GPUArray<Scalar4> angmom_change(Np_tot, m_exec_conf);
+            GPUArray<Scalar4> angmom_change(num_total, m_exec_conf);
             m_angmom_change.swap(angmom_change);
             }
         beginRigidBodyCollision(timestep);
