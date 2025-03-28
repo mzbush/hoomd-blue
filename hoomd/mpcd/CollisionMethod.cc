@@ -238,10 +238,7 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
             }
         // if the central particle is not local, cannot read or write to it.
         const unsigned int central_idx = h_rtag.data[central_tag];
-        if (central_idx == NOT_LOCAL)
-            {
-            continue;
-            }
+        assert(central_idx != NOT_LOCAL);
         // collision on central particle itself already taken care of by collision rule
         if (particle_index == central_idx)
             {
