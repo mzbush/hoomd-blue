@@ -117,7 +117,7 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
     virtual bool shouldCollide(uint64_t timestep);
 
     //! Begin process of applying collisions to rigid bodies
-    virtual void beginRigidBodyCollision(uint64_t timestep);
+    virtual void storeInitialEmbeddedGroupVelocities(uint64_t timestep);
 
     //! Accumulate momenta changes of constituent particles of rigid bodies
     virtual void accumulateRigidBodyMomenta(uint64_t timestep);
