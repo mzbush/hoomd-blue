@@ -161,7 +161,7 @@ def test_rigid_collide(
         # snap.particles.angmom[:] = [[0,0,5,0]]
         snap.mpcd.N = 2
         snap.mpcd.types = ["C"]
-        snap.mpcd.position[:] = [[1.1, 0, 0], [-1.1, 0, 0]]
+        snap.mpcd.position[:] = [[1.2, 0, 0], [-1.2, 0, 0]]
         snap.mpcd.velocity[:] = [[0.6, 0.7, 0.8], [0.6, -0.7, 0.8]]
 
     sim = simulation_factory(snap)
@@ -183,10 +183,10 @@ def test_rigid_collide(
     cm = hoomd.mpcd.collide.StochasticRotationDynamics(
         period=1,
         angle=90,
-        embedded_particles=hoomd.filter.Rigid(flags=("constituent", "free")),
+        embedded_particles=hoomd.filter.Rigid(flags=("constituent",)),
     )
     sim.operations.integrator = hoomd.mpcd.Integrator(
-        dt=0.02, collision_method=cm, integrate_rotational_dof=True, rigid=rigid
+        dt=0, collision_method=cm, integrate_rotational_dof=True, rigid=rigid
     )
     sim.run(1)
     new_snapshot = sim.state.get_snapshot()
