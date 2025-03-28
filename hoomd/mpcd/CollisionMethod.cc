@@ -224,7 +224,7 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
     for (unsigned int idx = 0; idx < num_group; ++idx)
         {
         // get the index from the embedded group
-        unsigned int particle_index = h_embed_group.data[idx];
+        const unsigned int particle_index = h_embed_group.data[idx];
         // check if particle is in a rigid body
         unsigned int central_tag = h_body.data[particle_index];
         if (central_tag >= MIN_FLOPPY)
