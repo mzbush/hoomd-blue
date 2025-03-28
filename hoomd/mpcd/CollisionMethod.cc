@@ -244,22 +244,20 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
             }
         // get velocities and masses
         const Scalar4 vel_mass_const = h_velocity.data[particle_index];
+        const vec3<Scalar> vel_const(vel_mass_const);
         const Scalar mass_const = vel_mass_const.w;
-        const quat<Scalar> orientation(h_orientation.data[central_idx]);
+
         // get displacement
-        const Scalar4 postype_central = h_postype.data[central_idx];
-        const vec3<Scalar> pos_central(postype_central);
         const Scalar4 postype_const = h_postype.data[particle_index];
         const vec3<Scalar> pos_const(postype_const);
+        const Scalar4 postype_central = h_postype.data[central_idx];
+        const vec3<Scalar> pos_central(postype_central);
         vec3<Scalar> displacement = pos_const - pos_central;
 
-        // update central particle velocity
-        // note: need to be sure that vector -> quaternion angular momentum conversion is correct
-        vec3<Scalar> linmom_change = mass_const
-                                     * (vec3<Scalar>(h_velocity.data[particle_index])
-                                        - vec3<Scalar>(h_initial_vel.data[idx]));
-        vec3<Scalar> angmom_change_vec = cross(displacement, linmom_change);
-        quat<Scalar> angmom_change = Scalar(2.0) * orientation * quat(0.0, angmom_change_vec);
+        // change in linear and angular momentum
+        const vec3<Scalar> initial_vel_const(h_initial_vel.data[idx]);
+        const vec3<Scalar> linmom_change = mass_const * (vel_const - initial_vel_const);
+        const vec3<Scalar> angmom_change = cross(displacement, linmom_change);
 
         // get the current accumulated momentum
         vec3<Scalar> linmom_accum(h_linmom_accum.data[central_idx]);
