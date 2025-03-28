@@ -301,9 +301,6 @@ void mpcd::CollisionMethod::finishRigidBodyCollision(uint64_t timestep)
         // save update
         h_angmom.data[idx] = quat_to_scalar4(updated_angmom);
         h_velocity.data[idx] = make_scalar4(updated_vel.x, updated_vel.y, updated_vel.z, mass);
-        // clear accumulation
-        h_linmom_accum.data[idx] = make_scalar3(0, 0, 0);
-        h_angmom_accum.data[idx] = make_scalar4(0, 0, 0, 0);
         }
     }
 /*!
