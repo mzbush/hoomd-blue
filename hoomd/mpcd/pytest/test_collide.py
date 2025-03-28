@@ -195,6 +195,18 @@ def test_rigid_collide(
         new_velo = new_snapshot.particles.velocity
         # the central particle speed should change despite not being in the filter
         assert not np.any(np.isclose(new_velo[0], [0, 0, 1]))
-        # for a spinning dimer, constituent particle velocities could cancel
+
+        # in a spinning dimer, constituent velocities should average to central velocity
         calculated_central_speed = (new_velo[2] - new_velo[1]) / 2 + new_velo[1]
         assert np.allclose(new_velo[0], calculated_central_speed)
+
+        # ensure conservation of linear momentum
+        initial_momentum = np.sum(
+            [[0.6, 0.7, 0.8], [0.6, -0.7, 0.8], [0, 0, 2]], axis=0
+        )
+        final_mpcd_momentum = np.sum(
+            new_snapshot.mpcd.velocity * new_snapshot.mpcd.mass, axis=0
+        )
+        final_md_momentum = new_velo[0] * dimer_properties["mass"][0]
+        final_momentum = final_md_momentum + final_mpcd_momentum
+        assert np.allclose(initial_momentum, final_momentum)
