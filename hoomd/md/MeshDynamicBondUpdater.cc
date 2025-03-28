@@ -54,6 +54,7 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
         force->precomputeParameter();
         }
 
+
     ArrayHandle<typename MeshBond::members_t> h_bonds(m_mesh->getMeshBondData()->getMembersArray(),
                                                       access_location::host,
                                                       access_mode::readwrite);
@@ -83,6 +84,7 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
     const unsigned int size = (unsigned int)m_mesh->getMeshBondData()->getN();
 
     std::vector<unsigned int> changed;
+
 
     for (unsigned int i = 0; i < size; i++)
         {
@@ -114,11 +116,12 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
         unsigned int tag_c = bond.tag[2];
         unsigned int tag_d = bond.tag[3];
 
+        unsigned int idx_c = h_rtag.data[tag_c];
+        unsigned int idx_d = h_rtag.data[tag_d];
+
         if (tag_c == tag_d)
             continue;
 
-        unsigned int idx_c = h_rtag.data[tag_c];
-        unsigned int idx_d = h_rtag.data[tag_d];
 
 	unsigned int tr_idx1 = h_neigh_bonds.data[i].x;
 	unsigned int tr_idx2 = h_neigh_bonds.data[i].y;
@@ -162,6 +165,7 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
 		    have_to_check_surrounding = true;
 	    }
 
+
         // Initialize the RNG
         RandomGenerator rng(hoomd::Seed(RNGIdentifier::MeshDynamicBondUpdater, timestep, seed),
                             hoomd::Counter(i));
@@ -180,16 +184,19 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
            {
 	   tr_idx[1] = tr_idx1;
 	   tr_idx[0] = tr_idx2;
+
+	   v_idx[0]=tag_a;
+	   v_idx[1]=tag_b;
+	   v_idx[2]=tag_d;
+	   v_idx[3]=tag_c;
+
 	   if(a_before_b)
 	   	{
 	   	tr_idx[0] = tr_idx1;
 	   	tr_idx[1] = tr_idx2;
+	   	v_idx[2]=tag_c;
+	   	v_idx[3]=tag_d;
 		}
-
-	   v_idx[0]=idx_a;
-	   v_idx[1]=idx_b;
-	   v_idx[2]=idx_cc;
-	   v_idx[3]=idx_dd;
 	   unsigned int counter = 4;
 
 	   for(unsigned int j = 0; j < 2; ++j)
@@ -206,7 +213,7 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
 			if(bic2 == i)
 				bic2 =  h_neigh_triags.data[tr_idx[j]].z;
 			}
-		if( h_bonds.data[bic].tag[0] == idx_a || h_bonds.data[bic].tag[1] == idx_a)
+		if( h_bonds.data[bic].tag[0] == tag_a || h_bonds.data[bic].tag[1] == tag_a)
 			{
 				b_idx[2*j] = bic;
 				b_idx[2*j+1] = bic2;
@@ -216,7 +223,7 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
 				b_idx[2*j+1] = bic;
 				b_idx[2*j] = bic2;
 			}
-	   	for(unsigned int k = 0; k < 2; ++j)
+	   	for(unsigned int k = 0; k < 2; ++k)
 			{
 			unsigned int tic =  h_neigh_bonds.data[b_idx[2*j+k]].x;
 			if(tic == tr_idx[j])
@@ -233,86 +240,66 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
 			counter++;
 			}
 		}
-
 	   if (have_to_check_surrounding)
 		   {
 		   for (auto& force : m_forces)
-			energyDifference += force->energyDiffSurrounding(v_idx[0],v_idx[1],v_idx[2],v_idx[3],v_idx[4],v_idx[5],v_idx[6],v_idx[7], type_id);
+			energyDifference += force->energyDiffSurrounding(h_rtag.data[v_idx[0]],h_rtag.data[v_idx[1]],h_rtag.data[v_idx[2]],h_rtag.data[v_idx[3]],h_rtag.data[v_idx[4]],h_rtag.data[v_idx[5]],h_rtag.data[v_idx[6]],h_rtag.data[v_idx[7]], type_id);
 		   part_func = exp(-m_inv_T * energyDifference);
 		   }
 	   }
 
         if (part_func > rand_number)
             {
-	    bond.tag[0] = v_idx[2];
-	    bond.tag[1] = v_idx[3];
-	    if(v_idx[2] < v_idx[3])
+	    h_bonds.data[i].tag[0] = v_idx[2];
+	    h_bonds.data[i].tag[1] = v_idx[3];
+	    if(v_idx[2] > v_idx[3])
 		{
-	    	bond.tag[1] = v_idx[2];
-	    	bond.tag[0] = v_idx[3];
+	    	h_bonds.data[i].tag[1] = v_idx[2];
+	    	h_bonds.data[i].tag[0] = v_idx[3];
 		}
 
-	    bond.tag[2] = v_idx[0];
-	    bond.tag[3] = v_idx[1];
+	    h_bonds.data[i].tag[2] = v_idx[0];
+	    h_bonds.data[i].tag[3] = v_idx[1];
 
-	    h_bonds.data[i] = bond;
+	    h_triangles.data[tr_idx[0]].tag[0] = v_idx[0];
+	    h_triangles.data[tr_idx[0]].tag[1] = v_idx[3];
+	    h_triangles.data[tr_idx[0]].tag[2] = v_idx[2];
+    	    
+	    h_triangles.data[tr_idx[1]].tag[0] = v_idx[1];
+	    h_triangles.data[tr_idx[1]].tag[1] = v_idx[2];
+	    h_triangles.data[tr_idx[1]].tag[2] = v_idx[3];
 
-	    triangle1.tag[0] = v_idx[0];
-	    triangle1.tag[1] = v_idx[3];
-	    triangle1.tag[2] = v_idx[2];
-	    h_triangles.data[tr_idx[0]] = triangle1; // triangle a,b,c to a,d,c 
+	    h_bonds.data[b_idx[0]].tag[2] = v_idx[3];
+	    h_bonds.data[b_idx[0]].tag[3] = v_idx[4];
 
-	    triangle1.tag[0] = v_idx[1];
-	    triangle1.tag[1] = v_idx[2];
-	    triangle1.tag[2] = v_idx[3];
-	    h_triangles.data[tr_idx[1]] = triangle1; // triangle b,a,d to b,c,d 
+	    h_bonds.data[b_idx[1]].tag[2] = v_idx[3];
+	    h_bonds.data[b_idx[1]].tag[3] = v_idx[5];
 
-	    bond = h_bonds.data[b_idx[0]];
-	    bond.tag[2] = v_idx[3];
-	    bond.tag[3] = v_idx[4];
-	    h_bonds.data[b_idx[0]] = bond; // bond a,c,b,x to a,c,d,x
+	    h_bonds.data[b_idx[2]].tag[2] = v_idx[2];
+	    h_bonds.data[b_idx[2]].tag[3] = v_idx[6];
 
-	    bond = h_bonds.data[b_idx[1]];
-	    bond.tag[2] = v_idx[3];
-	    bond.tag[3] = v_idx[5];
-	    h_bonds.data[b_idx[1]] = bond; // bond b,c,a,x to b,c,d,x
+	    h_bonds.data[b_idx[3]].tag[2] = v_idx[2];
+	    h_bonds.data[b_idx[3]].tag[3] = v_idx[7];
 
-	    bond = h_bonds.data[b_idx[2]];
-	    bond.tag[2] = v_idx[2];
-	    bond.tag[3] = v_idx[6];
-	    h_bonds.data[b_idx[2]] = bond; // bond a,d,b,x to a,d,c,x
+	    h_neigh_bonds.data[b_idx[0]].x = tr_idx[0];
+	    h_neigh_bonds.data[b_idx[0]].y = tr_idx[2];
 
-	    bond = h_bonds.data[b_idx[3]];
-	    bond.tag[2] = v_idx[2];
-	    bond.tag[3] = v_idx[7];
-	    h_bonds.data[b_idx[3]] = bond; // bond b,d,a,x to b,d,c,x
+	    h_neigh_bonds.data[b_idx[2]].x = tr_idx[0];
+	    h_neigh_bonds.data[b_idx[2]].y = tr_idx[4];
 
-	    uint2 tris;
-	    uint3 bs;
+	    h_neigh_bonds.data[b_idx[1]].x = tr_idx[1];
+	    h_neigh_bonds.data[b_idx[1]].y = tr_idx[3];
 
-	    tris.x = tr_idx[0];
-	    tris.y = tr_idx[2];
-	    h_neigh_bonds.data[b_idx[0]] = tris;
+	    h_neigh_bonds.data[b_idx[3]].x = tr_idx[1];
+	    h_neigh_bonds.data[b_idx[3]].y = tr_idx[5];
 
-	    tris.y = tr_idx[4];
-	    h_neigh_bonds.data[b_idx[2]] = tris;
+	    h_neigh_triags.data[tr_idx[0]].x = i;
+	    h_neigh_triags.data[tr_idx[0]].y = b_idx[0];
+	    h_neigh_triags.data[tr_idx[0]].z = b_idx[2];
 
-	    tris.x = tr_idx[1];
-	    tris.y = tr_idx[3];
-	    h_neigh_bonds.data[b_idx[1]] = tris;
-
-	    tris.y = tr_idx[5];
-	    h_neigh_bonds.data[b_idx[3]] = tris;
-
-	    bs.x = i;
-	    bs.y = b_idx[0];
-	    bs.z = b_idx[2];
-	    h_neigh_triags.data[tr_idx[0]] = bs;
-
-	    bs.x = i;
-	    bs.y = b_idx[1];
-	    bs.z = b_idx[3];
-	    h_neigh_triags.data[tr_idx[1]] = bs;
+	    h_neigh_triags.data[tr_idx[1]].x = i;
+	    h_neigh_triags.data[tr_idx[1]].y = b_idx[1];
+	    h_neigh_triags.data[tr_idx[1]].z = b_idx[3];
 
             for (auto& force : m_forces)
                 {

@@ -386,13 +386,6 @@ class MeshDynamicalBonding(Updater):
 
         self._param_dict.update(param_dict)
 
-        allow_switch = TypeParameter("allow_switch",
-                                     type_kind="particle_types",
-                                     param_dict=TypeParameterDict(True,
-                                                                  len_keys=1))
-
-        self._extend_typeparam([allow_switch])
-
         self._mesh = mesh
 
     def _attach_hook(self):
@@ -404,6 +397,14 @@ class MeshDynamicalBonding(Updater):
 
         self._forces._sync(self._simulation, self._cpp_obj.forces)
 
+    @property
+    def forces(self):
+        return self._forces
+
+    @forces.setter
+    def forces(self, value):
+        self._forces.clear()
+        self._forces.extend(value)
 
 __all__ = [
     "ActiveRotationalDiffusion",
