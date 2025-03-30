@@ -24,9 +24,10 @@ namespace md
 
 MeshDynamicBondUpdater::MeshDynamicBondUpdater(std::shared_ptr<SystemDefinition> sysdef,
                                                std::shared_ptr<Trigger> trigger,
+					       std::shared_ptr<Integrator> integrator,
                                                std::shared_ptr<MeshDefinition> mesh,
                                                Scalar T)
-    : Updater(sysdef, trigger), m_mesh(mesh), m_inv_T(1.0 / T)
+    : Updater(sysdef, trigger), m_integrator(integrator), m_mesh(mesh), m_inv_T(1.0 / T)
     {
     assert(m_pdata);
     assert(m_mesh);
@@ -49,11 +50,13 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
     {
     uint16_t seed = m_sysdef->getSeed();
 
-    for (auto& force : m_forces)
+    std::vector<std::shared_ptr<ForceCompute>> forces = m_integrator->getForces();
+
+    //for (auto& force : m_forces)
+    for (auto& force : forces)
         {
         force->precomputeParameter();
         }
-
 
     ArrayHandle<typename MeshBond::members_t> h_bonds(m_mesh->getMeshBondData()->getMembersArray(),
                                                       access_location::host,
@@ -78,13 +81,10 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
                                      access_location::host,
                                      access_mode::read);
 
-    ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
-
     // for each of the angles
     const unsigned int size = (unsigned int)m_mesh->getMeshBondData()->getN();
 
     std::vector<unsigned int> changed;
-
 
     for (unsigned int i = 0; i < size; i++)
         {
@@ -122,7 +122,6 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
         if (tag_c == tag_d)
             continue;
 
-
 	unsigned int tr_idx1 = h_neigh_bonds.data[i].x;
 	unsigned int tr_idx2 = h_neigh_bonds.data[i].y;
 
@@ -157,14 +156,14 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
 	    }
 
 	bool have_to_check_surrounding = false;
-        for (auto& force : m_forces)
+        //for (auto& force : m_forces)
+        for (auto& force : forces)
 	    {
             energyDifference += force->energyDiff(idx_a, idx_b, idx_cc, idx_dd, type_id);
 
 	    if(force->checkSurrounding())
 		    have_to_check_surrounding = true;
 	    }
-
 
         // Initialize the RNG
         RandomGenerator rng(hoomd::Seed(RNGIdentifier::MeshDynamicBondUpdater, timestep, seed),
@@ -242,7 +241,8 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
 		}
 	   if (have_to_check_surrounding)
 		   {
-		   for (auto& force : m_forces)
+		   //for (auto& force : m_forces)
+		   for (auto& force : forces)
 			energyDifference += force->energyDiffSurrounding(h_rtag.data[v_idx[0]],h_rtag.data[v_idx[1]],h_rtag.data[v_idx[2]],h_rtag.data[v_idx[3]],h_rtag.data[v_idx[4]],h_rtag.data[v_idx[5]],h_rtag.data[v_idx[6]],h_rtag.data[v_idx[7]], type_id);
 		   part_func = exp(-m_inv_T * energyDifference);
 		   }
@@ -301,12 +301,13 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
 	    h_neigh_triags.data[tr_idx[1]].y = b_idx[1];
 	    h_neigh_triags.data[tr_idx[1]].z = b_idx[3];
 
-            for (auto& force : m_forces)
+            //for (auto& force : m_forces)
+            for (auto& force : forces)
                 {
                 force->postcomputeParameter(idx_a, idx_b, idx_cc, idx_dd, type_id);
                 }
-            //m_mesh->getMeshBondData()->meshChanged();
-            //m_mesh->getMeshTriangleData()->meshChanged();
+            m_mesh->getMeshBondData()->notifyGroupReorder();
+            m_mesh->getMeshTriangleData()->notifyGroupReorder();
             }
         }
     }
@@ -320,6 +321,7 @@ void export_MeshDynamicBondUpdater(pybind11::module& m)
         "MeshDynamicBondUpdater")
         .def(pybind11::init<std::shared_ptr<SystemDefinition>,
                             std::shared_ptr<Trigger>,
+			    std::shared_ptr<Integrator>,
                             std::shared_ptr<MeshDefinition>,
                             Scalar>())
         .def_property_readonly("forces", &MeshDynamicBondUpdater::getForces)

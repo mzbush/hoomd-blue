@@ -393,6 +393,7 @@ class MeshDynamicalBonding(Updater):
 
         self._cpp_obj = _md.MeshDynamicBondUpdater(
             self._simulation.state._cpp_sys_def, self.trigger,
+            self._simulation.operations.integrator._cpp_obj,
             self._mesh._cpp_obj, self.kT)
 
         self._forces._sync(self._simulation, self._cpp_obj.forces)

@@ -41,6 +41,7 @@ class PYBIND11_EXPORT MeshDynamicBondUpdater : public Updater
     /// Constructor
     MeshDynamicBondUpdater(std::shared_ptr<SystemDefinition> sysdef,
                            std::shared_ptr<Trigger> trigger,
+			   std::shared_ptr<Integrator> integrator,
                            std::shared_ptr<MeshDefinition> mesh,
                            Scalar T);
 
@@ -68,6 +69,7 @@ class PYBIND11_EXPORT MeshDynamicBondUpdater : public Updater
 
     private:
     /// List of all the force computes
+    std::shared_ptr<Integrator> m_integrator;
     std::vector<std::shared_ptr<ForceCompute>> m_forces;
     std::shared_ptr<MeshDefinition> m_mesh;   //!< Active force to call rotationalDiffusion on
     Scalar m_inv_T;
