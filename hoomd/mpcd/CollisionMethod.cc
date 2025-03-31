@@ -330,7 +330,7 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
 
         // convert angular momentum to quaternion and update
         const vec3<Scalar> inertia(h_inertia.data[central_idx]);
-        vec3<Scalar> angmom_change_body = rotate(orientation, angmom_accum);
+        vec3<Scalar> angmom_change_body = rotate(conj(orientation), angmom_accum);
         if (inertia.x == Scalar(0))
             {
             angmom_change_body.x = Scalar(0);
