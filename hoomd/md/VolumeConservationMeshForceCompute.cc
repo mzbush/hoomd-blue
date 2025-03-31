@@ -381,34 +381,16 @@ Scalar VolumeConservationMeshForceCompute::energyDiff(unsigned int idx_a,
     pos_c = box.shift(pos_c, h_image.data[idx_c]);
     pos_d = box.shift(pos_d, h_image.data[idx_d]);
 
-    std::cout << pos_a.x << " " << pos_a.y << " " << pos_a.z << std::endl;
-    std::cout << pos_b.x << " " << pos_b.y << " " << pos_b.z << std::endl;
-    std::cout << pos_c.x << " " << pos_c.y << " " << pos_c.z << std::endl;
-    std::cout << pos_d.x << " " << pos_d.y << " " << pos_d.z << std::endl;
-
-    Scalar test = dot(cross(pos_b, pos_d),pos_c)/6;
-
-    std::cout << test << std::endl;
-
     Scalar volume_old = dot(cross(pos_c, pos_b), pos_a) + dot(cross(pos_d, pos_a), pos_b);
-
     Scalar volume_new = dot(cross(pos_a, pos_c), pos_d) + dot(cross(pos_b, pos_d), pos_c);
 
     m_volume_diff = (volume_new-volume_old)/6.0;
 
-    std::cout << m_volume_diff << std::endl;
-
     Scalar energy_old = h_volume.data[type_id] - h_params.data[type_id].V0;
-
     Scalar energy_new = energy_old + m_volume_diff;
 
-    std::cout << energy_old << " " << energy_new << std::endl;
-
     energy_old = energy_old * energy_old;
-
     energy_new = energy_new * energy_new;
-
-    std::cout << energy_old << " " << energy_new << std::endl;
 
     return h_params.data[type_id].k / (2.0 * h_params.data[type_id].V0) * (energy_new - energy_old);
     }
