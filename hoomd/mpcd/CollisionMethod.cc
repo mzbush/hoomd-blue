@@ -276,6 +276,7 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
     {
     ArrayHandle<Scalar3> h_linmom_accum(m_linmom_accum, access_location::host, access_mode::read);
     ArrayHandle<Scalar3> h_angmom_accum(m_angmom_accum, access_location::host, access_mode::read);
+
     ArrayHandle<Scalar4> h_velocity(m_pdata->getVelocities(),
                                     access_location::host,
                                     access_mode::readwrite);
@@ -285,6 +286,9 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
     ArrayHandle<Scalar4> h_orientation(m_pdata->getOrientationArray(),
                                        access_location::host,
                                        access_mode::read);
+    ArrayHandle<Scalar3> h_inertia(m_pdata->getMomentsOfInertiaArray(),
+                                   access_location::host,
+                                   access_mode::read);
     ArrayHandle<unsigned int> h_body(m_pdata->getBodies(),
                                      access_location::host,
                                      access_mode::read);
@@ -325,7 +329,23 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
         const quat<Scalar> orientation(h_orientation.data[idx]);
 
         // convert angular momentum to quaternion and update
-        quat<Scalar> angmom_change = Scalar(2.0) * orientation * quat(0.0, angmom_accum);
+        const vec3<Scalar> inertia(h_inertia.data[central_idx]);
+        vec3<Scalar> angmom_change_body = rotate(orientation, angmom_accum);
+        if (inertia.x == Scalar(0))
+            {
+            angmom_change_body.x = Scalar(0);
+            }
+
+        if (inertia.y == Scalar(0))
+            {
+            angmom_change_body.y = Scalar(0);
+            }
+
+        if (inertia.z == Scalar(0))
+            {
+            angmom_change_body.z = Scalar(0);
+            }
+        quat<Scalar> angmom_change = Scalar(2.0) * orientation * quat(0.0, angmom_change_body);
         quat<Scalar> updated_angmom = angmom + angmom_change;
 
         // save update
