@@ -87,7 +87,7 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
     if (m_rigid_bodies)
         {
         accumulateRigidBodyMomenta(timestep);
-        transferRigidBodyCollision(timestep);
+        transferRigidBodyMomenta(timestep);
         }
     }
 
@@ -271,7 +271,7 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
         }
     }
 
-void mpcd::CollisionMethod::transferRigidBodyCollision(uint64_t timestep)
+void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
     {
     ArrayHandle<Scalar3> h_linmom_accum(m_linmom_accum, access_location::host, access_mode::read);
     ArrayHandle<Scalar3> h_angmom_accum(m_angmom_accum, access_location::host, access_mode::read);
@@ -329,7 +329,7 @@ void mpcd::CollisionMethod::transferRigidBodyCollision(uint64_t timestep)
 
         // save update
         h_angmom.data[idx] = quat_to_scalar4(updated_angmom);
-        h_velocity.data[idx] = make_scalar4(updated_vel.x, updated_vel.y, updated_vel.z, mass);
+        h_velocity.data[idx] = make_scalar4(vel_mass.x, vel_mass.y, vel_mass.z, mass);
         }
     }
 /*!
