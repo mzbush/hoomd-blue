@@ -222,6 +222,8 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
                                      access_location::host,
                                      access_mode::read);
     ArrayHandle<unsigned int> h_rtag(m_pdata->getRTags(), access_location::host, access_mode::read);
+    ArrayHandle<int3> h_image(m_pdata->getImages(), access_location::host, access_mode::read);
+    const BoxDim& global_box = m_pdata->getGlobalBox();
 
     ArrayHandle<Scalar3> h_linmom_accum(m_linmom_accum,
                                         access_location::host,
@@ -257,9 +259,17 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
         // get displacement
         const Scalar4 postype_const = h_postype.data[particle_index];
         const vec3<Scalar> pos_const(postype_const);
+        const int3 img_const = h_image.data[particle_index];
+
         const Scalar4 postype_central = h_postype.data[central_idx];
         const vec3<Scalar> pos_central(postype_central);
+        const int3 img_central = h_image.data[central_idx];
+
         vec3<Scalar> displacement = pos_const - pos_central;
+        const int3 displacement_img = make_int3(img_const.x - img_central.x,
+                                                img_const.y - img_central.y,
+                                                img_const.z - img_central.z);
+        displacement = global_box.shift(displacement, displacement_img);
 
         // change in linear and angular momentum
         const vec3<Scalar> initial_vel_const(h_initial_vel.data[idx]);
