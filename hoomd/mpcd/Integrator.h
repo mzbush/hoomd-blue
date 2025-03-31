@@ -68,15 +68,7 @@ class PYBIND11_EXPORT Integrator : public hoomd::md::IntegratorTwoStep
         syncCellList();
         }
 
-    //! Set the rigid body definition for the collision method
-    void setRigid(std::shared_ptr<hoomd::md::ForceComposite> new_rigid)
-        {
-        m_rigid_bodies = new_rigid;
-        if (m_collide)
-            {
-            m_collide->setRigid(new_rigid);
-            }
-        }
+    void setRigid(std::shared_ptr<hoomd::md::ForceComposite> new_rigid) override;
 
 #ifdef ENABLE_MPI
     //! Set the MPCD communicator to use
