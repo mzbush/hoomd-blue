@@ -58,7 +58,8 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
     m_cl->compute(timestep);
 
     // create auxillary array for rigid bodies
-    if (m_rigid_bodies)
+    const bool rigid_body_collision = m_embed_group && m_rigid_bodies;
+    if (rigid_body_collision)
         {
         // resize initial velocity array
         const unsigned int num_group = m_embed_group->getNumMembers();
