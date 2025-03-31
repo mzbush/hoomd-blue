@@ -76,11 +76,6 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
             GPUArray<Scalar3> angmom_accum(num_total, m_exec_conf);
             m_angmom_accum.swap(angmom_accum);
             }
-        else
-            {
-            m_linmom_accum.zeroFill();
-            m_angmom_accum.zeroFill();
-            }
         storeInitialEmbeddedGroupVelocities(timestep);
         }
 
