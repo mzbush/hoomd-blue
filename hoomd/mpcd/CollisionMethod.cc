@@ -203,19 +203,14 @@ void mpcd::CollisionMethod::storeInitialEmbeddedGroupVelocities(uint64_t timeste
 
 void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
     {
-    unsigned int num_group = m_embed_group->getNumMembers();
-    ArrayHandle<Scalar4> h_initial_vel(m_initial_velocity,
-                                       access_location::host,
-                                       access_mode::read);
-    ArrayHandle<Scalar3> h_linmom_accum(m_linmom_accum,
-                                        access_location::host,
-                                        access_mode::readwrite);
-    ArrayHandle<Scalar3> h_angmom_accum(m_angmom_accum,
-                                        access_location::host,
-                                        access_mode::readwrite);
+    const unsigned int num_group = m_embed_group->getNumMembers();
     ArrayHandle<unsigned int> h_embed_group(m_embed_group->getIndexArray(),
                                             access_location::host,
                                             access_mode::read);
+    ArrayHandle<Scalar4> h_initial_vel(m_initial_velocity,
+                                       access_location::host,
+                                       access_mode::read);
+
     ArrayHandle<Scalar4> h_postype(m_pdata->getPositions(),
                                    access_location::host,
                                    access_mode::read);
@@ -226,6 +221,14 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
                                      access_location::host,
                                      access_mode::read);
     ArrayHandle<unsigned int> h_rtag(m_pdata->getRTags(), access_location::host, access_mode::read);
+
+    ArrayHandle<Scalar3> h_linmom_accum(m_linmom_accum,
+                                        access_location::host,
+                                        access_mode::readwrite);
+    ArrayHandle<Scalar3> h_angmom_accum(m_angmom_accum,
+                                        access_location::host,
+                                        access_mode::readwrite);
+
     for (unsigned int idx = 0; idx < num_group; ++idx)
         {
         // get the index from the embedded group
