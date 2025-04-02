@@ -18,6 +18,8 @@ namespace gpu
 void gpu_check_collision_warnings(Scalar4 d_initial_velo,
                                   const Scalar4* d_vel_embed,
                                   const unsigned int* d_embed_group,
+                                  const unsigned int* d_body,
+                                  const unsigned int* d_rtag,
                                   const uint64_t timestep);
 
 void gpu_store_initial_embedded_group_velocities(Scalar4 d_initial_velo,
