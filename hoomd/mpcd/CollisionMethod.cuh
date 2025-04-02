@@ -6,13 +6,15 @@
  * \brief Declaration of CUDA kernels for mpcd::CollisionMethod
  */
 
+#include "hoomd/BoxDim.h"
 #include "hoomd/HOOMDMath.h"
+#include "hoomd/Index1D.h"
 
 namespace hoomd
     {
 namespace mpcd
     {
-namespace gpu
+namespace kernel
     {
 
 void gpu_check_collision_warnings(Scalar4 d_initial_velo,
@@ -49,6 +51,6 @@ void gpu_transfer_rigid_body_momenta(Scalar3 d_linmom_accum,
                                      const unsigned int* d_rtag,
                                      const uint64_t timestep);
 
-    } // end namespace gpu
+    } // end namespace kernel
     } // end namespace mpcd
     } // end namespace hoomd
