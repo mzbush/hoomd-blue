@@ -135,7 +135,9 @@ class TestCollisionMethod:
     @pytest.mark.parametrize(
         "rigid_velo", [[0, 0, 0], [1, 2, 3]], ids=["Stationary", "Moving"]
     )
-    @pytest.mark.parametrize("rigid_angmom", [[0, 0, 0, 0]], ids=["Nonrotating"])
+    @pytest.mark.parametrize(
+        "rigid_angmom", [[0, 0, 0, 0], [0, 2, 3, 4]], ids=["Nonrotating", "Rotating"]
+    )
     @pytest.mark.parametrize(
         "rigid_pos", [[0, 0, 0], [5, 5, 5]], ids=["center", "edge"]
     )
