@@ -17,7 +17,7 @@ namespace mpcd
 namespace gpu
     {
 
-cudaError_t store_initial_embedded_group_velocities(Scalar4* d_initial_velo,
+cudaError_t store_initial_embedded_group_velocities(Scalar4* d_initial_vel,
                                                     const Scalar4* d_vel_embed,
                                                     const unsigned int* d_embed_group,
                                                     const unsigned int num_group,
@@ -25,7 +25,7 @@ cudaError_t store_initial_embedded_group_velocities(Scalar4* d_initial_velo,
 
 cudaError_t accumulate_rigid_body_momenta(Scalar3* d_linmom_accum,
                                           Scalar3* d_angmom_accum,
-                                          const Scalar4* d_initial_velo,
+                                          const Scalar4* d_initial_vel,
                                           const unsigned int* d_embed_group,
                                           const Scalar4* d_postype,
                                           const Scalar4* d_velocity,

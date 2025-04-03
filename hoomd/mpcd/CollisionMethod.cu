@@ -17,7 +17,7 @@ namespace gpu
 namespace kernel
     {
 
-__global__ void store_initial_embedded_group_velocities(Scalar4* d_initial_velo,
+__global__ void store_initial_embedded_group_velocities(Scalar4* d_initial_vel,
                                                         const Scalar4* d_vel_embed,
                                                         const unsigned int* d_embed_group,
                                                         const unsigned int num_group)
@@ -30,7 +30,7 @@ __global__ void store_initial_embedded_group_velocities(Scalar4* d_initial_velo,
 
 __global__ void accumulate_rigid_body_momenta(Scalar3* d_linmom_accum,
                                               Scalar3* d_angmom_accum,
-                                              const Scalar4* d_initial_velo,
+                                              const Scalar4* d_initial_vel,
                                               const unsigned int* d_embed_group,
                                               const Scalar4* d_postype,
                                               const Scalar4* d_velocity,
@@ -64,7 +64,7 @@ __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
 
     } // end namespace kernel
 
-cudaError_t store_initial_embedded_group_velocities(Scalar4* d_initial_velo,
+cudaError_t store_initial_embedded_group_velocities(Scalar4* d_initial_vel,
                                                     const Scalar4* d_vel_embed,
                                                     const unsigned int* d_embed_group,
                                                     const unsigned int num_group,
@@ -80,7 +80,7 @@ cudaError_t store_initial_embedded_group_velocities(Scalar4* d_initial_velo,
 
     dim3 grid(num_group / run_block_size + 1);
     mpcd::gpu::kernel::store_initial_embedded_group_velocities<<<grid, run_block_size>>>(
-        d_initial_velo,
+        d_initial_vel,
         d_vel_embed,
         d_embed_group,
         num_group);
@@ -90,7 +90,7 @@ cudaError_t store_initial_embedded_group_velocities(Scalar4* d_initial_velo,
 
 cudaError_t accumulate_rigid_body_momenta(Scalar3* d_linmom_accum,
                                           Scalar3* d_angmom_accum,
-                                          const Scalar4* d_initial_velo,
+                                          const Scalar4* d_initial_vel,
                                           const unsigned int* d_embed_group,
                                           const Scalar4* d_postype,
                                           const Scalar4* d_velocity,
@@ -111,7 +111,7 @@ cudaError_t accumulate_rigid_body_momenta(Scalar3* d_linmom_accum,
     dim3 grid(num_group / run_block_size + 1);
     mpcd::gpu::kernel::accumulate_rigid_body_momenta<<<grid, run_block_size>>>(d_linmom_accum,
                                                                                d_angmom_accum,
-                                                                               d_initial_velo,
+                                                                               d_initial_vel,
                                                                                d_embed_group,
                                                                                d_postype,
                                                                                d_velocity,
