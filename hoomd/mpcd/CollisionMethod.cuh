@@ -14,7 +14,7 @@ namespace hoomd
     {
 namespace mpcd
     {
-namespace kernel
+namespace gpu
     {
 
 void gpu_check_collision_warnings(Scalar4 d_initial_velo,
