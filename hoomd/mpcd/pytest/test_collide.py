@@ -191,7 +191,7 @@ class TestCollisionMethod:
         ],
         ids=["dimer", "cross", "uneven-mass"],
     )
-    def test_rigid_collide_linear(
+    def test_rigid_collide(
         self,
         one_particle_snapshot_factory,
         simulation_factory,
@@ -263,8 +263,11 @@ class TestCollisionMethod:
             central_flag = new_snap.particles.typeid == new_snap.particles.types.index(
                 "A"
             )
+            constit_flag = new_snap.particles.typeid == new_snap.particles.types.index(
+                "B"
+            )
             new_velo_central = new_snap.particles.velocity[central_flag]
-
+            new_velo_constituent = new_snap.particles.velocity[constit_flag]
             # solve for expected central particle velocity based on linear momentum
             initial_mpcd_momentum = np.sum(mpcd_velo, axis=0)
             initial_md_momentum = np.array(rigid_velo) * total_mass
@@ -291,3 +294,15 @@ class TestCollisionMethod:
             )
             change_md_angmom = new_snap.particles.angmom[0] - rigid_angmom
             assert np.allclose(expected_change_md_angmom, change_md_angmom)
+
+            # check the constituent velocities match the central particle
+            # since orientation is stuck at [1, 0, 0, 0], angular velocity
+            # is 0.5 * real part of angmom / inertia.
+            new_angmom = new_snap.particles.angmom[0]
+            omega = [
+                0 if i == 0 else 0.5 * a / i
+                for i, a in zip(rigid_properties["inertia"], new_angmom[1:])
+            ]
+            expected_tangential_velocity = np.cross(omega, rigid_def["positions"])
+            expected_velocity = np.add(expected_tangential_velocity, new_velo_central)
+            assert np.allclose(new_velo_constituent, expected_velocity)
