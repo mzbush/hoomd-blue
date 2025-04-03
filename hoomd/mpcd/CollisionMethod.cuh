@@ -24,10 +24,11 @@ void gpu_check_collision_warnings(Scalar4 d_initial_velo,
                                   const unsigned int* d_rtag,
                                   const uint64_t timestep);
 
-void gpu_store_initial_embedded_group_velocities(Scalar4 d_initial_velo,
+cudaError_t store_initial_embedded_group_velocities(Scalar4 d_initial_velo,
                                                  const Scalar4* d_vel_embed,
                                                  const unsigned int* d_embed_group,
-                                                 const uint64_t timestep);
+                                                 const unsigned int num_group,
+                                                 const unsigned int block_size);
 
 void gpu_accumulate_rigid_body_momenta(Scalar3 d_linmom_accum,
                                        Scalar3 d_angmom_accum,
