@@ -7,6 +7,7 @@
  */
 
 #include "CollisionMethod.cuh"
+#include "hoomd/ParticleData.cuh"
 
 namespace hoomd
     {
@@ -18,7 +19,7 @@ namespace kernel
     {
 
 __global__ void store_initial_embedded_group_velocities(Scalar4* d_initial_vel,
-                                                        const Scalar4* d_vel_embed,
+                                                        const Scalar4* d_velocity,
                                                         const unsigned int* d_embed_group,
                                                         const unsigned int num_group)
     {
@@ -26,6 +27,10 @@ __global__ void store_initial_embedded_group_velocities(Scalar4* d_initial_vel,
     unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= num_group)
         return;
+
+    // store the initial velocity
+    unsigned int particle_idx = d_embed_group[idx];
+    d_initial_vel[idx] = d_velocity[particle_idx];
     }
 
 __global__ void accumulate_rigid_body_momenta(Scalar3* d_linmom_accum,
@@ -44,6 +49,51 @@ __global__ void accumulate_rigid_body_momenta(Scalar3* d_linmom_accum,
     unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= num_group)
         return;
+
+    // get the index from the embedded group and check if in a rigid body
+    unsigned int particle_idx = d_embed_group[idx];
+    const unsigned int central_tag = d_body[particle_idx];
+    if (central_tag >= MIN_FLOPPY)
+        {
+        return;
+        }
+    const unsigned int central_idx = d_rtag[central_tag];
+    // if the central particle is not local, cannot read or write to it.
+    assert(central_idx != NOT_LOCAL);
+
+    // collision on central particle itself already taken care of by collision rule
+    if (particle_idx == central_idx)
+        {
+        return;
+        }
+    // get velocities and masses
+    const Scalar4 vel_mass_const = d_velocity[particle_idx];
+    const vec3<Scalar> vel_const(vel_mass_const);
+    const Scalar mass_const = vel_mass_const.w;
+
+    // get displacement
+    const Scalar4 postype_const = d_postype[particle_idx];
+    const vec3<Scalar> pos_const(postype_const);
+    const int3 img_const = d_image[particle_idx];
+
+    const Scalar4 postype_central = d_postype[central_idx];
+    const vec3<Scalar> pos_central(postype_central);
+    const int3 img_central = d_image[central_idx];
+
+    vec3<Scalar> displacement = pos_const - pos_central;
+    const int3 displacement_img = make_int3(img_const.x - img_central.x,
+                                            img_const.y - img_central.y,
+                                            img_const.z - img_central.z);
+    displacement = global_box.shift(displacement, displacement_img);
+
+    // change in linear and angular momentum
+    const vec3<Scalar> initial_vel_const(d_initial_vel[idx]);
+    const vec3<Scalar> linmom_change = mass_const * (vel_const - initial_vel_const);
+    const vec3<Scalar> angmom_change = cross(displacement, linmom_change);
+
+    // accumulate onto central particle
+    d_linmom_accum[central_idx] += vec_to_scalar3(linmom_change);
+    d_angmom_accum[central_idx] += vec_to_scalar3(angmom_change);
     }
 
 __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
@@ -59,13 +109,66 @@ __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
     // one thread per particle
     unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= num_total)
+        {
         return;
-    }
+        }
+    // check that the particle is in a rigid body and a central particle
+    const unsigned int central_tag = d_body[idx];
+    if (central_tag >= MIN_FLOPPY)
+        {
+        return;
+        }
+    const unsigned int central_idx = d_rtag[central_tag];
+    if (central_idx != idx)
+        {
+        return;
+        }
 
+    // get accumulated momentum for particle
+    const Scalar3 linmom_accum(d_linmom_accum[idx]);
+    const vec3<Scalar> angmom_accum(d_angmom_accum[idx]);
+
+    // compute and store new velocity
+    Scalar4 vel_mass = d_velocity[idx];
+    const Scalar mass = vel_mass.w;
+    if (mass > 0)
+        {
+        vel_mass.x += linmom_accum.x / mass;
+        vel_mass.y += linmom_accum.y / mass;
+        vel_mass.z += linmom_accum.z / mass;
+        d_velocity[idx] = vel_mass;
+        }
+
+    // compute new angular momentum
+    quat<Scalar> angmom(d_angmom[idx]);
+    const quat<Scalar> orientation(d_orientation[idx]);
+
+    // convert angular momentum to quaternion and update
+    const vec3<Scalar> inertia(d_inertia[central_idx]);
+    vec3<Scalar> angmom_change_body = rotate(conj(orientation), angmom_accum);
+    if (inertia.x == Scalar(0))
+        {
+        angmom_change_body.x = Scalar(0);
+        }
+
+    if (inertia.y == Scalar(0))
+        {
+        angmom_change_body.y = Scalar(0);
+        }
+
+    if (inertia.z == Scalar(0))
+        {
+        angmom_change_body.z = Scalar(0);
+        }
+    angmom += Scalar(2.0) * orientation * quat(0.0, angmom_change_body);
+
+    // save update
+    d_angmom[idx] = quat_to_scalar4(angmom);
+    }
     } // end namespace kernel
 
 cudaError_t store_initial_embedded_group_velocities(Scalar4* d_initial_vel,
-                                                    const Scalar4* d_vel_embed,
+                                                    const Scalar4* d_velocity,
                                                     const unsigned int* d_embed_group,
                                                     const unsigned int num_group,
                                                     const unsigned int block_size)
@@ -81,7 +184,7 @@ cudaError_t store_initial_embedded_group_velocities(Scalar4* d_initial_vel,
     dim3 grid(num_group / run_block_size + 1);
     mpcd::gpu::kernel::store_initial_embedded_group_velocities<<<grid, run_block_size>>>(
         d_initial_vel,
-        d_vel_embed,
+        d_velocity,
         d_embed_group,
         num_group);
 

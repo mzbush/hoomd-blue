@@ -142,9 +142,9 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
         ArrayHandle<unsigned int> h_embed_group(m_embed_group->getIndexArray(),
                                                 access_location::host,
                                                 access_mode::read);
-        ArrayHandle<Scalar4> h_vel_embed(m_pdata->getVelocities(),
-                                         access_location::host,
-                                         access_mode::read);
+        ArrayHandle<Scalar4> h_velocity(m_pdata->getVelocities(),
+                                        access_location::host,
+                                        access_mode::read);
         ArrayHandle<unsigned int> h_body_embed(m_pdata->getBodies(),
                                                access_location::host,
                                                access_mode::read);
@@ -161,7 +161,7 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
             const unsigned int particle_index = h_embed_group.data[idx];
 
             // check mass
-            const Scalar4 vel_mass = h_vel_embed.data[particle_index];
+            const Scalar4 vel_mass = h_velocity.data[particle_index];
             const Scalar mass = vel_mass.w;
             if (mass <= Scalar(0))
                 {
@@ -224,14 +224,14 @@ void mpcd::CollisionMethod::storeInitialEmbeddedGroupVelocities(uint64_t timeste
     ArrayHandle<unsigned int> h_embed_group(m_embed_group->getIndexArray(),
                                             access_location::host,
                                             access_mode::read);
-    ArrayHandle<Scalar4> h_vel_embed(m_pdata->getVelocities(),
-                                     access_location::host,
-                                     access_mode::read);
+    ArrayHandle<Scalar4> h_velocity(m_pdata->getVelocities(),
+                                    access_location::host,
+                                    access_mode::read);
     for (unsigned int idx = 0; idx < num_group; ++idx)
         {
         // collect the initial velocities of the embedded particles
         const unsigned int particle_index = h_embed_group.data[idx];
-        h_initial_vel.data[idx] = h_vel_embed.data[particle_index];
+        h_initial_vel.data[idx] = h_velocity.data[particle_index];
         }
     }
 
@@ -410,12 +410,12 @@ void mpcd::CollisionMethod::storeInitialEmbeddedGroupVelocitiesGPU(uint64_t time
     ArrayHandle<unsigned int> d_embed_group(m_embed_group->getIndexArray(),
                                             access_location::device,
                                             access_mode::read);
-    ArrayHandle<Scalar4> d_vel_embed(m_pdata->getVelocities(),
-                                     access_location::device,
-                                     access_mode::read);
+    ArrayHandle<Scalar4> d_velocity(m_pdata->getVelocities(),
+                                    access_location::device,
+                                    access_mode::read);
     m_store_tuner->begin();
     mpcd::gpu::store_initial_embedded_group_velocities(d_initial_vel.data,
-                                                       d_vel_embed.data,
+                                                       d_velocity.data,
                                                        d_embed_group.data,
                                                        num_group,
                                                        m_store_tuner->getParam()[0]);

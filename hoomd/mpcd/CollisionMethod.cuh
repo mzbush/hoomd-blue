@@ -18,7 +18,7 @@ namespace gpu
     {
 
 cudaError_t store_initial_embedded_group_velocities(Scalar4* d_initial_vel,
-                                                    const Scalar4* d_vel_embed,
+                                                    const Scalar4* d_velocity,
                                                     const unsigned int* d_embed_group,
                                                     const unsigned int num_group,
                                                     const unsigned int block_size);
