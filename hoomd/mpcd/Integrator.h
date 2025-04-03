@@ -18,12 +18,13 @@
 #include "Sorter.h"
 #include "StreamingMethod.h"
 #include "VirtualParticleFiller.h"
-#include "hoomd/md/ForceComposite.h"
+
 #ifdef ENABLE_MPI
 #include "Communicator.h"
 #endif // ENABLE_MPI
 
 #include "hoomd/SystemDefinition.h"
+#include "hoomd/md/ForceComposite.h"
 #include "hoomd/md/IntegratorTwoStep.h"
 #include <pybind11/pybind11.h>
 
