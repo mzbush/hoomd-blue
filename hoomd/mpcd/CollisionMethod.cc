@@ -49,17 +49,8 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
     // sync the embedded group
     m_cl->setEmbeddedGroup(m_embed_group);
 
-// check for collision warnings
-#ifdef ENABLE_HIP
-    if (m_exec_conf->isCUDAEnabled())
-        {
-        checkCollisionWarningsGPU(timestep);
-        }
-    else
-#endif
-        {
-        checkCollisionWarnings(timestep);
-        }
+    // check for collision warnings
+    checkCollisionWarnings(timestep);
 
     // set random grid shift
     m_cl->drawGridShift(timestep);
@@ -117,7 +108,7 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
             accumulateRigidBodyMomenta(timestep);
             transferRigidBodyMomenta(timestep);
             }
-            m_rigid_bodies->updateCompositeParticles(timestep);
+        m_rigid_bodies->updateCompositeParticles(timestep);
         }
     }
 
@@ -401,8 +392,6 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomentaGPU(uint64_t timestep) { }
 //! Finish process of applying collisions to rigid bodies (GPU version)
 void mpcd::CollisionMethod::transferRigidBodyMomentaGPU(uint64_t timestep) { }
 
-//! Check for issues related to applying collision to rigid bodies (GPU version)
-void mpcd::CollisionMethod::checkCollisionWarningsGPU(uint64_t timestep) { }
 #endif // ENABLE_HIP
 /*!
  * \param timestep Current timestep
