@@ -32,7 +32,7 @@ cudaError_t accumulate_rigid_body_momenta(Scalar3* d_linmom_accum,
                                           const int3* d_image,
                                           const unsigned int* d_body,
                                           const unsigned int* d_rtag,
-                                          const BoxDim global_box,
+                                          const BoxDim& global_box,
                                           const unsigned int num_group,
                                           const unsigned int block_size);
 
