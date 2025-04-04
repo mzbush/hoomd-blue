@@ -24,7 +24,7 @@ __global__ void store_initial_embedded_group_velocities(Scalar4* d_initial_vel,
                                                         const unsigned int num_group)
     {
     // one thread per particle
-    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= num_group)
         return;
 
