@@ -92,8 +92,12 @@ __global__ void accumulate_rigid_body_momenta(Scalar3* d_linmom_accum,
     const vec3<Scalar> angmom_change = cross(displacement, linmom_change);
 
     // accumulate onto central particle
-    d_linmom_accum[central_idx] += vec_to_scalar3(linmom_change);
-    d_angmom_accum[central_idx] += vec_to_scalar3(angmom_change);
+    atomicAdd(&d_linmom_accum[central_idx].x, linmom_change.x);
+    atomicAdd(&d_linmom_accum[central_idx].y, linmom_change.y);
+    atomicAdd(&d_linmom_accum[central_idx].z, linmom_change.z);
+    atomicAdd(&d_angmom_accum[central_idx].x, angmom_change.x);
+    atomicAdd(&d_angmom_accum[central_idx].y, angmom_change.y);
+    atomicAdd(&d_angmom_accum[central_idx].z, angmom_change.z);
     }
 
 __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
