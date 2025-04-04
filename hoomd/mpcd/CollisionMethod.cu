@@ -112,6 +112,7 @@ __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
         {
         return;
         }
+
     // check that the particle is in a rigid body and a central particle
     const unsigned int central_tag = d_body[idx];
     if (central_tag >= MIN_FLOPPY)
