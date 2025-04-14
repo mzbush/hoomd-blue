@@ -87,7 +87,7 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
             m_initial_velocity.swap(initial_velocity);
             }
 
-        const unsigned int num_total = m_pdata->getN();
+        const unsigned int num_total = m_pdata->getN() + m_pdata->getNGhosts();
         if (num_total > m_linmom_accum.getNumElements())
             {
             GPUArray<Scalar3> linmom_accum(num_total, m_exec_conf);
