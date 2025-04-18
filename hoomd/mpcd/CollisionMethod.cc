@@ -7,7 +7,9 @@
  */
 
 #include "CollisionMethod.h"
-
+#ifdef ENABLE_MPI
+#include "hoomd/Communicator.h"
+#endif // ENABLE_MPI
 namespace hoomd
     {
 /*!
@@ -24,7 +26,8 @@ mpcd::CollisionMethod::CollisionMethod(std::shared_ptr<SystemDefinition> sysdef,
     : m_sysdef(sysdef), m_pdata(m_sysdef->getParticleData()),
       m_mpcd_pdata(sysdef->getMPCDParticleData()), m_exec_conf(m_pdata->getExecConf()),
       m_period(period), m_checked_collision_warnings(false), m_initial_velocity(m_exec_conf),
-      m_linmom_accum(m_exec_conf), m_angmom_accum(m_exec_conf)
+      m_linmom_accum(m_exec_conf), m_angmom_accum(m_exec_conf), m_linmom_accum_copybuf(m_exec_conf),
+      m_angmom_accum_copybuf(m_exec_conf)
     {
     // setup next timestep for collision
     m_next_timestep = cur_timestep;
@@ -94,6 +97,12 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
             m_linmom_accum.swap(linmom_accum);
             GPUArray<Scalar3> angmom_accum(num_total, m_exec_conf);
             m_angmom_accum.swap(angmom_accum);
+#ifdef ENABLE_MPI
+            GPUArray<Scalar3> linmom_accum_copybuf(num_total, m_exec_conf);
+            m_linmom_accum_copybuf.swap(linmom_accum);
+            GPUArray<Scalar3> angmom_accum_copybuf(num_total, m_exec_conf);
+            m_angmom_accum_copybuf.swap(angmom_accum);
+#endif
             }
 
 #ifdef ENABLE_HIP
@@ -425,7 +434,47 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
     }
 #ifdef ENABLE_MPI
 //! Communicate momenta accumulation to other ranks
-void mpcd::CollisionMethod::communicateMomentaAccumulation() { }
+void mpcd::CollisionMethod::communicateMomentaAccumulation()
+    {
+    ArrayHandle<unsigned int> h_rtag(m_pdata->getRTags(), access_location::host, access_mode::read);
+    ArrayHandle<unsigned int> h_tag(m_pdata->getTags(), access_location::host, access_mode::read);
+    ArrayHandle<unsigned int> h_body(m_pdata->getBodies(),
+                                     access_location::host,
+                                     access_mode::read);
+    const unsigned int num_local = m_pdata->getN();
+    const unsigned int num_total = m_pdata->getN() + m_pdata->getNGhosts();
+    for (unsigned int idx = num_local - 1; idx < num_total; idx++)
+        {
+        // check that the ghost particle is in a rigid body and a central particle
+        const unsigned int central_tag = h_body.data[idx];
+        if (central_tag >= MIN_FLOPPY)
+            {
+            continue;
+            }
+        const unsigned int central_idx = h_rtag.data[central_tag];
+        if (central_idx != idx)
+            {
+            continue;
+            }
+        assert(central_idx != NOT_LOCAL);
+        // construct a plan to send only the central particles based on reverse plan
+        }
+    for (unsigned int dir = 0; dir < 6; dir++)
+        {
+        ArrayHandle<Scalar3> h_linmom_accum(m_linmom_accum,
+                                            access_location::host,
+                                            access_mode::readwrite);
+        ArrayHandle<Scalar3> h_angmom_accum(m_angmom_accum,
+                                            access_location::host,
+                                            access_mode::readwrite);
+        ArrayHandle<Scalar3> h_linmom_accum_copybuf(m_linmom_accum_copybuf,
+                                                    access_location::host,
+                                                    access_mode::readwrite);
+        ArrayHandle<Scalar3> h_angmom_accum_copybuf(m_angmom_accum_copybuf,
+                                                    access_location::host,
+                                                    access_mode::readwrite);
+        }
+    }
 
 //! Communicate new momenta of rigid body central particle
 void mpcd::CollisionMethod::communicateRigidBodyTransfer() { }

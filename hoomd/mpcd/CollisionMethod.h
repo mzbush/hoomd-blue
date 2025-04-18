@@ -152,6 +152,9 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
 
     //! Communicate new momenta of rigid body central particle
     void communicateRigidBodyTransfer();
+
+    GPUArray<Scalar3> m_linmom_accum_copybuf; //!< copy buffer for linear momentum
+    GPUArray<Scalar3> m_angmom_accum_copybuf; //!< copy buffer for angular momentum
 #endif
 #ifdef ENABLE_HIP
     //! Begin process of applying collisions to rigid bodies (GPU version)
