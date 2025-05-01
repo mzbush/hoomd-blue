@@ -206,8 +206,8 @@ class TestCollisionMethod:
         properties_rigid,
     ):
         if "kT" not in init_args:
-            # init_args["kT"] = 1.0
-            pass
+            init_args["kT"] = 1.0
+
         N_mpcd = len(def_rigid["constituent_types"])
         rng = np.random.default_rng(seed=42)
         velo_mpcd = rng.normal(0.0, np.sqrt(init_args["kT"]), (N_mpcd, 3))
