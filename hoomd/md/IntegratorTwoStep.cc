@@ -113,14 +113,17 @@ void IntegratorTwoStep::update(uint64_t timestep)
         }
 
     // update rigid body constituent particles at end of step
-#ifdef ENABLE_MPI
-    if (m_sysdef->isDomainDecomposed())
+    if (m_rigid_bodies)
         {
-        m_comm->beginUpdateGhosts(timestep + 1);
-        m_comm->finishUpdateGhosts(timestep + 1);
-        }
+#ifdef ENABLE_MPI
+        if (m_sysdef->isDomainDecomposed())
+            {
+            m_comm->beginUpdateGhosts(timestep + 1);
+            m_comm->finishUpdateGhosts(timestep + 1);
+            }
 #endif
-    updateRigidBodies(timestep + 1);
+        updateRigidBodies(timestep + 1);
+        }
     }
 
 /*! \param deltaT new deltaT to set

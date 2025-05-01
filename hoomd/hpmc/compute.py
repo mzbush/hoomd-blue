@@ -15,6 +15,7 @@ from hoomd.data.parameterdicts import ParameterDict
 from hoomd.logging import log
 import hoomd
 import numpy
+import inspect
 
 
 class FreeVolume(Compute):
@@ -101,7 +102,9 @@ class FreeVolume(Compute):
 
     """
 
-    __doc__ = __doc__.replace("{inherited}", Compute._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(Compute._doc_inherited)
+    )
 
     def __init__(self, test_particle_type, num_samples):
         # store metadata
@@ -332,7 +335,9 @@ class SDF(Compute):
         dx (float): Bin width :math:`[\mathrm{length}]`.
     """
 
-    __doc__ = __doc__.replace("{inherited}", Compute._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(Compute._doc_inherited)
+    )
 
     def __init__(self, xmax, dx):
         # store metadata

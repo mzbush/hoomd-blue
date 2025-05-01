@@ -804,8 +804,7 @@ void ForceComposite::computeForces(uint64_t timestep)
                 h_torque.data[central_idx].z += delta_torque.z;
 
                 /* from previous rigid body implementation: Access Torque elements from a single
-                   particle. Right now I will be assuming that the particle and rigid body reference
-                   frames are the same. Probably have to rotate first.
+                   particle. Probably have to rotate first.
                  */
                 h_torque.data[central_idx].x += net_torque.x;
                 h_torque.data[central_idx].y += net_torque.y;

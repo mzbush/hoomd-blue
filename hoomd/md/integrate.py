@@ -12,6 +12,7 @@ from hoomd.data import syncedlist
 from hoomd.md.methods import Method
 from hoomd.md.force import Force
 from hoomd.md.constrain import Constraint, Rigid
+import inspect
 
 
 def _set_synced_list(old_list, new_list):
@@ -272,7 +273,9 @@ class Integrator(_DynamicIntegrator):
             simulation associated with the integrator.
     """
 
-    __doc__ = __doc__.replace("{inherited}", hoomd.operation.Integrator._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(hoomd.operation.Integrator._doc_inherited)
+    )
     _doc_inherited = (
         hoomd.operation.Integrator._doc_inherited
         + """

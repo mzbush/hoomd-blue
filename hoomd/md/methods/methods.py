@@ -23,6 +23,7 @@ from hoomd.filter import ParticleFilter
 from hoomd.variant import Variant
 from collections.abc import Sequence
 from .thermostats import Thermostat
+import inspect
 
 
 class Method(AutotunedObject):
@@ -34,7 +35,11 @@ class Method(AutotunedObject):
         Users should use the subclasses and not instantiate `Method` directly.
     """
 
-    __doc__ += AutotunedObject._doc_inherited
+    __doc__ = (
+        inspect.cleandoc(__doc__)
+        + "\n"
+        + inspect.cleandoc(AutotunedObject._doc_inherited)
+    )
 
     def _attach_hook(self):
         self._simulation.state.update_group_dof()
@@ -85,7 +90,9 @@ class Thermostatted(Method):
     _skip_for_equality = AutotunedObject._skip_for_equality | {
         "_thermo",
     }
-    __doc__ = __doc__.replace("{inherited}", Method._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(Method._doc_inherited)
+    )
 
     _doc_inherited = (
         Method._doc_inherited
@@ -181,7 +188,9 @@ class ConstantVolume(Thermostatted):
     .. _Kamberaj 2005: https://dx.doi.org/10.1063/1.1906216
     """
 
-    __doc__ = __doc__.replace("{inherited}", Thermostatted._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(Thermostatted._doc_inherited)
+    )
 
     _doc_inherited = (
         Thermostatted._doc_inherited
@@ -523,7 +532,9 @@ class ConstantPressure(Thermostatted):
                 npt.barostat_dof = numpy.load(file=path / "barostat_dof.npy")
     """
 
-    __doc__ = __doc__.replace("{inherited}", Thermostatted._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(Thermostatted._doc_inherited)
+    )
 
     def __init__(
         self,
@@ -711,7 +722,9 @@ class DisplacementCapped(ConstantVolume):
                 displacement_capped.maximum_displacement = 1e-5
     """
 
-    __doc__ = __doc__.replace("{inherited}", ConstantVolume._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(ConstantVolume._doc_inherited)
+    )
 
     def __init__(self, filter, maximum_displacement: hoomd.variant.variant_like):
         # store metadata
@@ -858,7 +871,9 @@ class Langevin(Method):
                 langevin.gamma_r["A"] = [1.0, 2.0, 3.0]
     """
 
-    __doc__ = __doc__.replace("{inherited}", Method._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(Method._doc_inherited)
+    )
 
     def __init__(
         self,
@@ -1077,7 +1092,9 @@ class Brownian(Method):
                 brownian.gamma_r["A"] = [1.0, 2.0, 3.0]
     """
 
-    __doc__ = __doc__.replace("{inherited}", Method._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(Method._doc_inherited)
+    )
 
     def __init__(
         self,
@@ -1234,7 +1251,9 @@ class OverdampedViscous(Method):
                 overdamped_viscous.gamma_r["A"] = [1.0, 2.0, 3.0]
     """
 
-    __doc__ = __doc__.replace("{inherited}", Method._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(Method._doc_inherited)
+    )
 
     def __init__(
         self,

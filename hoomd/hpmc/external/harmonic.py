@@ -8,6 +8,7 @@ from hoomd.data.typeconverter import NDArrayValidator
 from hoomd.hpmc import _hpmc
 import hoomd
 import numpy as np
+import inspect
 
 from .external import External
 
@@ -81,7 +82,9 @@ class Harmonic(External):
             :math:`[\mathrm{dimensionless}]`.
     """
 
-    __doc__ = __doc__.replace("{inherited}", External._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(External._doc_inherited)
+    )
 
     def __init__(
         self,

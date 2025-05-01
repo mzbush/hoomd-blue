@@ -2812,14 +2812,14 @@ void Communicator::beginUpdateGhosts(uint64_t timestep)
                                              access_location::host,
                                              access_mode::read);
 
-            // copy velocity of ghost particles
+            // copy angmom of ghost particles
             for (unsigned int ghost_idx = 0; ghost_idx < m_num_copy_ghosts[dir]; ghost_idx++)
                 {
                 unsigned int idx = h_rtag.data[h_copy_ghosts.data[ghost_idx]];
 
                 assert(idx < m_pdata->getN() + m_pdata->getNGhosts());
 
-                // copy velocity into send buffer
+                // copy angmom into send buffer
                 h_angmom_copybuf.data[ghost_idx] = h_angmom.data[idx];
                 }
             }

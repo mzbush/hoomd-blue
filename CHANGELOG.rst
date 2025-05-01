@@ -12,6 +12,11 @@ Change Log
 * Set constituent particle velocities for rigid bodies
   (`#2024 <https://github.com/glotzerlab/hoomd-blue/pull/2024>`__).
 
+*Fixed*
+
+* The documentation builds without warnings in Python 3.13 environments
+  (`#2049 <https://github.com/glotzerlab/hoomd-blue/pull/2049>`__).
+
 5.1.1 (2025-03-19)
 ^^^^^^^^^^^^^^^^^^
 

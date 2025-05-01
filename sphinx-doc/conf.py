@@ -32,12 +32,11 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
     "sphinx.ext.todo",
-    "IPython.sphinxext.ipython_console_highlighting",
-    "sphinx_copybutton",
-    "notfound.extension",
 ]
 
 if os.getenv("READTHEDOCS"):
+    extensions.append("sphinx_copybutton")
+    extensions.append("notfound.extension")
     extensions.append("sphinxcontrib.googleanalytics")
     googleanalytics_id = "G-ZR0DNZD21E"
 

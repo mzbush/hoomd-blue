@@ -4,6 +4,7 @@
 """Alchemical pair forces."""
 
 from collections.abc import Mapping
+import inspect
 
 import hoomd.data
 from hoomd.logging import log
@@ -335,7 +336,9 @@ class LJGauss(BaseLJGauss, _AlchemicalPairForce):
     """
 
     _alchemical_dofs = ["epsilon", "sigma", "r0"]
-    __doc__ = __doc__.replace("{inherited}", BaseLJGauss._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(BaseLJGauss._doc_inherited)
+    )
 
     def __init__(self, nlist, default_r_cut=None, default_r_on=0.0, mode="none"):
         _AlchemicalPairForce.__init__(self)

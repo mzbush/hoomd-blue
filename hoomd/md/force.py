@@ -15,6 +15,7 @@ from hoomd.data.parameterdicts import ParameterDict, TypeParameterDict
 from hoomd.filter import ParticleFilter
 from hoomd.md.manifold import Manifold
 import numpy
+import inspect
 
 
 class Force(Compute):
@@ -77,7 +78,9 @@ class Force(Compute):
     **Members defined in** `Force`:
     """
 
-    __doc__ = __doc__.replace("{inherited}", Compute._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(Compute._doc_inherited)
+    )
 
     _doc_inherited = (
         Compute._doc_inherited
@@ -466,7 +469,9 @@ class Active(Force):
         `float`]]
     """
 
-    __doc__ = __doc__.replace("{inherited}", Force._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(Force._doc_inherited)
+    )
 
     def __init__(self, filter):
         super().__init__()
@@ -594,7 +599,9 @@ class ActiveOnManifold(Active):
         `float`]]
     """
 
-    __doc__ = __doc__.replace("{inherited}", Force._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(Force._doc_inherited)
+    )
 
     def __init__(self, filter, manifold_constraint):
         # store metadata
@@ -677,7 +684,9 @@ class Constant(Force):
         `float`]]
     """
 
-    __doc__ = __doc__.replace("{inherited}", Force._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(Force._doc_inherited)
+    )
 
     def __init__(self, filter):
         super().__init__()

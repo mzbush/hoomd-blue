@@ -7,6 +7,7 @@ import hoomd
 from hoomd.md.force import Force
 import math
 import numpy
+import inspect
 
 
 def make_pppm_coulomb_forces(nlist, resolution, order, r_cut, alpha=0):
@@ -165,7 +166,9 @@ class Coulomb(Force):
           :math:`\\mathrm{[length^{-1}]}`.
     """
 
-    __doc__ = __doc__.replace("{inherited}", Force._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(Force._doc_inherited)
+    )
 
     def __init__(self, nlist, resolution, order, r_cut, alpha, pair_force):
         super().__init__()
