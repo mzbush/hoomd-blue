@@ -275,17 +275,6 @@ class PYBIND11_EXPORT Communicator
         return ghost_max_width;
         }
 
-    //! Get the plan for the latest ghost particle exchange
-    GPUVector<unsigned int>& getPlan()
-        {
-        return m_plan;
-        }
-
-    //! Get the reverse plan for the latest ghost particle exchange
-    GPUVector<unsigned int>& getPlanReverse()
-        {
-        return m_plan_reverse;
-        }
     //! Set the ghost communication flags
     /*! \note Flags will be available after the next call to communicate().
      */
