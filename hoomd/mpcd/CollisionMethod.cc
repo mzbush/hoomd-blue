@@ -102,15 +102,6 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
             m_linmom_accum_copybuf.swap(linmom_accum);
             GPUArray<Scalar3> angmom_accum_copybuf(num_total, m_exec_conf);
             m_angmom_accum_copybuf.swap(angmom_accum);
-            GPUVector<unsigned int> plan_reverse_copybuf(num_total, m_exec_conf);
-            m_plan_reverse_copybuf.swap(plan_reverse_copybuf);
-            for (unsigned int dir = 0; dir < 6; dir++)
-                {
-                GPUVector<unsigned int> copy_ghosts(m_exec_conf);
-                m_copy_ghosts[dir].swap(copy_ghosts);
-                m_num_copy_ghosts[dir] = 0;
-                m_num_recv_ghosts[dir] = 0;
-                }
 #endif
             }
 
@@ -136,37 +127,13 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
         if (m_exec_conf->isCUDAEnabled())
             {
             accumulateRigidBodyMomentaGPU(timestep);
-#ifdef ENABLE_MPI
-            if (m_sysdef->isDomainDecomposed())
-                {
-                communicateMomentaAccumulationGPU();
-                }
-#endif
             transferRigidBodyMomentaGPU(timestep);
-#ifdef ENABLE_MPI
-            if (m_sysdef->isDomainDecomposed())
-                {
-                communicateRigidBodyTransferGPU();
-                }
-#endif
             }
         else
 #endif
             {
             accumulateRigidBodyMomenta(timestep);
-#ifdef ENABLE_MPI
-            if (m_sysdef->isDomainDecomposed())
-                {
-                communicateMomentaAccumulation();
-                }
-#endif
             transferRigidBodyMomenta(timestep);
-#ifdef ENABLE_MPI
-            if (m_sysdef->isDomainDecomposed())
-                {
-                communicateRigidBodyTransfer();
-                }
-#endif
             }
         m_rigid_bodies->updateCompositeParticles(timestep);
         }
@@ -441,111 +408,7 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
         h_angmom.data[idx] = quat_to_scalar4(angmom);
         }
     }
-#ifdef ENABLE_MPI
-//! Communicate momenta accumulation to other ranks
-void mpcd::CollisionMethod::communicateMomentaAccumulation()
-    {
-    if (m_sysdef->isDomainDecomposed())
-        {
-        // get communicator
-        auto comm_weak = m_sysdef->getCommunicator();
-        assert(comm_weak.lock());
-        auto m_comm = comm_weak.lock();
 
-        auto decomposition = m_comm->getDomainDecomposition();
-        // resize buffers
-        unsigned int max_copy_ghosts = m_pdata->getN() + m_pdata->getNGhosts();
-        m_plan_reverse_copybuf.resize(max_copy_ghosts);
-
-        for (unsigned int dir = 0; dir < 6; dir++)
-            {
-            if (!m_comm->isCommunicating(dir))
-                {
-                continue;
-                }
-
-                {
-                // fill the angular and linear momentum copy buffers
-                ArrayHandle<unsigned int> h_rtag(m_pdata->getRTags(),
-                                                 access_location::host,
-                                                 access_mode::read);
-                ArrayHandle<unsigned int> h_tag(m_pdata->getTags(),
-                                                access_location::host,
-                                                access_mode::read);
-                ArrayHandle<unsigned int> h_body(m_pdata->getBodies(),
-                                                 access_location::host,
-                                                 access_mode::read);
-                ArrayHandle<Scalar3> h_linmom_accum(m_linmom_accum,
-                                                    access_location::host,
-                                                    access_mode::read);
-                ArrayHandle<Scalar3> h_angmom_accum(m_angmom_accum,
-                                                    access_location::host,
-                                                    access_mode::read);
-                ArrayHandle<Scalar3> h_linmom_accum_copybuf(m_linmom_accum_copybuf,
-                                                            access_location::host,
-                                                            access_mode::overwrite);
-                ArrayHandle<Scalar3> h_angmom_accum_copybuf(m_angmom_accum_copybuf,
-                                                            access_location::host,
-                                                            access_mode::overwrite);
-                ArrayHandle<unsigned int> h_plan_reverse(m_comm->getPlanReverse(),
-                                                         access_location::host,
-                                                         access_mode::read);
-                ArrayHandle<unsigned int> h_copy_ghosts(m_copy_ghosts[dir],
-                                                        access_location::host,
-                                                        access_mode::overwrite);
-                ArrayHandle<unsigned int> h_plan_reverse_copybuf(m_plan_reverse_copybuf,
-                                                                 access_location::host,
-                                                                 access_mode::overwrite);
-
-                for (unsigned int idx = 0; idx < m_pdata->getN() + m_pdata->getNGhosts(); idx++)
-                    {
-                    m_num_copy_ghosts[dir] = 0;
-                    // check that the ghost particle is in a rigid body and a central particle
-                    const unsigned int central_tag = h_body.data[idx];
-                    if (central_tag >= MIN_FLOPPY)
-                        {
-                        continue;
-                        }
-                    const unsigned int central_idx = h_rtag.data[central_tag];
-                    if (central_idx != idx)
-                        {
-                        continue;
-                        }
-                    assert(central_idx != NOT_LOCAL);
-                    // send only the central particles ghosts in the next message
-                    if (h_plan_reverse.data[idx] & (1 << dir))
-                        {
-                        // send with next message
-                        h_linmom_accum_copybuf.data[m_num_copy_ghosts[dir]]
-                            = h_linmom_accum.data[idx];
-                        h_angmom_accum_copybuf.data[m_num_copy_ghosts[dir]]
-                            = h_angmom_accum.data[idx];
-                        h_plan_reverse_copybuf.data[m_num_copy_ghosts[dir]]
-                            = h_plan_reverse.data[idx];
-
-                        h_copy_ghosts.data[m_num_copy_ghosts[dir]] = h_tag.data[idx];
-                        m_num_copy_ghosts[dir]++;
-                        }
-                    }
-                }
-            unsigned int send_neighbor = decomposition->getNeighborRank(dir);
-
-            // we receive from the direction opposite to the one we send to
-            unsigned int recv_neighbor;
-            if (dir % 2 == 0)
-                recv_neighbor = decomposition->getNeighborRank(dir + 1);
-            else
-                recv_neighbor = decomposition->getNeighborRank(dir - 1);
-
-            // TO DO: implement send and receive logic here
-            //  follow guide from exchangeGhosts starting at line 2060
-            }
-        }
-    }
-
-//! Communicate new momenta of rigid body central particle
-void mpcd::CollisionMethod::communicateRigidBodyTransfer() { }
-#endif
 #ifdef ENABLE_HIP
 //! Begin process of applying collisions to rigid bodies (GPU version)
 void mpcd::CollisionMethod::storeInitialEmbeddedGroupVelocitiesGPU(uint64_t timestep)
@@ -664,13 +527,6 @@ void mpcd::CollisionMethod::transferRigidBodyMomentaGPU(uint64_t timestep)
     m_transfer_tuner->end();
     }
 
-#ifdef ENABLE_MPI
-//! Communicate momenta accumulation to other ranks
-void mpcd::CollisionMethod::communicateMomentaAccumulationGPU() { }
-
-//! Communicate new momenta of rigid body central particle
-void mpcd::CollisionMethod::communicateRigidBodyTransferGPU() { }
-#endif
 #endif // ENABLE_HIP
 
 /*!

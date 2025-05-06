@@ -147,22 +147,8 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
     void transferRigidBodyMomenta(uint64_t timestep);
 
 #ifdef ENABLE_MPI
-    //! Communicate momenta accumulation to other ranks
-    void communicateMomentaAccumulation();
-
-    //! Communicate new momenta of rigid body central particle
-    void communicateRigidBodyTransfer();
-
     GPUArray<Scalar3> m_linmom_accum_copybuf; //!< copy buffer for linear momentum
     GPUArray<Scalar3> m_angmom_accum_copybuf; //!< copy buffer for angular momentum
-
-    GPUVector<unsigned int>
-        m_copy_ghosts[6]; //!< Per-direction list of indices of particles to send as ghosts
-    unsigned int
-        m_num_copy_ghosts[6]; //!< Number of local particles that are sent to neighboring processors
-    unsigned int m_num_recv_ghosts[6];              //!< Number of ghosts received per direction
-    GPUVector<unsigned int> m_plan_reverse_copybuf; //!< Per-direction buffer for reverse particle
-                                                    //!< plans. Copy buffer for m_plan_reverse
 
     /// The systems's communicator.
     std::shared_ptr<Communicator> m_comm;
@@ -176,14 +162,6 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
 
     //! Finish process of applying collisions to rigid bodies (GPU version)
     void transferRigidBodyMomentaGPU(uint64_t timestep);
-
-#ifdef ENABLE_MPI
-    //! Communicate momenta accumulation to other ranks
-    void communicateMomentaAccumulationGPU();
-
-    //! Communicate new momenta of rigid body central particle
-    void communicateRigidBodyTransferGPU();
-#endif
 
     std::shared_ptr<Autotuner<1>> m_store_tuner;      //!< Tuner for storing velocities
     std::shared_ptr<Autotuner<1>> m_accumulate_tuner; //!< Tuner for accumulating momenta
