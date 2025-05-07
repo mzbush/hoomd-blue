@@ -3,6 +3,7 @@ set(files __init__.py
         expanded_gaussian.py
         lj_gauss.py
 	    opp.py
+      zetterling.py
 	    pair.py
         step.py
         union.py

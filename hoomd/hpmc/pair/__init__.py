@@ -30,12 +30,14 @@ from .lennard_jones import LennardJones
 from .expanded_gaussian import ExpandedGaussian
 from .lj_gauss import LJGauss
 from .opp import OPP
+from .zetterling import Zetterling
 from .union import Union
 from .angular_step import AngularStep
 from .step import Step
 
 __all__ = [
     "OPP",
+    "Zetterling",
     "AngularStep",
     "ExpandedGaussian",
     "LJGauss",
