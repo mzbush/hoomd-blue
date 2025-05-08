@@ -26,66 +26,61 @@ class Zetterling(Pair):
           :math:`[\\mathrm{length}]`.
         mode (str): Energy shifting/smoothing mode.
 
-    `OPP` computes the oscillating pair potential between every pair
+    `Zetterling` computes the oscillating pair potential between every pair
     of particles in the simulation state. The functional form of the potential,
-    including its behavior under shifting modes, is identical to that in
-    the MD pair potential `hoomd.md.pair.OPP`.
+    including its behavior under shifting modes. 
 
-    See Also:
-        `hoomd.md.pair.OPP`
+    .. math::
+        U(r) = A \frac{\exp{(\alpha r)\cos{(2 k_F r)}}}{r^3}
+              + B \left( \frac{\sigma}{r} \right)^n
 
-        `hoomd.md.pair`
+    The potential was introduced in `F. H. M. Zetterling, M. Dzugutov, and S. Lidin 2001`_.
 
-    .. rubric:: Example
+    .. _F. H. M. Zetterling, M. Dzugutov, and S. Lidin 2001:
+       https://doi.org/10.1557/PROC-643-K9.5
 
-    .. code-block:: python
+    Example::
 
-        opp = hoomd.hpmc.pair.OPP()
-        opp.params[('A', 'A')] = dict(
-            C1=1., C2=1., eta1=15, eta2=3, k=1.0, phi=3.14, r_cut=3.0
-        )
-        simulation.operations.integrator.pair_potentials = [opp]
+        zetterling = hoomd.hpmc.pair.Zetterling(mode="shift")
+        opp.params[("A", "A")] = {
+            "A": 1.58,
+            "alpha": -0.22,
+            "kf": 4.12,
+            "B": 0.95533,
+            "sigma": 1.0,
+            "n": 18.0,
+        }
+        opp.r_cut[("A", "A")] = 2.649
+
+    {inherited}
+
+    ----------
+
+    **Members defined in** `Zetterling`:
 
     .. py:attribute:: params
 
-        The potential parameters. The dictionary has the following keys:
+        The Zetterling potential parameters. The dictionary has the following keys:
 
-        * ``C1`` (`float`, **required**) -
-          Energy scale of the first term :math:`C_1`
-          :math:`[\\mathrm{energy}]`.
-        * ``C2`` (`float`, **required**) -
-          Energy scale of the second term :math:`C_2`
-          :math:`[\\mathrm{energy}]`
-        * ``eta1`` (`float`, **required**) -
-          The inverse power to take :math:`r` to in the first term,
-          :math:`\\eta_1` :math:`[\\mathrm{dimensionless}]`.
-        * ``eta2`` (`float`, **required**) -
-          The inverse power to take :math:`r` to in the second term
-          :math:`\\eta_2` :math:`[\\mathrm{dimensionless}]`.
-        * ``k`` (`float`, **required**) -
-          oscillation frequency :math:`k` :math:`[\\mathrm{length}^{-1}]`
-        * ``phi`` (`float`, **required**) -
-          potential phase shift :math:`\\phi` :math:`[\\mathrm{dimensionless}]`
-        * ``r_cut`` (`float`): Cutoff radius :math:`[\\mathrm{length}]`.
-          Defaults to the value given in ``default_r_cut`` on construction.
-        * ``r_on`` (`float`): XPLOR on radius :math:`[\\mathrm{length}]`.
-          Defaults to the value given in ``default_r_on`` on construction.
+        * ``A`` (`float`, **required**) -
+          Energy scale of the first term :math:`A`
+          :math:`[\mathrm{energy}]`
+        * ``alpha`` (`float`, **required**) -
+          Screening factor :math:`\alpha`
+          :math:`[\mathrm{length}^{-1}]`
+        * ``kf`` (`float`, **required**) -
+          Wave number to mimic the Friedel oscillations effect :math:`k_F` 
+          :math:`k_F` :math:`[\mathrm{length}^{-1}]`.
+        * ``B`` (`float`, **required**) -
+          Energy scale of the second term :math:`B`
+          :math:`B` :math:`[\mathrm{energy}]`.
+        * ``sigma`` (`float`, **required**) -
+          Repulsive core size :math:`\sigma` :math:`[\mathrm{length}]`
+        * ``n`` (`float`, **required**) -
+          The power to take \sigma/r in the second term :math:`n` :math:`[\mathrm{dimensionless}]`
 
         Type: `TypeParameter` [`tuple` [``particle_type``, ``particle_type``],
         `dict`]
-
-    .. py:attribute:: mode
-
-        The energy shifting/smoothing mode: Possible values are:
-        ``"none"``, ``"shift"``, and ``"xplor"``.
-
-        .. rubric:: Example
-
-        .. code-block:: python
-
-            opp.mode = 'shift'
-
-        Type: `str`
     """
     _cpp_class_name = "PairPotentialZetterling"
 
