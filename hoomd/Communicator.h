@@ -726,6 +726,38 @@ class PYBIND11_EXPORT Communicator
         removeGhostParticleTags();
         m_has_ghost_particles = false;
         }
+
+    //! template for reduceGhostProperty
+    /*! exchange arrays of particle properties that are not in the ParticleData
+     * between and reduce them. Only reduce via addition is implemented.
+     * The array provided to exchange must be the size of all local and ghost
+     * particles under the assumption that the properties described at each
+     * index correspond to the particle at the same index in the processor's
+     * ParticleData.
+     * \note Assumes that exchangeGhosts has been run to set up the plan and reverse plan
+     * \note class T must have a valid operator+
+     *
+     * \param data reference to array of properties to exchange and reduce
+     * \param copybuf reference to provided copy buffer for data
+     */
+    template<class T> void reduce_(GPUVector<T>& data, GPUVector<T>& copybuf)
+        {
+        if (data.getNumElements() < m_pdata->getN() + m_pdata->getNGhosts())
+            {
+            throw std::length_error("Array to exchange has" + std::to_string(data.getNumElements())
+                                    + ", expected "
+                                    + std::to_string(m_pdata->getN() + m_pdata->getNGhosts()));
+            }
+        if (copybuf.getNumElements() < m_pdata->getN() + m_pdata->getNGhosts())
+            {
+            copybuf.resize(m_pdata->getN() + m_pdata->getNGhosts());
+            }
+        }
+
+    virtual void reduceGhostProperty(GPUVector<Scalar3> data, GPUVector<Scalar3> copybuf)
+        {
+        reduce_(data, copybuf);
+        }
     };
 
 namespace detail
