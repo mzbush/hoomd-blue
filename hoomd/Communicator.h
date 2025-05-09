@@ -748,9 +748,17 @@ class PYBIND11_EXPORT Communicator
                                     + ", expected "
                                     + std::to_string(m_pdata->getN() + m_pdata->getNGhosts()));
             }
-        if (copybuf.getNumElements() < m_pdata->getN() + m_pdata->getNGhosts())
+        // ensure that copy buffer is clear of data and the right size
+        copybuf.clear() if (copybuf.getNumElements() < m_pdata->getN() + m_pdata->getNGhosts())
             {
             copybuf.resize(m_pdata->getN() + m_pdata->getNGhosts());
+            }
+
+        // update data in these arrays
+        for (unsigned int dir = 0; dir < 6; dir++)
+            {
+            if (!isCommunicating(dir))
+                continue;
             }
         }
 
