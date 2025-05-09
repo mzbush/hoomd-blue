@@ -270,7 +270,7 @@ zetterling_test_parameters = [
 @pytest.mark.cpu
 def test_energy(mc_simulation_factory, params, mode, d, expected_energy):
     """Test that Zetterling computes the correct energies for 1 pair."""
-    zetterling = hoomd.hpmc.pair.ZetterlingP(mode=mode)
+    zetterling = hoomd.hpmc.pair.Zetterling(mode=mode)
     zetterling.params[("A", "A")] = params
 
     simulation = mc_simulation_factory(d=d)
