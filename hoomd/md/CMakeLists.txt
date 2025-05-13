@@ -128,6 +128,7 @@ set(_md_headers ActiveForceComputeGPU.h
                 EvaluatorPairYukawa.h
                 EvaluatorPairWangFrenkel.h
                 EvaluatorPairZBL.h
+                EvaluatorPairZetterling.h
                 EvaluatorTersoff.h
                 EvaluatorWalls.h
                 FIREEnergyMinimizerGPU.h
