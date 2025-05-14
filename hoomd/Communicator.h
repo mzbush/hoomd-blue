@@ -737,34 +737,122 @@ class PYBIND11_EXPORT Communicator
      * \note Assumes that exchangeGhosts has been run to set up the plan and reverse plan
      * \note class T must have a valid operator+
      *
-     * \param data reference to array of properties to exchange and reduce
-     * \param copybuf reference to provided copy buffer for data
+     * \param property_data reference to array of properties to exchange and reduce
+     * \param copybuf reference to provided copy buffer for property_data
+     * \param recvbuf reference to provided recieve buffer for property_data
      */
-    template<class T> void reduce_(GPUVector<T>& data, GPUVector<T>& copybuf)
+    template<class T>
+    void reduce_(GPUVector<T>& property_data, GPUVector<T>& copybuf, GPUVector<T>& recvbuf)
         {
-        if (data.getNumElements() < m_pdata->getN() + m_pdata->getNGhosts())
+        if (property_data.getNumElements() < m_pdata->getN() + m_pdata->getNGhosts())
             {
-            throw std::length_error("Array to exchange has" + std::to_string(data.getNumElements())
-                                    + ", expected "
+            throw std::length_error("Array to exchange has"
+                                    + std::to_string(property_data.getNumElements()) + ", expected "
                                     + std::to_string(m_pdata->getN() + m_pdata->getNGhosts()));
             }
+        ArrayHandle<unsigned int> h_rtag(m_pdata->getRTags(),
+                                         access_location::host,
+                                         access_mode::read);
+        // Set some global counters
+        unsigned int num_tot_recv_ghosts = 0; // total number of ghosts received
+        unsigned int num_tot_recv_ghosts_reverse
+            = 0; // total number of ghosts received in reverse direction
+
         // ensure that copy buffer is clear of data and the right size
-        copybuf.clear() if (copybuf.getNumElements() < m_pdata->getN() + m_pdata->getNGhosts())
-            {
-            copybuf.resize(m_pdata->getN() + m_pdata->getNGhosts());
-            }
+        copybuf.clear();
+        recvbuf.clear();
 
         // update data in these arrays
         for (unsigned int dir = 0; dir < 6; dir++)
             {
             if (!isCommunicating(dir))
                 continue;
+
+            // resize copy buffer as needed
+            unsigned int old_size = (unsigned int)copybuf.size();
+            copybuf.resize(old_size + m_num_forward_ghosts_reverse[dir]
+                           + m_num_copy_local_ghosts_reverse[dir]);
+
+            // copy property of ghost particles to be sent in reverse
+            for (unsigned int ghost_idx = 0; ghost_idx < m_num_copy_local_ghosts_reverse[dir];
+                 ghost_idx++)
+                {
+                unsigned int idx = h_rtag.data[m_copy_ghosts_reverse[ghost_idx]];
+
+                assert(idx < m_pdata->getN() + m_pdata->getNGhosts());
+
+                // copy reverse net force into send buffer
+                copybuf[ghost_idx] = property_data[idx];
+                }
+
+            // Scan the entire recv buf for additional particles. This is data corresponding to
+            // ghosts forwarded to this domain
+            for (unsigned int i = 0; i < m_num_forward_ghosts_reverse[dir]; ++i)
+                {
+                unsigned int idx = m_forward_ghosts_reverse[i];
+                copybuf[m_num_copy_local_ghosts_reverse[dir] + i] = recvbuf[idx];
+                }
+
+            unsigned int send_neighbor = m_decomposition->getNeighborRank(dir);
+
+            // we receive from the direction opposite to the one we send to
+            unsigned int recv_neighbor;
+            if (dir % 2 == 0)
+                recv_neighbor = m_decomposition->getNeighborRank(dir + 1);
+            else
+                recv_neighbor = m_decomposition->getNeighborRank(dir - 1);
+
+            // update number of ghosts received
+            num_tot_recv_ghosts += m_num_recv_ghosts[dir];
+
+            unsigned int start_idx_reverse = num_tot_recv_ghosts_reverse;
+            num_tot_recv_ghosts_reverse
+                += m_num_recv_local_ghosts_reverse[dir] + m_num_recv_forward_ghosts_reverse[dir];
+            m_netforce_reverse_recvbuf.resize(num_tot_recv_ghosts_reverse);
+            // begin send and receive according to reverse plan
+            m_reqs.clear();
+            m_stats.clear();
+
+            MPI_Isend(&copybuf,
+                      (unsigned int)((m_num_copy_local_ghosts_reverse[dir]
+                                      + m_num_forward_ghosts_reverse[dir])
+                                     * sizeof(Scalar4)),
+                      MPI_BYTE,
+                      send_neighbor,
+                      2,
+                      m_mpi_comm,
+                      &m_reqs[0]);
+            MPI_Irecv(&recvbuf + start_idx_reverse,
+                      (unsigned int)((m_num_recv_local_ghosts_reverse[dir]
+                                      + m_num_recv_forward_ghosts_reverse[dir])
+                                     * sizeof(Scalar4)),
+                      MPI_BYTE,
+                      recv_neighbor,
+                      2,
+                      m_mpi_comm,
+                      &m_reqs[1]);
+            MPI_Waitall(2, &m_reqs.front(), &m_stats.front());
+
+            // combine received properties
+            unsigned int n_local_particles = m_pdata->getN();
+            for (unsigned int i = 0;
+                 i < m_num_recv_forward_ghosts_reverse[dir] + m_num_recv_local_ghosts_reverse[dir];
+                 i++)
+                {
+                unsigned int idx = h_rtag.data[m_tag_reverse[start_idx_reverse + i]];
+                if (idx < n_local_particles)
+                    {
+                    property_data[idx] += recvbuf[start_idx_reverse + i];
+                    }
+                }
             }
         }
 
-    virtual void reduceGhostProperty(GPUVector<Scalar3> data, GPUVector<Scalar3> copybuf)
+    virtual void reduceGhostProperty(GPUVector<Scalar3>& data,
+                                     GPUVector<Scalar3>& copybuf,
+                                     GPUVector<Scalar3>& recvbuf)
         {
-        reduce_(data, copybuf);
+        reduce_(data, copybuf, recvbuf);
         }
     };
 
