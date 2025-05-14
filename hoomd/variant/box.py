@@ -120,12 +120,12 @@ class Interpolate(_hoomd.VectorVariantBoxInterpolate, BoxVariant):
     .. math::
 
         \\begin{align*}
-        L_{x}' &= \\lambda L_{2x} + (1 - \\lambda) L_{1x} \\\\
-        L_{y}' &= \\lambda L_{2y} + (1 - \\lambda) L_{1y} \\\\
-        L_{z}' &= \\lambda L_{2z} + (1 - \\lambda) L_{1z} \\\\
-        xy' &= \\lambda xy_{2} + (1 - \\lambda) xy_{1} \\\\
-        xz' &= \\lambda xz_{2} + (1 - \\lambda) xz_{1} \\\\
-        yz' &= \\lambda yz_{2} + (1 - \\lambda) yz_{1} \\\\
+        L_{x}' &= \\lambda L_{fx} + (1 - \\lambda) L_{ix} \\\\
+        L_{y}' &= \\lambda L_{fy} + (1 - \\lambda) L_{iy} \\\\
+        L_{z}' &= \\lambda L_{fz} + (1 - \\lambda) L_{iz} \\\\
+        xy' &= \\lambda xy_{f} + (1 - \\lambda) xy_{i} \\\\
+        xz' &= \\lambda xz_{f} + (1 - \\lambda) xz_{i} \\\\
+        yz' &= \\lambda yz_{f} + (1 - \\lambda) yz_{i} \\\\
         \\end{align*}
 
     Where ``initial_box`` is :math:`(L_{ix}, L_{iy}, L_{iz}, xy_i, xz_i, yz_i)`,
