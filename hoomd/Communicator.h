@@ -783,7 +783,7 @@ class PYBIND11_EXPORT Communicator
 
                 assert(idx < m_pdata->getN() + m_pdata->getNGhosts());
 
-                // copy reverse net force into send buffer
+                // copy reverse property into send buffer
                 // ERROR: ambiguous overload for ‘operator=’ (operand types are
                 // ‘hoomd::GPUVector<double3>::data_proxy’ and
                 // ‘hoomd::GPUVector<double3>::data_proxy’)
@@ -797,6 +797,9 @@ class PYBIND11_EXPORT Communicator
                 // ERROR: cannot convert ‘hoomd::GPUVector<unsigned int>’ to ‘unsigned int’ in
                 // initialization
                 unsigned int idx = m_forward_ghosts_reverse[i];
+                // ERROR: ambiguous overload for ‘operator=’ (operand types are
+                // ‘hoomd::GPUVector<double3>::data_proxy’ and
+                // ‘hoomd::GPUVector<double3>::data_proxy’)
                 copybuf[m_num_copy_local_ghosts_reverse[dir] + i] = recvbuf[idx];
                 }
 
@@ -815,7 +818,7 @@ class PYBIND11_EXPORT Communicator
             unsigned int start_idx_reverse = num_tot_recv_ghosts_reverse;
             num_tot_recv_ghosts_reverse
                 += m_num_recv_local_ghosts_reverse[dir] + m_num_recv_forward_ghosts_reverse[dir];
-            m_netforce_reverse_recvbuf.resize(num_tot_recv_ghosts_reverse);
+            recvbuf.resize(num_tot_recv_ghosts_reverse);
             // begin send and receive according to reverse plan
             m_reqs.clear();
             m_stats.clear();
