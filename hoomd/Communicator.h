@@ -777,11 +777,16 @@ class PYBIND11_EXPORT Communicator
             for (unsigned int ghost_idx = 0; ghost_idx < m_num_copy_local_ghosts_reverse[dir];
                  ghost_idx++)
                 {
+                // ERROR: no match for ‘operator[]’ (operand types are ‘unsigned int* const’ and
+                // ‘hoomd::GPUVector<unsigned int>’)
                 unsigned int idx = h_rtag.data[m_copy_ghosts_reverse[ghost_idx]];
 
                 assert(idx < m_pdata->getN() + m_pdata->getNGhosts());
 
                 // copy reverse net force into send buffer
+                // ERROR: ambiguous overload for ‘operator=’ (operand types are
+                // ‘hoomd::GPUVector<double3>::data_proxy’ and
+                // ‘hoomd::GPUVector<double3>::data_proxy’)
                 copybuf[ghost_idx] = property_data[idx];
                 }
 
@@ -789,6 +794,8 @@ class PYBIND11_EXPORT Communicator
             // ghosts forwarded to this domain
             for (unsigned int i = 0; i < m_num_forward_ghosts_reverse[dir]; ++i)
                 {
+                // ERROR: cannot convert ‘hoomd::GPUVector<unsigned int>’ to ‘unsigned int’ in
+                // initialization
                 unsigned int idx = m_forward_ghosts_reverse[i];
                 copybuf[m_num_copy_local_ghosts_reverse[dir] + i] = recvbuf[idx];
                 }
@@ -842,6 +849,9 @@ class PYBIND11_EXPORT Communicator
                 unsigned int idx = h_rtag.data[m_tag_reverse[start_idx_reverse + i]];
                 if (idx < n_local_particles)
                     {
+                    // ERROR: error: no match for ‘operator+=’ (operand types are
+                    // ‘hoomd::GPUVector<double3>::data_proxy’ and
+                    // ‘hoomd::GPUVector<double3>::data_proxy’)
                     property_data[idx] += recvbuf[start_idx_reverse + i];
                     }
                 }
