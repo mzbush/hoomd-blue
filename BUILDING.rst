@@ -237,8 +237,7 @@ Other option changes take effect at any time:
 - ``HOOMD_GPU_PLATFORM`` - Choose either ``CUDA`` or ``HIP`` as a GPU backend (default: ``CUDA``).
 - ``HOOMD_SHORTREAL_SIZE`` - Size in bits of the ``ShortReal`` type (default: ``32``).
 
-  - When set to ``32``, perform force computations, overlap checks, and other local calculations
-    in single precision.
+  - When set to ``32``, perform HPMC overlap checks in single precision.
   - When set to ``64``, perform **all** calculations in double precision.
 
 - ``HOOMD_LONGREAL_SIZE`` - Size in bits of the ``LongReal`` type (default: ``64``).
