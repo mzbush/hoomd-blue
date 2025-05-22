@@ -333,7 +333,17 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
     {
     ArrayHandle<Scalar3> h_linmom_accum(m_linmom_accum, access_location::host, access_mode::read);
     ArrayHandle<Scalar3> h_angmom_accum(m_angmom_accum, access_location::host, access_mode::read);
-
+    ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
+    const BoxDim& box = m_pdata->getBox();
+    uchar3 periodic = box.getPeriodic();
+    uint3 conditions = make_uint3(0, 0, 0);
+    uint3 cell_dim = m_cl->getDim();
+    const BoxDim& global_box = m_pdata->getGlobalBox();
+    const Scalar3 grid_shift = m_cl->getGridShift();
+    uint3 n_global_cells = m_cl->getGlobalDim();
+    uint3 h_global_cell_dim = m_cl->getGlobalDim();
+    const Index3D& ci = m_cl->getCellIndexer();
+    const int3& h_origin_idx = m_cl->getOriginIndex();
     ArrayHandle<Scalar4> h_velocity(m_pdata->getVelocities(),
                                     access_location::host,
                                     access_mode::readwrite);
@@ -406,6 +416,105 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
 
         // save update
         h_angmom.data[idx] = quat_to_scalar4(angmom);
+
+        // find the cell this particle would belong to
+        Scalar4 postype_i = h_pos.data[idx];
+        Scalar3 pos_i = make_scalar3(postype_i.x, postype_i.y, postype_i.z);
+        const Scalar3 fractional_pos_i = global_box.makeFraction(pos_i) - grid_shift;
+        int3 global_bin = make_int3((int)std::floor(fractional_pos_i.x * h_global_cell_dim.x),
+                                    (int)std::floor(fractional_pos_i.y * h_global_cell_dim.y),
+                                    (int)std::floor(fractional_pos_i.z * h_global_cell_dim.z));
+
+        // wrap cell back through the boundaries (grid shifting may send +/- 1 outside of range)
+        // this is done using periodic from the "local" box, since this will be periodic
+        // only when there is one rank along the dimension
+        if (periodic.x)
+            {
+            if (global_bin.x == (int)n_global_cells.x)
+                global_bin.x = 0;
+            else if (global_bin.x == -1)
+                global_bin.x = n_global_cells.x - 1;
+            }
+        if (periodic.y)
+            {
+            if (global_bin.y == (int)n_global_cells.y)
+                global_bin.y = 0;
+            else if (global_bin.y == -1)
+                global_bin.y = n_global_cells.y - 1;
+            }
+        if (periodic.z)
+            {
+            if (global_bin.z == (int)n_global_cells.z)
+                global_bin.z = 0;
+            else if (global_bin.z == -1)
+                global_bin.z = n_global_cells.z - 1;
+            }
+
+        // compute the local cell
+        int3 bin = make_int3(global_bin.x - h_origin_idx.x,
+                             global_bin.y - h_origin_idx.y,
+                             global_bin.z - h_origin_idx.z);
+        // these checks guard against round-off errors with domain decomposition
+        if (!periodic.x)
+            {
+            if (bin.x == -1)
+                bin.x = 0;
+            else if (bin.x == (int)cell_dim.x)
+                bin.x = cell_dim.x - 1;
+            }
+        if (!periodic.y)
+            {
+            if (bin.y == -1)
+                bin.y = 0;
+            else if (bin.y == (int)cell_dim.y)
+                bin.y = cell_dim.y - 1;
+            }
+        if (!periodic.z)
+            {
+            if (bin.z == -1)
+                bin.z = 0;
+            else if (bin.z == (int)cell_dim.z)
+                bin.z = cell_dim.z - 1;
+            }
+
+        // validate and make sure no particles blew out of the box
+        if ((bin.x < 0 || bin.x >= (int)cell_dim.x) || (bin.y < 0 || bin.y >= (int)cell_dim.y)
+            || (bin.z < 0 || bin.z >= (int)cell_dim.z))
+            {
+            conditions.z = idx + 1;
+            continue;
+            }
+
+        unsigned int bin_idx = ci(bin.x, bin.y, bin.z);
+
+        // get the cell velocity, kinetic energy, and new temperature
+        ArrayHandle<double4> h_cell_vel(m_thermo->getCellVelocities(),
+                                        access_location::host,
+                                        access_mode::read);
+        ArrayHandle<double3> h_cell_energy(m_thermo->getCellEnergies(),
+                                           access_location::host,
+                                           access_mode::read);
+
+        const Scalar4 vel_mass_cell = h_cell_vel.data[bin_idx];
+        const vec3<Scalar> vel_cell(vel_mass_cell);
+        const Scalar mass_cell = vel_mass_cell.w;
+        const double3 cell_energy = h_cell_energy.data[bin_idx];
+        const unsigned int np = __double_as_int(cell_energy.z);
+        Scalar4 vel_com;
+        if (mass + mass_cell > 0)
+            {
+            vel_com.x = (vel_mass.x * mass + vel_mass_cell.x * mass_cell) / (mass + mass_cell);
+            vel_com.y = (vel_mass.y * mass + vel_mass_cell.y * mass_cell) / (mass + mass_cell);
+            vel_com.z = (vel_mass.z * mass + vel_mass_cell.z * mass_cell) / (mass + mass_cell);
+            vel_com.w = mass + mass_cell;
+            }
+        Scalar kinetic_energy
+            = cell_energy.x
+              + 0.5 * mass
+                    * (vel_mass.x * vel_mass.x + vel_mass.y * vel_mass.y + vel_mass.z * vel_mass.z);
+        Scalar temperature = 2 * kinetic_energy / (3 * (np - 1 + 1));
+
+        // thermostat relative velocities
         }
     }
 

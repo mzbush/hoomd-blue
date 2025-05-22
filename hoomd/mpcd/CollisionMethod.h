@@ -18,6 +18,7 @@
 #endif
 
 #include "CellList.h"
+#include "CellThermoCompute.h"
 #include "hoomd/md/ForceComposite.h"
 
 #include "hoomd/Autotuned.h"
@@ -94,11 +95,22 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
     virtual void setCellList(std::shared_ptr<mpcd::CellList> cl)
         {
         m_cl = cl;
+        detachCallbacks();
         if (m_cl)
             {
             m_cl->setEmbeddedGroup(m_embed_group);
+            m_thermo = std::make_shared<mpcd::CellThermoCompute>(m_sysdef, m_cl);
+            attachCallbacks();
+            }
+        else
+            {
+            m_thermo = std::shared_ptr<mpcd::CellThermoCompute>();
             }
         }
+
+    virtual void attachCallbacks();
+
+    virtual void detachCallbacks();
 
     //! Get the rigid body definitions
     std::shared_ptr<hoomd::md::ForceComposite> getRigid()
@@ -113,6 +125,7 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
         }
 
     protected:
+    std::shared_ptr<mpcd::CellThermoCompute> m_thermo;         //!< Cell thermo
     std::shared_ptr<SystemDefinition> m_sysdef;                //!< HOOMD system definition
     std::shared_ptr<hoomd::ParticleData> m_pdata;              //!< HOOMD particle data
     std::shared_ptr<mpcd::ParticleData> m_mpcd_pdata;          //!< MPCD particle data
