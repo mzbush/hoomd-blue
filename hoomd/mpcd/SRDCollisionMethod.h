@@ -93,9 +93,9 @@ class PYBIND11_EXPORT SRDCollisionMethod : public mpcd::CollisionMethod
         }
 
     protected:
-    std::shared_ptr<mpcd::CellThermoCompute> m_thermo; //!< Cell thermo
-    GPUVector<double3> m_rotvec;                       //!< MPCD rotation vectors
-    Scalar m_angle;                                    //!< MPCD rotation angle (degrees)
+    // std::shared_ptr<mpcd::CellThermoCompute> m_thermo; //!< Cell thermo
+    GPUVector<double3> m_rotvec; //!< MPCD rotation vectors
+    Scalar m_angle;              //!< MPCD rotation angle (degrees)
 
     std::shared_ptr<Variant> m_T; //!< Temperature for thermostat
     GPUVector<double> m_factors;  //!< Cell-level rescale factors

@@ -95,22 +95,16 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
     virtual void setCellList(std::shared_ptr<mpcd::CellList> cl)
         {
         m_cl = cl;
-        detachCallbacks();
         if (m_cl)
             {
             m_cl->setEmbeddedGroup(m_embed_group);
             m_thermo = std::make_shared<mpcd::CellThermoCompute>(m_sysdef, m_cl);
-            attachCallbacks();
             }
         else
             {
             m_thermo = std::shared_ptr<mpcd::CellThermoCompute>();
             }
         }
-
-    virtual void attachCallbacks();
-
-    virtual void detachCallbacks();
 
     //! Get the rigid body definitions
     std::shared_ptr<hoomd::md::ForceComposite> getRigid()

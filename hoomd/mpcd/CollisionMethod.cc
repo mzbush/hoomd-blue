@@ -7,6 +7,8 @@
  */
 
 #include "CollisionMethod.h"
+#include "hoomd/RNGIdentifiers.h"
+#include "hoomd/RandomNumbers.h"
 #ifdef ENABLE_MPI
 #include "hoomd/Communicator.h"
 #endif // ENABLE_MPI
@@ -334,15 +336,18 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
     ArrayHandle<Scalar3> h_linmom_accum(m_linmom_accum, access_location::host, access_mode::read);
     ArrayHandle<Scalar3> h_angmom_accum(m_angmom_accum, access_location::host, access_mode::read);
     ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
+    ArrayHandle<unsigned int> h_cell_size(m_cl->getCellSizeArray(),
+                                          access_location::host,
+                                          access_mode::read);
     const BoxDim& box = m_pdata->getBox();
     uchar3 periodic = box.getPeriodic();
-    uint3 conditions = make_uint3(0, 0, 0);
     uint3 cell_dim = m_cl->getDim();
     const BoxDim& global_box = m_pdata->getGlobalBox();
     const Scalar3 grid_shift = m_cl->getGridShift();
     uint3 n_global_cells = m_cl->getGlobalDim();
     uint3 h_global_cell_dim = m_cl->getGlobalDim();
     const Index3D& ci = m_cl->getCellIndexer();
+    const Index3D& global_ci = m_cl->getGlobalCellIndexer();
     const int3& h_origin_idx = m_cl->getOriginIndex();
     ArrayHandle<Scalar4> h_velocity(m_pdata->getVelocities(),
                                     access_location::host,
@@ -481,7 +486,6 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
         if ((bin.x < 0 || bin.x >= (int)cell_dim.x) || (bin.y < 0 || bin.y >= (int)cell_dim.y)
             || (bin.z < 0 || bin.z >= (int)cell_dim.z))
             {
-            conditions.z = idx + 1;
             continue;
             }
 
@@ -500,14 +504,7 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
         const Scalar mass_cell = vel_mass_cell.w;
         const double3 cell_energy = h_cell_energy.data[bin_idx];
         const unsigned int np = __double_as_int(cell_energy.z);
-        Scalar4 vel_com;
-        if (mass + mass_cell > 0)
-            {
-            vel_com.x = (vel_mass.x * mass + vel_mass_cell.x * mass_cell) / (mass + mass_cell);
-            vel_com.y = (vel_mass.y * mass + vel_mass_cell.y * mass_cell) / (mass + mass_cell);
-            vel_com.z = (vel_mass.z * mass + vel_mass_cell.z * mass_cell) / (mass + mass_cell);
-            vel_com.w = mass + mass_cell;
-            }
+
         Scalar kinetic_energy
             = cell_energy.x
               + 0.5 * mass
@@ -515,6 +512,46 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
         Scalar temperature = 2 * kinetic_energy / (3 * (np - 1 + 1));
 
         // thermostat relative velocities
+        // get the global index from the bin numbers found
+        const int3 global_cell = m_cl->getGlobalCell(bin);
+        const unsigned int global_idx = global_ci(global_cell.x, global_cell.y, global_cell.z);
+        // get the rng
+        uint16_t seed = m_sysdef->getSeed();
+        hoomd::RandomGenerator rng(
+            hoomd::Seed(hoomd::RNGIdentifier::CollisionMethod, timestep, seed),
+            hoomd::Counter(global_idx));
+
+        // the total number of degrees of freedom in the cell divided by 2
+        const double alpha = m_sysdef->getNDimensions() * (np - 1 + 1) / (double)2.;
+
+        // rescale velocity if there are other particles in the cell
+        if (alpha > 0)
+            {
+            // draw a random kinetic energy for the cell at the set temperature
+            hoomd::GammaDistribution<double> gamma_gen(alpha, 1.0);
+            const double rand_ke = gamma_gen(rng);
+
+            // generate the scale factor from the current temperature
+            // (don't use the kinetic energy of this cell, since this
+            // is total not relative to COM)
+            const double cur_ke = alpha * temperature;
+            double factor = (cur_ke > 0.) ? fast::sqrt(rand_ke / cur_ke) : 1.;
+
+            // rescale with the temperature of the cell
+            Scalar4 vel_com;
+            if (mass + mass_cell > 0)
+                {
+                vel_com.x = (vel_mass.x * mass + vel_mass_cell.x * mass_cell) / (mass + mass_cell);
+                vel_com.y = (vel_mass.y * mass + vel_mass_cell.y * mass_cell) / (mass + mass_cell);
+                vel_com.z = (vel_mass.z * mass + vel_mass_cell.z * mass_cell) / (mass + mass_cell);
+                vel_com.w = mass + mass_cell;
+
+                vel_mass.x += (vel_mass.x - vel_com.x) * factor;
+                vel_mass.y += (vel_mass.y - vel_com.y) * factor;
+                vel_mass.z += (vel_mass.z - vel_com.z) * factor;
+                h_velocity.data[idx] = vel_mass;
+                }
+            }
         }
     }
 
