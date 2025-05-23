@@ -192,8 +192,7 @@ class AlchemicalDOF(_HOOMDBaseObject):
     def _attach_hook(self):
         if not self._force._attached:
             raise RuntimeError(
-                "Call Simulation.run(0) before attaching "
-                "alchemical degrees of freedom."
+                "Call Simulation.run(0) before attaching alchemical degrees of freedom."
             )
         self._cpp_obj = self._force._cpp_obj.getAlchemicalPairParticle(
             self.typepair, self.name

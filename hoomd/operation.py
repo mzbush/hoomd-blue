@@ -105,9 +105,7 @@ class _HOOMDGetSetAttrBase:
                 self._typeparam_dict[attr][k] = v
         except TypeError:
             raise ValueError(
-                "To set {}, you must use a dictionary " "with types as keys.".format(
-                    attr
-                )
+                "To set {}, you must use a dictionary with types as keys.".format(attr)
             )
 
     def __dir__(self):
@@ -360,7 +358,7 @@ class _HOOMDBaseObject(_HOOMDGetSetAttrBase, _DependencyRelation, metaclass=Logg
                 typeparam._attach(cpp_obj, simulation.state)
             except ValueError as err:
                 raise err.__class__(
-                    f"For {type(self)} in TypeParameter {typeparam.name} " f"{err!s}"
+                    f"For {type(self)} in TypeParameter {typeparam.name} {err!s}"
                 )
 
     def _unapply_typeparam_dict(self):
@@ -525,9 +523,7 @@ class AutotunedObject(_HOOMDBaseObject):
             operation.tune_kernel_parameters()
         """
         if not self._attached:
-            raise RuntimeError(
-                "Call Simulation.run() before " "tune_kernel_parameters."
-            )
+            raise RuntimeError("Call Simulation.run() before tune_kernel_parameters.")
         self._cpp_obj.startAutotuning()
 
 

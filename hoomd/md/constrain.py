@@ -148,9 +148,11 @@ class Rigid(Constraint):
 
     .. math::
 
+        \begin{split}
         \vec{r}_c &= \vec{r}_b
                     + \mathbf{q}_b \vec{r}_{c,\mathrm{body}} \mathbf{q}_b^* \\
         \mathbf{q}_c &= \mathbf{q}_b \mathbf{q}_{c,\mathrm{body}}
+        \end{split}
 
     where :math:`\vec{r}_c` and :math:`\mathbf{q}_c` are the position and
     orientation of a constituent particle in the simulation box,
@@ -197,11 +199,13 @@ class Rigid(Constraint):
 
     .. math::
 
+        \begin{split}
         \vec{F}_b' &= \vec{F}_b + \sum_c \vec{F}_c \\
         \vec{U}_b' &= U_b + \sum_c U_c \\
         \vec{\tau}_b' &= \vec{\tau}_b + \sum_c \vec{\tau}_c +
             (\mathbf{q}_b \vec{r}_{c,\mathrm{body}} \mathbf{q}_b^*)
             \times \vec{F}_c
+        \end{split}
 
     `Rigid` also computes the corrected virial accounting for the effective
     constraint force (see `Glaser 2020

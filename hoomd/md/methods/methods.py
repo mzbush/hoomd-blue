@@ -126,7 +126,7 @@ class Thermostatted(Method):
             return
 
         if new_thermostat._attached:
-            raise RuntimeError("Trying to set a thermostat that is " "already attached")
+            raise RuntimeError("Trying to set a thermostat that is already attached")
         if self._attached:
             new_thermostat._set_thermo(self.filter, self._thermo)
             new_thermostat._attach(self._simulation)
@@ -329,12 +329,12 @@ class ConstantPressure(Thermostatted):
 
     .. math::
 
+        \begin{split}
         \frac{d^2 L}{dt^2} &= V W^{-1} (S - S_{ext})
-            - \gamma \frac{dL}{dt} + R(t)
-
-        \langle R \rangle &= 0
-
+            - \gamma \frac{dL}{dt} + R(t) \\
+        \langle R \rangle &= 0 \\
         \langle |R|^2 \rangle &= 2 \gamma kT \delta t W^{-1}
+        \end{split}
 
     Where :math:`\gamma` is the friction on the barostat piston, which damps
     unphysical volume oscillations at the cost of non-deterministic integration,
@@ -655,9 +655,7 @@ class ConstantPressure(Thermostatted):
             `hoomd.md.methods.thermostats.MTTK.thermalize_dof`
         """
         if not self._attached:
-            raise RuntimeError(
-                "Call Simulation.run(0) before" "thermalize_barostat_dof"
-            )
+            raise RuntimeError("Call Simulation.run(0) beforethermalize_barostat_dof")
 
         self._simulation._warn_if_seed_unset()
         self._cpp_obj.thermalizeBarostatDOF(self._simulation.timestep)
@@ -764,12 +762,12 @@ class Langevin(Method):
 
     .. math::
 
+        \begin{split}
         m \frac{d\vec{v}}{dt} &= \vec{F}_\mathrm{C} - \gamma \cdot \vec{v} +
-        \vec{F}_\mathrm{R}
-
-        \langle \vec{F}_\mathrm{R} \rangle &= 0
-
+        \vec{F}_\mathrm{R} \\
+        \langle \vec{F}_\mathrm{R} \rangle &= 0 \\
         \langle |\vec{F}_\mathrm{R}|^2 \rangle &= 2 d kT \gamma / \delta t
+        \end{split}
 
     where :math:`\vec{F}_\mathrm{C}` is the force on the particle from all
     potentials and constraint forces, :math:`\gamma` is the drag coefficient,
@@ -783,13 +781,13 @@ class Langevin(Method):
 
     .. math::
 
+        \begin{split}
         I \frac{d\vec{\omega}}{dt} &= \vec{\tau}_\mathrm{C} - \gamma_r \cdot
-        \vec{\omega} + \vec{\tau}_\mathrm{R}
-
-        \langle \vec{\tau}_\mathrm{R} \rangle &= 0,
-
+        \vec{\omega} + \vec{\tau}_\mathrm{R} \\
+        \langle \vec{\tau}_\mathrm{R} \rangle &= 0, \\
         \langle \tau_\mathrm{R}^i \cdot \tau_\mathrm{R}^i \rangle &=
         2 k T \gamma_r^i / \delta t,
+        \end{split}
 
     where :math:`\vec{\tau}_\mathrm{C} = \vec{\tau}_\mathrm{net}`,
     :math:`\gamma_r^i` is the i-th component of the rotational drag coefficient
@@ -970,16 +968,14 @@ class Brownian(Method):
 
     .. math::
 
-        \frac{d\vec{r}}{dt} &= \frac{\vec{F}_\mathrm{C} +
-        \vec{F}_\mathrm{R}}{\gamma},
-
-        \langle \vec{F}_\mathrm{R} \rangle &= 0,
-
-        \langle |\vec{F}_\mathrm{R}|^2 \rangle &= 2 d k T \gamma / \delta t,
-
-        \langle \vec{v}(t) \rangle &= 0,
-
-        \langle |\vec{v}(t)|^2 \rangle &= d k T / m,
+        \begin{split}
+        \frac{d\vec{r}}{dt} &= \frac{\vec{F}_\mathrm{C}
+        + \vec{F}_\mathrm{R}}{\gamma}, \\
+        \langle \vec{F}_\mathrm{R} \rangle &= 0, \\
+        \langle |\vec{F}_\mathrm{R}|^2 \rangle &= 2 d k T \gamma / \delta t, \\
+        \langle \vec{v}(t) \rangle &= 0, \\
+        \langle |\vec{v}(t)|^2 \rangle &= d k T / m, \\
+        \end{split}
 
     where :math:`\vec{F}_\mathrm{C} = \vec{F}_\mathrm{net}` is the net force on
     the particle from all forces (`hoomd.md.Integrator.forces`) and constraints
@@ -994,17 +990,15 @@ class Brownian(Method):
 
     .. math::
 
+        \begin{split}
         \frac{d\mathbf{q}}{dt} &= \frac{\vec{\tau}_\mathrm{C} +
-        \vec{\tau}_\mathrm{R}}{\gamma_r},
-
-        \langle \vec{\tau}_\mathrm{R} \rangle &= 0,
-
+        \vec{\tau}_\mathrm{R}}{\gamma_r}, \\
+        \langle \vec{\tau}_\mathrm{R} \rangle &= 0, \\
         \langle \tau_\mathrm{R}^i \cdot \tau_\mathrm{R}^i \rangle &=
-        2 k T \gamma_r^i / \delta t,
-
-        \langle \vec{L}(t) \rangle &= 0,
-
-        \langle L^i(t) \cdot L^i(t) \rangle &= k T \cdot I^i,
+        2 k T \gamma_r^i / \delta t, \\
+        \langle \vec{L}(t) \rangle &= 0, \\
+        \langle L^i(t) \cdot L^i(t) \rangle &= k T \cdot I^i, \\
+        \end{split}
 
     where :math:`\vec{\tau}_\mathrm{C} = \vec{\tau}_\mathrm{net}`,
     :math:`\gamma_r^i` is the i-th component of the rotational drag coefficient
@@ -1174,13 +1168,12 @@ class OverdampedViscous(Method):
 
     .. math::
 
-        \frac{d\vec{r}}{dt} &= \vec{v}
-
-        \vec{v(t)} &= \frac{\vec{F}_\mathrm{C}}{\gamma}
-
-        \frac{d\mathbf{q}}{dt} &= \vec{\tau}
-
+        \begin{split}
+        \frac{d\vec{r}}{dt} &= \vec{v} \\
+        \vec{v(t)} &= \frac{\vec{F}_\mathrm{C}}{\gamma} \\
+        \frac{d\mathbf{q}}{dt} &= \vec{\tau} \\
         \tau^i &= \frac{\tau_\mathrm{C}^i}{\gamma_r^i}
+        \end{split}
 
     where :math:`\vec{F}_\mathrm{C} = \vec{F}_\mathrm{net}` is the net force on
     the particle from all forces (`hoomd.md.Integrator.forces`) and constraints

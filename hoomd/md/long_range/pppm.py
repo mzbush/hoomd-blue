@@ -29,7 +29,7 @@ def make_pppm_coulomb_forces(nlist, resolution, order, r_cut, alpha=0):
 
     .. math::
 
-        U_\\mathrm{coulomb} = \\frac{1}{2} \\sum_\\vec{n} \\sum_{i=0}^{N-1}
+        U_\\mathrm{coulomb} = \\frac{1}{2} \\sum_{\\vec{n}} \\sum_{i=0}^{N-1}
           \\sum_{j=0}^{N-1} u_\\mathrm{coulomb}(\\vec{r}_j - \\vec{r}_i +
           n_1 \\cdot \\vec{a}_1 + n_2 \\cdot \\vec{a}_2 +
           n_3 \\cdot \\vec{a}_3, q_i, q_j)
@@ -229,7 +229,7 @@ class Coulomb(Force):
         fmid = _diffpr(hx, hy, hz, Lx, Ly, Lz, N, order, kappa, q2, rcut)
 
         if f * fmid >= 0.0:
-            raise RuntimeError("Cannot compute PPPM Coloumb forces,\n" "f*fmid >= 0.0")
+            raise RuntimeError("Cannot compute PPPM Coloumb forces,\nf*fmid >= 0.0")
 
         if f < 0.0:
             dgew = gew2 - gew1
@@ -249,7 +249,7 @@ class Coulomb(Force):
                 rtb = kappa
             ncount += 1
             if ncount > 10000.0:
-                raise RuntimeError("Cannot compute PPPM\n" "kappa is not converging")
+                raise RuntimeError("Cannot compute PPPM\nkappa is not converging")
 
         # set parameters
         particle_types = self._simulation.state.particle_types

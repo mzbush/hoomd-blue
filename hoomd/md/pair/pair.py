@@ -795,6 +795,8 @@ class DPD(Pair):
     where
 
     .. math::
+
+        \begin{split}
         F_{\mathrm{C}}(r) &= A \cdot  w(r_{ij}), \\
         F_{\mathrm{R, ij}}(r_{ij}) &= - \theta_{ij}\sqrt{3}
         \sqrt{\frac{2k_b\gamma T}{\Delta t}}\cdot w(r_{ij}),  \\
@@ -806,6 +808,7 @@ class DPD(Pair):
         & r < r_{\mathrm{cut}} \\
         0 & r \ge r_{\mathrm{cut}} \\
         \end{cases},
+        \end{split}
 
 
     :math:`\hat r_{ij}` is a normalized vector from particle i to
@@ -957,6 +960,8 @@ class DPDLJ(Pair):
     on every particle in the simulation state with:
 
     .. math::
+
+        \begin{split}
         F &= F_{\mathrm{C}}(r) + F_{\mathrm{R,ij}}(r_{ij}) +
             F_{\mathrm{D,ij}}(v_{ij}), \\
         F_{\mathrm{C}}(r) &= \partial U / \partial r, \\
@@ -973,6 +978,7 @@ class DPDLJ(Pair):
         & r < r_{\mathrm{cut}} \\
         0 & r \ge r_{\mathrm{cut}} \\
         \end{cases},
+        \end{split}
 
     :math:`\hat r_{ij}` is a normalized vector from particle i to
     particle j, :math:`v_{ij} = v_i - v_j`, and :math:`\theta_{ij}` is a
@@ -1529,12 +1535,14 @@ class DLVO(Pair):
     on every particle in the simulation state with:
 
     .. math::
+        \begin{split}
         V_{\mathrm{DLVO}}(r) = &- \frac{A}{6} \left[
             \frac{2a_1a_2}{r^2 - (a_1+a_2)^2} +
             \frac{2a_1a_2}{r^2 - (a_1-a_2)^2} \\
             + \log \left(
             \frac{r^2 - (a_1+a_2)^2}{r^2 - (a_1-a_2)^2} \right) \right] \\
             & + \frac{a_1 a_2}{a_1+a_2} Z e^{-\kappa(r - (a_1+a_2))}
+        \end{split}
 
     where :math:`a_1` is the radius of first particle in the pair, :math:`a_2`
     is the radius of second particle in the pair, :math:`A` is the Hamaker
@@ -1804,8 +1812,10 @@ class Fourier(Pair):
 
     .. math::
 
+        \begin{split}
         a_1 &= \sum_{n=2}^4 (-1)^n a_n \\
         b_1 &= \sum_{n=2}^4 n (-1)^n b_n \\
+        \end{split}
 
     enforce :math:`U(r_\mathrm{cut}) = 0`.
 

@@ -9,12 +9,12 @@ a time :math:`\Delta t`:
 
 .. math::
 
-    \mathbf{v}(t + \Delta t/2) &= \mathbf{v}(t) + (\mathbf{f}/m)(\Delta t / 2)
-
-    \mathbf{r}(t+\Delta t) &= \mathbf{r}(t) + \mathbf{v}(t+\Delta t/2) \Delta t
-
+    \begin{split}
+    \mathbf{v}(t + \Delta t/2) &= \mathbf{v}(t) + (\mathbf{f}/m)(\Delta t / 2) \\
+    \mathbf{r}(t+\Delta t) &= \mathbf{r}(t) + \mathbf{v}(t+\Delta t/2) \Delta t \\
     \mathbf{v}(t + \Delta t) &= \mathbf{v}(t + \Delta t/2) +
     (\mathbf{f}/m)(\Delta t / 2)
+    \end{split}
 
 where **r** and **v** are the particle position and velocity, respectively, and
 **f** is the external force acting on the particles of mass *m*. For a list of
@@ -169,7 +169,7 @@ class Bulk(StreamingMethod):
         if isinstance(sim.device, hoomd.device.GPU):
             class_info[1] += "GPU"
         class_ = getattr(*class_info, None)
-        assert class_ is not None, "C++ streaming method could not be " "determined"
+        assert class_ is not None, "C++ streaming method could not be determined"
 
         self._cpp_obj = class_(
             sim.state._cpp_sys_def,

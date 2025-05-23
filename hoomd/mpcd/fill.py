@@ -197,7 +197,7 @@ class GeometryFiller(VirtualParticleFiller):
         if isinstance(sim.device, hoomd.device.GPU):
             class_info[1] += "GPU"
         class_ = getattr(*class_info, None)
-        assert class_ is not None, "Virtual particle filler for geometry " "not found"
+        assert class_ is not None, "Virtual particle filler for geometry not found"
 
         self._cpp_obj = class_(
             sim.state._cpp_sys_def,

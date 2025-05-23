@@ -27,7 +27,7 @@ class _MoveSizeTuneDefinition(mc_move_tune._MCTuneDefinition):
     def __init__(self, attr, type, target, domain=None):
         if attr not in self._attr_acceptance:
             raise ValueError(
-                "Only {} are allowed as tunable " "attributes.".format(
+                "Only {} are allowed as tunable attributes.".format(
                     self._available_attrs
                 )
             )
