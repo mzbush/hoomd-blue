@@ -557,9 +557,9 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
                 vel_com.z = (vel_mass.z * mass + vel_mass_cell.z * mass_cell) / (mass + mass_cell);
                 vel_com.w = mass + mass_cell;
 
-                vel_mass.x += (vel_mass.x - vel_com.x) * factor;
-                vel_mass.y += (vel_mass.y - vel_com.y) * factor;
-                vel_mass.z += (vel_mass.z - vel_com.z) * factor;
+                vel_mass.x = vel_com.x + (vel_mass.x - vel_com.x) * factor;
+                vel_mass.y = vel_com.y + (vel_mass.y - vel_com.y) * factor;
+                vel_mass.z = vel_com.z + (vel_mass.z - vel_com.z) * factor;
                 h_velocity.data[idx] = vel_mass;
 
                 // rescale the other particles in the cell
