@@ -119,7 +119,7 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
         }
 
     protected:
-    std::shared_ptr<mpcd::CellThermoCompute> m_thermo;         //!< Cell thermo
+    std::shared_ptr<mpcd::CellThermoCompute> m_thermo_rigid_thermostat;         //!< Cell thermo
     std::shared_ptr<SystemDefinition> m_sysdef;                //!< HOOMD system definition
     std::shared_ptr<hoomd::ParticleData> m_pdata;              //!< HOOMD particle data
     std::shared_ptr<mpcd::ParticleData> m_mpcd_pdata;          //!< MPCD particle data
