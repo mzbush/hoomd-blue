@@ -56,7 +56,7 @@ class PYBIND11_EXPORT ATCollisionMethod : public mpcd::CollisionMethod
         }
 
     protected:
-    // std::shared_ptr<mpcd::CellThermoCompute> m_thermo;      //!< Cell thermo
+    std::shared_ptr<mpcd::CellThermoCompute> m_thermo;      //!< Cell thermo
     std::shared_ptr<mpcd::CellThermoCompute> m_rand_thermo; //!< Cell thermo for random velocities
     std::shared_ptr<Variant> m_T;                           //!< Temperature for thermostat
 

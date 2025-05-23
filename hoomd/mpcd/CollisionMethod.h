@@ -98,11 +98,11 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
         if (m_cl)
             {
             m_cl->setEmbeddedGroup(m_embed_group);
-            m_thermo = std::make_shared<mpcd::CellThermoCompute>(m_sysdef, m_cl);
+            m_thermo_rigid_thermostat = std::make_shared<mpcd::CellThermoCompute>(m_sysdef, m_cl);
             }
         else
             {
-            m_thermo = std::shared_ptr<mpcd::CellThermoCompute>();
+            m_thermo_rigid_thermostat = std::shared_ptr<mpcd::CellThermoCompute>();
             }
         }
 
@@ -119,11 +119,11 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
         }
 
     protected:
-    std::shared_ptr<mpcd::CellThermoCompute> m_thermo_rigid_thermostat;         //!< Cell thermo
-    std::shared_ptr<SystemDefinition> m_sysdef;                //!< HOOMD system definition
-    std::shared_ptr<hoomd::ParticleData> m_pdata;              //!< HOOMD particle data
-    std::shared_ptr<mpcd::ParticleData> m_mpcd_pdata;          //!< MPCD particle data
-    std::shared_ptr<const ExecutionConfiguration> m_exec_conf; //!< Execution configuration
+    std::shared_ptr<mpcd::CellThermoCompute> m_thermo_rigid_thermostat; //!< Cell thermo
+    std::shared_ptr<SystemDefinition> m_sysdef;                         //!< HOOMD system definition
+    std::shared_ptr<hoomd::ParticleData> m_pdata;                       //!< HOOMD particle data
+    std::shared_ptr<mpcd::ParticleData> m_mpcd_pdata;                   //!< MPCD particle data
+    std::shared_ptr<const ExecutionConfiguration> m_exec_conf;          //!< Execution configuration
 
     std::shared_ptr<mpcd::CellList> m_cl;                      //!< MPCD cell list
     std::shared_ptr<ParticleGroup> m_embed_group;              //!< Embedded particles

@@ -354,6 +354,13 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
     ArrayHandle<unsigned int> h_rtag(m_pdata->getRTags(), access_location::host, access_mode::read);
 
     // for rescaling the velocity to match the thermostat
+    m_thermo_rigid_thermostat->compute(timestep);
+    ArrayHandle<double4> h_cell_vel(m_thermo_rigid_thermostat->getCellVelocities(),
+                                    access_location::host,
+                                    access_mode::read);
+    ArrayHandle<double3> h_cell_energy(m_thermo_rigid_thermostat->getCellEnergies(),
+                                       access_location::host,
+                                       access_mode::read);
     ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
     ArrayHandle<unsigned int> h_cell_size(m_cl->getCellSizeArray(),
                                           access_location::host,
@@ -503,13 +510,6 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
         unsigned int bin_idx = ci(bin.x, bin.y, bin.z);
 
         // get the cell velocity, kinetic energy, and new temperature
-        ArrayHandle<double4> h_cell_vel(m_thermo->getCellVelocities(),
-                                        access_location::host,
-                                        access_mode::read);
-        ArrayHandle<double3> h_cell_energy(m_thermo->getCellEnergies(),
-                                           access_location::host,
-                                           access_mode::read);
-
         const Scalar4 vel_mass_cell = h_cell_vel.data[bin_idx];
         const vec3<Scalar> vel_cell(vel_mass_cell);
         const Scalar mass_cell = vel_mass_cell.w;
