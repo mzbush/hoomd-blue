@@ -146,13 +146,6 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
     //! Finish process of applying collisions to rigid bodies
     void transferRigidBodyMomenta(uint64_t timestep);
 
-#ifdef ENABLE_MPI
-    GPUArray<Scalar3> m_linmom_accum_copybuf; //!< copy buffer for linear momentum
-    GPUArray<Scalar3> m_angmom_accum_copybuf; //!< copy buffer for angular momentum
-
-    /// The systems's communicator.
-    std::shared_ptr<Communicator> m_comm;
-#endif
 #ifdef ENABLE_HIP
     //! Begin process of applying collisions to rigid bodies (GPU version)
     void storeInitialEmbeddedGroupVelocitiesGPU(uint64_t timestep);
