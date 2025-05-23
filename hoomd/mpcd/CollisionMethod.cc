@@ -333,6 +333,7 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
 
 void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
     {
+    m_thermo_rigid_thermostat->compute(timestep);
     ArrayHandle<Scalar3> h_linmom_accum(m_linmom_accum, access_location::host, access_mode::read);
     ArrayHandle<Scalar3> h_angmom_accum(m_angmom_accum, access_location::host, access_mode::read);
 
@@ -354,7 +355,6 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
     ArrayHandle<unsigned int> h_rtag(m_pdata->getRTags(), access_location::host, access_mode::read);
 
     // for rescaling the velocity to match the thermostat
-    m_thermo_rigid_thermostat->compute(timestep);
     ArrayHandle<double4> h_cell_vel(m_thermo_rigid_thermostat->getCellVelocities(),
                                     access_location::host,
                                     access_mode::read);

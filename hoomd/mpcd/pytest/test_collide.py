@@ -626,7 +626,6 @@ class TestCollisionMethod:
         rng = np.random.default_rng(seed=42)
         velo_mpcd = rng.normal(0.0, np.sqrt(init_args["kT"]), (N_mpcd, 3))
         velo_mpcd -= np.mean(velo_mpcd, axis=0)
-
         # create simulation
         initial_snap = one_particle_snapshot_factory(
             particle_types=["A", "B"], position=[0, 0, 0], L=21
@@ -694,7 +693,7 @@ class TestCollisionMethod:
             final_momentum_mpcd = np.sum(new_velo_mpcd * new_snap.mpcd.mass, axis=0)
             final_linmom_md = initial_momentum - final_momentum_mpcd
             final_velocity_md = final_linmom_md / total_mass
-            assert not np.allclose(final_velocity_md, new_velo_central)
+            assert np.allclose(final_velocity_md, new_velo_central)
 
             # solve for expected angular momentum change based on solvent
             # multiply expected change by 2 to get quaternion
@@ -708,7 +707,7 @@ class TestCollisionMethod:
                 * 2
             )
             change_angmom_md = new_snap.particles.angmom[0]
-            assert not np.allclose(expected_change_angmom_md, change_angmom_md)
+            assert np.allclose(expected_change_angmom_md, change_angmom_md)
 
             # check the constituent velocities match the central particle
             # since orientation is stuck at [1, 0, 0, 0], angular velocity
@@ -721,3 +720,8 @@ class TestCollisionMethod:
             expected_tangential_velocity = np.cross(omega, def_rigid["positions"])
             expected_velocity = np.add(expected_tangential_velocity, new_velo_central)
             assert np.allclose(new_velo_constituent, expected_velocity)
+
+            # check the solvent particle in the cell with the central particle
+            # changed even though the central particle doesn't participate in
+            # collisions
+            assert np.all(np.logical_not(np.isclose(velo_mpcd, new_velo_mpcd)))
