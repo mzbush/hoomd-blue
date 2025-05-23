@@ -28,8 +28,7 @@ mpcd::CollisionMethod::CollisionMethod(std::shared_ptr<SystemDefinition> sysdef,
     : m_sysdef(sysdef), m_pdata(m_sysdef->getParticleData()),
       m_mpcd_pdata(sysdef->getMPCDParticleData()), m_exec_conf(m_pdata->getExecConf()),
       m_period(period), m_checked_collision_warnings(false), m_initial_velocity(m_exec_conf),
-      m_linmom_accum(m_exec_conf), m_angmom_accum(m_exec_conf), m_linmom_accum_copybuf(m_exec_conf),
-      m_angmom_accum_copybuf(m_exec_conf)
+      m_linmom_accum(m_exec_conf), m_angmom_accum(m_exec_conf)
     {
     // setup next timestep for collision
     m_next_timestep = cur_timestep;
@@ -99,12 +98,6 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
             m_linmom_accum.swap(linmom_accum);
             GPUArray<Scalar3> angmom_accum(num_total, m_exec_conf);
             m_angmom_accum.swap(angmom_accum);
-#ifdef ENABLE_MPI
-            GPUArray<Scalar3> linmom_accum_copybuf(num_total, m_exec_conf);
-            m_linmom_accum_copybuf.swap(linmom_accum);
-            GPUArray<Scalar3> angmom_accum_copybuf(num_total, m_exec_conf);
-            m_angmom_accum_copybuf.swap(angmom_accum);
-#endif
             }
 
 #ifdef ENABLE_HIP
