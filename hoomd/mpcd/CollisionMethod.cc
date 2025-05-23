@@ -26,7 +26,8 @@ mpcd::CollisionMethod::CollisionMethod(std::shared_ptr<SystemDefinition> sysdef,
     : m_sysdef(sysdef), m_pdata(m_sysdef->getParticleData()),
       m_mpcd_pdata(sysdef->getMPCDParticleData()), m_exec_conf(m_pdata->getExecConf()),
       m_period(period), m_checked_collision_warnings(false), m_initial_velocity(m_exec_conf),
-      m_linmom_accum(m_exec_conf), m_angmom_accum(m_exec_conf)
+      m_linmom_accum(m_exec_conf), m_angmom_accum(m_exec_conf), m_linmom_accum_copybuf(m_exec_conf),
+      m_angmom_accum_copybuf(m_exec_conf)
     {
     // setup next timestep for collision
     m_next_timestep = cur_timestep;
@@ -36,7 +37,14 @@ mpcd::CollisionMethod::CollisionMethod(std::shared_ptr<SystemDefinition> sysdef,
         uint64_t multiple = cur_timestep / m_period + (cur_timestep % m_period != 0);
         m_next_timestep = multiple * m_period + phase;
         }
-
+#ifdef ENABLE_MPI
+    if (m_sysdef->isDomainDecomposed())
+        {
+        auto comm_weak = m_sysdef->getCommunicator();
+        assert(comm_weak.lock());
+        m_comm = comm_weak.lock();
+        }
+#endif
 #ifdef ENABLE_HIP
     if (m_exec_conf->isCUDAEnabled())
         {
@@ -324,6 +332,10 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
 
 void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
     {
+#ifdef ENABLE_MPI
+    m_comm->reduceGhostProperty(m_linmom_accum, m_linmom_accum_copybuf);
+    m_comm->reduceGhostProperty(m_linmom_accum, m_linmom_accum_copybuf);
+#endif
     ArrayHandle<Scalar3> h_linmom_accum(m_linmom_accum, access_location::host, access_mode::read);
     ArrayHandle<Scalar3> h_angmom_accum(m_angmom_accum, access_location::host, access_mode::read);
 
