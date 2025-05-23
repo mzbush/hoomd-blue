@@ -335,20 +335,7 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
     {
     ArrayHandle<Scalar3> h_linmom_accum(m_linmom_accum, access_location::host, access_mode::read);
     ArrayHandle<Scalar3> h_angmom_accum(m_angmom_accum, access_location::host, access_mode::read);
-    ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
-    ArrayHandle<unsigned int> h_cell_size(m_cl->getCellSizeArray(),
-                                          access_location::host,
-                                          access_mode::read);
-    const BoxDim& box = m_pdata->getBox();
-    uchar3 periodic = box.getPeriodic();
-    uint3 cell_dim = m_cl->getDim();
-    const BoxDim& global_box = m_pdata->getGlobalBox();
-    const Scalar3 grid_shift = m_cl->getGridShift();
-    uint3 n_global_cells = m_cl->getGlobalDim();
-    uint3 h_global_cell_dim = m_cl->getGlobalDim();
-    const Index3D& ci = m_cl->getCellIndexer();
-    const Index3D& global_ci = m_cl->getGlobalCellIndexer();
-    const int3& h_origin_idx = m_cl->getOriginIndex();
+
     ArrayHandle<Scalar4> h_velocity(m_pdata->getVelocities(),
                                     access_location::host,
                                     access_mode::readwrite);
@@ -365,6 +352,30 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
                                      access_location::host,
                                      access_mode::read);
     ArrayHandle<unsigned int> h_rtag(m_pdata->getRTags(), access_location::host, access_mode::read);
+
+    // for rescaling the velocity to match the thermostat
+    ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
+    ArrayHandle<unsigned int> h_cell_size(m_cl->getCellSizeArray(),
+                                          access_location::host,
+                                          access_mode::read);
+    ArrayHandle<unsigned int> h_cell_list(m_cl->getCellList(),
+                                          access_location::host,
+                                          access_mode::read);
+    ArrayHandle<Scalar4> h_vel_mpcd(m_mpcd_pdata->getVelocities(),
+                                    access_location::host,
+                                    access_mode::readwrite);
+    const Index2D& cli = m_cl->getCellListIndexer();
+    const BoxDim& box = m_pdata->getBox();
+    uchar3 periodic = box.getPeriodic();
+    uint3 cell_dim = m_cl->getDim();
+    const BoxDim& global_box = m_pdata->getGlobalBox();
+    const Scalar3 grid_shift = m_cl->getGridShift();
+    uint3 n_global_cells = m_cl->getGlobalDim();
+    uint3 h_global_cell_dim = m_cl->getGlobalDim();
+    const Index3D& ci = m_cl->getCellIndexer();
+    const Index3D& global_ci = m_cl->getGlobalCellIndexer();
+    const int3& h_origin_idx = m_cl->getOriginIndex();
+
     // add accumulated momentum to the central particle
     unsigned int num_total = m_pdata->getN();
     for (unsigned int idx = 0; idx < num_total; ++idx)
@@ -550,6 +561,27 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
                 vel_mass.y += (vel_mass.y - vel_com.y) * factor;
                 vel_mass.z += (vel_mass.z - vel_com.z) * factor;
                 h_velocity.data[idx] = vel_mass;
+
+                // rescale the other particles in the cell
+                const unsigned int np = h_cell_size.data[bin_idx];
+                const unsigned int N_mpcd = m_mpcd_pdata->getN() + m_mpcd_pdata->getNVirtual();
+                for (unsigned int offset = 0; offset < np; ++offset)
+                    {
+                    // Load particle data
+                    // NOTE: unsure if bin_idx is correct here
+                    const unsigned int cur_p = h_cell_list.data[cli(offset, bin_idx)];
+                    if (cur_p < N_mpcd)
+                        {
+                        Scalar4 vel_solv = h_vel_mpcd.data[cur_p];
+                        vel_solv.x += (vel_solv.x - vel_com.x) * factor;
+                        vel_solv.y += (vel_solv.y - vel_com.y) * factor;
+                        vel_solv.z += (vel_solv.z - vel_com.z) * factor;
+                        h_vel_mpcd.data[idx] = vel_solv;
+                        }
+                    else
+                        {
+                        }
+                    }
                 }
             }
         }
