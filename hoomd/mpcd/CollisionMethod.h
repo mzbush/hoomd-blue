@@ -95,10 +95,12 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
     virtual void setCellList(std::shared_ptr<mpcd::CellList> cl)
         {
         m_cl = cl;
+        detachRigidCallbacks();
         if (m_cl)
             {
             m_cl->setEmbeddedGroup(m_embed_group);
             m_thermo_rigid_thermostat = std::make_shared<mpcd::CellThermoCompute>(m_sysdef, m_cl);
+            attachRigidCallbacks();
             }
         else
             {
@@ -106,6 +108,14 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
             }
         }
 
+    //! Get the requested thermo flags
+    mpcd::detail::ThermoFlags getRequestedThermoFlags() const
+        {
+        mpcd::detail::ThermoFlags flags;
+        flags[mpcd::detail::thermo_options::energy] = 1;
+
+        return flags;
+        }
     //! Get the rigid body definitions
     std::shared_ptr<hoomd::md::ForceComposite> getRigid()
         {
@@ -153,6 +163,11 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
     //! Finish process of applying collisions to rigid bodies
     void transferRigidBodyMomenta(uint64_t timestep);
 
+    //! Attach callback signals
+    void attachRigidCallbacks();
+
+    //! Detach callback signals
+    void detachRigidCallbacks();
 #ifdef ENABLE_MPI
     GPUArray<Scalar3> m_linmom_accum_copybuf; //!< copy buffer for linear momentum
     GPUArray<Scalar3> m_angmom_accum_copybuf; //!< copy buffer for angular momentum

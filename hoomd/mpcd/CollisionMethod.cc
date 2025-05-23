@@ -575,7 +575,7 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
                         vel_solv.x = vel_com.x + (vel_solv.x - vel_com.x) * factor;
                         vel_solv.y = vel_com.y + (vel_solv.y - vel_com.y) * factor;
                         vel_solv.z = vel_com.z + (vel_solv.z - vel_com.z) * factor;
-                        h_vel_mpcd.data[idx] = vel_solv;
+                        h_vel_mpcd.data[cur_p] = vel_solv;
                         }
                     else
                         {
@@ -585,7 +585,22 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
             }
         }
     }
+void mpcd::CollisionMethod::attachRigidCallbacks()
+    {
+    assert(m_thermo_rigid_thermostat);
+    m_thermo_rigid_thermostat->getFlagsSignal()
+        .connect<mpcd::CollisionMethod, &mpcd::CollisionMethod::getRequestedThermoFlags>(this);
+    }
 
+void mpcd::CollisionMethod::detachRigidCallbacks()
+    {
+    if (m_thermo_rigid_thermostat)
+        {
+        m_thermo_rigid_thermostat->getFlagsSignal()
+            .disconnect<mpcd::CollisionMethod, &mpcd::CollisionMethod::getRequestedThermoFlags>(
+                this);
+        }
+    }
 #ifdef ENABLE_HIP
 //! Begin process of applying collisions to rigid bodies (GPU version)
 void mpcd::CollisionMethod::storeInitialEmbeddedGroupVelocitiesGPU(uint64_t timestep)
