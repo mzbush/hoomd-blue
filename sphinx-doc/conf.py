@@ -6,6 +6,7 @@
 import sys
 import os
 import datetime
+from importlib.util import find_spec
 
 from sphinx.domains.python import PythonDomain
 
@@ -28,16 +29,21 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
-    "sphinx.ext.mathjax",
     "sphinx.ext.todo",
-    "IPython.sphinxext.ipython_console_highlighting",
-    "sphinx_copybutton",
-    "notfound.extension",
 ]
 
+if find_spec("sphinxcontrib.katex") is not None:
+    extensions.append("sphinxcontrib.katex")
+else:
+    extensions.append("sphinx.ext.mathjax")
+
 if os.getenv("READTHEDOCS"):
+    extensions.append("sphinx_copybutton")
+    extensions.append("notfound.extension")
     extensions.append("sphinxcontrib.googleanalytics")
     googleanalytics_id = "G-ZR0DNZD21E"
+
+    katex_prerender = True
 
 napoleon_include_special_with_doc = True
 
@@ -79,8 +85,8 @@ year = datetime.date.today().year
 copyright = f"2009-{year} The Regents of the University of Michigan"
 author = "The Regents of the University of Michigan"
 
-version = "5.1.1"
-release = "5.1.1"
+version = "5.2.0"
+release = "5.2.0"
 
 language = "en"
 

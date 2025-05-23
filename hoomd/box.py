@@ -101,18 +101,23 @@ class Box:
     :math:`\\alpha`, :math:`\\beta` and :math:`\\gamma` are as follows:
 
     .. math::
-        \\cos\\gamma &= \\cos(\\angle\\vec a_1, \\vec a_2) &=&
+
+        \\begin{split}
+        \\cos\\gamma &= \\cos(\\angle\\vec a_1, \\vec a_2) =
             \\frac{xy}{\\sqrt{1+xy^2}}\\\\
-        \\cos\\beta &= \\cos(\\angle\\vec a_1, \\vec a_3) &=&
+        \\cos\\beta &= \\cos(\\angle\\vec a_1, \\vec a_3) =
             \\frac{xz}{\\sqrt{1+xz^2+yz^2}}\\\\
-        \\cos\\alpha &= \\cos(\\angle\\vec a_2, \\vec a_3) &=&
+        \\cos\\alpha &= \\cos(\\angle\\vec a_2, \\vec a_3) =
             \\frac{xy \\cdot xz + yz}{\\sqrt{1+xy^2} \\sqrt{1+xz^2+yz^2}}
+        \\end{split}
 
     Given an arbitrarily oriented lattice with box vectors :math:`\\vec v_1,
     \\vec v_2, \\vec v_3`, the parameters for the rotated box can be found as
     follows:
 
     .. math::
+
+        \\begin{split}
         L_x &= v_1\\\\
         a_{2x} &= \\frac{\\vec v_1 \\cdot \\vec v_2}{v_1}\\\\
         L_y &= \\sqrt{v_2^2 - a_{2x}^2}\\\\
@@ -122,6 +127,7 @@ class Box:
         a_{3x} &= \\frac{\\vec v_1 \\cdot \\vec v_3}{v_1}\\\\
         xz &= \\frac{a_{3x}}{L_z}\\\\
         yz &= \\frac{\\vec v_2 \\cdot \\vec v_3 - a_{2x}a_{3x}}{L_y L_z}
+        \\end{split}
 
     .. rubric:: Box images
 
