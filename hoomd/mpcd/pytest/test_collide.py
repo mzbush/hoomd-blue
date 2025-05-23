@@ -308,10 +308,10 @@ class TestCollisionMethod:
             assert np.allclose(new_velo_constituent, expected_velocity)
 
     @pytest.mark.parametrize(
-        "embedded_filter",
+        "embedded_filter_flags",
         [
-            hoomd.filter.Rigid(flags=("constituent",)),
-            hoomd.filter.Rigid(flags=("constituent", "free")),
+            ("constituent",),
+            ("constituent", "free"),
         ],
         ids=["Non-participatory", "Participatory"],
     )
@@ -321,7 +321,7 @@ class TestCollisionMethod:
         simulation_factory,
         cls,
         init_args,
-        embedded_filter,
+        embedded_filter_flags,
     ):
         def_rigid = {
             "constituent_types": ["B", "B", "B", "B"],
@@ -395,7 +395,7 @@ class TestCollisionMethod:
         sim.operations.integrator.cell_list.shift = False
         sim.operations.integrator.collision_method = cls(
             period=1,
-            embedded_particles=embedded_filter,
+            embedded_particles=hoomd.filter.Rigid(flags=embedded_filter_flags),
             **init_args,
         )
 
@@ -404,7 +404,7 @@ class TestCollisionMethod:
         new_snap = sim.state.get_snapshot()
         if new_snap.communicator.rank == 0:
             # check if the free particle participated in collisions
-            participated_flag = "free" in embedded_filter._flags
+            participated_flag = "free" in embedded_filter_flags
             free_flag = new_snap.particles.typeid == new_snap.particles.types.index("C")
             assert np.array_equiv(
                 new_snap.particles.velocity[free_flag], [0.0, 1.0, 0.0]
