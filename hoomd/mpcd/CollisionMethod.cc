@@ -573,9 +573,9 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
                     if (cur_p < N_mpcd)
                         {
                         Scalar4 vel_solv = h_vel_mpcd.data[cur_p];
-                        vel_solv.x += (vel_solv.x - vel_com.x) * factor;
-                        vel_solv.y += (vel_solv.y - vel_com.y) * factor;
-                        vel_solv.z += (vel_solv.z - vel_com.z) * factor;
+                        vel_solv.x = vel_com.x + (vel_solv.x - vel_com.x) * factor;
+                        vel_solv.y = vel_com.y + (vel_solv.y - vel_com.y) * factor;
+                        vel_solv.z = vel_com.z + (vel_solv.z - vel_com.z) * factor;
                         h_vel_mpcd.data[idx] = vel_solv;
                         }
                     else
