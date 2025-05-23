@@ -41,18 +41,20 @@ class Zetterling(Pair):
     .. _F. H. M. Zetterling, M. Dzugutov, and S. Lidin 2001:
        https://doi.org/10.1557/PROC-643-K9.5
 
-    Example::
+    .. rubric:: Example
+
+    .. code-block:: python
 
         zetterling = hoomd.hpmc.pair.Zetterling(mode="shift")
-        opp.params[("A", "A")] = {
+        zetterling.params[("A", "A")] = {
             "A": 1.58,
             "alpha": -0.22,
             "kf": 4.12,
             "B": 0.95533,
             "sigma": 1.0,
             "n": 18.0,
+            "r_cut": 2.649,
         }
-        opp.r_cut[("A", "A")] = 2.649
 
     {inherited}
 
@@ -84,6 +86,19 @@ class Zetterling(Pair):
 
         Type: `TypeParameter` [`tuple` [``particle_type``, ``particle_type``],
         `dict`]
+
+    .. py:attribute:: mode
+
+        The energy shifting/smoothing mode: Possible values are:
+        ``"none"``, ``"shift"``, and ``"xplor"``.
+
+        .. rubric:: Example
+
+        .. code-block:: python
+
+            zetterling.mode = "shift"
+
+        Type: `str`
     """
 
     _cpp_class_name = "PairPotentialZetterling"
