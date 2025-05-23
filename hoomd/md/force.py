@@ -35,8 +35,10 @@ class Force(Compute):
 
     .. math::
 
+        \begin{split}
         U & = U_\mathrm{additional} + \sum_{i=0}^{N_\mathrm{particles}-1} U_i \\
         W & = W_\mathrm{additional} + \sum_{i=0}^{N_\mathrm{particles}-1} W_i
+        \end{split}
 
     `Force` represents virial tensors as six element arrays listing the
     components of the tensor in this order:

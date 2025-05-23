@@ -191,6 +191,7 @@ class SDF(Compute):
 
     .. math::
 
+        \begin{split}
         x_{ij}(\vec{A}) = \min \{ & x \in \mathbb{R}_{> 0} : \\
            & \mathrm{overlap}\left(
                 S_i(\mathbf{q}_i),
@@ -206,6 +207,7 @@ class SDF(Compute):
                                  \mathbf{q}_i,
                                  \mathbf{q}_j) \\
             \} &
+        \end{split}
 
     where :math:`\mathrm{overlap}` is the shape overlap function defined in
     `hoomd.hpmc.integrate`, :math:`S_i` is the shape of particle :math:`i`, and
@@ -214,6 +216,7 @@ class SDF(Compute):
 
     .. math::
 
+        \begin{split}
         x_{ij}(\vec{A}) = \max \{ & x \in \mathbb{R}_{< 0} : \\
            & \mathrm{overlap}\left(
                 S_i(\mathbf{q}_i),
@@ -229,6 +232,7 @@ class SDF(Compute):
                                  \mathbf{q}_i,
                                  \mathbf{q}_j) \\
             \} &
+        \end{split}
 
 
     For particle :math:`i`, `SDF` finds the the minimum (maximum for expansive

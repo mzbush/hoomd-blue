@@ -128,6 +128,7 @@ interactions between pairs of particles in multiple box images:
 
 .. math::
 
+    \begin{split}
     U_{\mathrm{pair}} = &
             \sum_{i=0}^{N_\mathrm{particles}-1}
             \sum_{j=i+1}^{N_\mathrm{particles}-1}
@@ -140,6 +141,7 @@ interactions between pairs of particles in multiple box images:
             U_{\mathrm{pair},ij}(\vec{r}_j - (\vec{r}_i + \vec{A}),
                                  \mathbf{q}_i,
                                  \mathbf{q}_j)
+    \end{split}
 
 where :math:`\vec{A} = h\vec{a}_1 + k\vec{a}_2 + l\vec{a}_3` is a vector that
 translates by periodic box images and the set of box images includes all image
@@ -217,6 +219,7 @@ The complete hard shape interaction energy for a given configuration is:
 
 .. math::
 
+    \begin{split}
     U_\mathrm{shape} = \quad & \infty
             \cdot
             \sum_{i=0}^{N_\mathrm{particles}-1}
@@ -237,6 +240,7 @@ The complete hard shape interaction energy for a given configuration is:
             S_j(\mathbf{q}_j, \vec{r}_j - (\vec{r}_i + \vec{A}))
             \right) \ne \emptyset
             \right]
+    \end{split}
 
 where the square brackets denote the Iverson bracket.
 

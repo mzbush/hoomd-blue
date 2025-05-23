@@ -172,20 +172,24 @@ class Integrator(_DynamicIntegrator):
 
     .. math::
 
+        \begin{split}
         \vec{F}_{\mathrm{net},i} &= \sum_{f \in \mathrm{forces}} \vec{F}_i^f \\
         \vec{\tau}_{\mathrm{net},i} &=
         \sum_{f \in \mathrm{forces}} \vec{\tau}_i^f \\
         U_{\mathrm{net},i} &= \sum_{f \in \mathrm{forces}} U_i^f \\
         W_{\mathrm{net},i} &= \sum_{f \in \mathrm{forces}} W_i^f \\
+        \end{split}
 
     `Integrator` also computes the net additional energy and virial
 
     .. math::
 
+        \begin{split}
         U_{\mathrm{net},\mathrm{additional}} &= \sum_{f \in \mathrm{forces}}
         U_\mathrm{additional}^f \\
         W_{\mathrm{net},\mathrm{additional}} &= \sum_{f \in \mathrm{forces}}
         W_\mathrm{additional}^f \\
+        \end{split}
 
     See `md.force.Force` for definitions of these terms. Constraints are a
     special type of force used to enforce specific constraints on the system

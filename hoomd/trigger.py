@@ -145,7 +145,7 @@ class Periodic(_hoomd.PeriodicTrigger, Trigger):
 
     def __str__(self):
         """Human readable representation of the trigger as a string."""
-        return f"hoomd.trigger.Periodic(period={self.period}, " f"phase={self.phase})"
+        return f"hoomd.trigger.Periodic(period={self.period}, phase={self.phase})"
 
     def __eq__(self, other):
         """Test for equivalent triggers."""
