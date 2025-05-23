@@ -725,3 +725,140 @@ class TestCollisionMethod:
             # changed even though the central particle doesn't participate in
             # collisions
             assert np.all(np.logical_not(np.isclose(velo_mpcd, new_velo_mpcd)))
+
+    def test_rigid_collide_central_rescale_multi(
+        self,
+        one_particle_snapshot_factory,
+        simulation_factory,
+        cls,
+        init_args,
+    ):
+        def_rigid = {
+            "constituent_types": ["B", "B", "B", "B"],
+            "positions": np.array(
+                [
+                    [1, 0, -1 / (2 ** (1.0 / 2.0))],
+                    [-1, 0, -1 / (2 ** (1.0 / 2.0))],
+                    [0, -1, 1 / (2 ** (1.0 / 2.0))],
+                    [0, 1, 1 / (2 ** (1.0 / 2.0))],
+                ]
+            )
+            * 2,
+            "orientations": [(1.0, 0.0, 0.0, 0.0)] * 4,
+        }
+        properties_rigid = {
+            "inertia": [1.0, 1.0, 1.0],
+            "mass": np.array([1 / 4, 1 / 16, 1 / 16, 1 / 16, 1 / 16]),
+        }
+        if "kT" not in init_args:
+            init_args["kT"] = 1.0
+
+        N_mpcd = (len(def_rigid["constituent_types"]) + 1) * 2
+        rng = np.random.default_rng(seed=42)
+        velo_mpcd = rng.normal(0.0, np.sqrt(init_args["kT"]), (N_mpcd, 3))
+        velo_mpcd -= np.mean(velo_mpcd, axis=0)
+        # create simulation
+        initial_snap = one_particle_snapshot_factory(
+            particle_types=["A", "B"], position=[0, 0, 0], L=21
+        )
+        total_mass = properties_rigid["mass"][0]
+        if initial_snap.communicator.rank == 0:
+            initial_snap.particles.moment_inertia[:] = [properties_rigid["inertia"]]
+            initial_snap.particles.mass[:] = [total_mass]
+            initial_snap.particles.velocity[:] = [0, 0, 0]
+            initial_snap.particles.angmom[:] = [0, 0, 0, 0]
+
+        sim = simulation_factory(initial_snap)
+        sim.seed = 5
+
+        rigid = hoomd.md.constrain.Rigid()
+        rigid.body["A"] = def_rigid
+        rigid.create_bodies(sim.state)
+
+        intermed_snap = sim.state.get_snapshot()
+        if intermed_snap.communicator.rank == 0:
+            # add mass of constituents
+            flags = (
+                intermed_snap.particles.typeid
+                == intermed_snap.particles.types.index("B")
+            )
+            intermed_snap.particles.mass[flags] = properties_rigid["mass"][flags]
+            intermed_snap.wrap()
+
+            # place the mpcd particles on top of constituents
+            intermed_snap.mpcd.N = N_mpcd
+            intermed_snap.mpcd.types = ["C"]
+            intermed_snap.mpcd.position[:] = np.tile(
+                intermed_snap.particles.position, (2, 1)
+            )
+            intermed_snap.mpcd.velocity[:] = velo_mpcd
+        sim.state.set_snapshot(intermed_snap)
+
+        sim.operations.integrator = hoomd.mpcd.Integrator(
+            dt=0, integrate_rotational_dof=True, rigid=rigid
+        )
+        sim.operations.integrator.cell_list.shift = False
+        sim.operations.integrator.collision_method = cls(
+            period=1,
+            embedded_particles=hoomd.filter.Rigid(flags=("constituent",)),
+            **init_args,
+        )
+
+        # run simulation
+        sim.run(1)
+        new_snap = sim.state.get_snapshot()
+        if new_snap.communicator.rank == 0:
+            assert np.array_equal(properties_rigid["mass"], new_snap.particles.mass)
+            central_flag = new_snap.particles.typeid == new_snap.particles.types.index(
+                "A"
+            )
+            constit_flag = new_snap.particles.typeid == new_snap.particles.types.index(
+                "B"
+            )
+            new_velo_central = new_snap.particles.velocity[central_flag]
+            new_velo_constituent = new_snap.particles.velocity[constit_flag]
+            new_velo_mpcd = new_snap.mpcd.velocity
+            # solve for expected central particle velocity based on linear momentum
+            initial_momentum_mpcd = np.sum(velo_mpcd, axis=0)
+            initial_momentum_md = np.array([0, 0, 0])
+            initial_momentum = initial_momentum_md + initial_momentum_mpcd
+
+            final_momentum_mpcd = np.sum(new_velo_mpcd * new_snap.mpcd.mass, axis=0)
+            final_linmom_md = initial_momentum - final_momentum_mpcd
+            final_velocity_md = final_linmom_md / total_mass
+            assert np.allclose(final_velocity_md, new_velo_central)
+
+            # solve for expected angular momentum change based on solvent
+            # multiply expected change by 2 to get quaternion
+            change_momentum_mpcd = (new_velo_mpcd - velo_mpcd) * new_snap.mpcd.mass
+            change_momentum_const = (
+                change_momentum_mpcd[1 : len(def_rigid["constituent_types"]) + 1]
+                + change_momentum_mpcd[len(def_rigid["constituent_types"]) + 2 :]
+            )
+            expected_change_angmom_md = np.zeros(4)
+            expected_change_angmom_md[1:] = (
+                np.sum(
+                    np.cross(def_rigid["positions"], -1 * change_momentum_const),
+                    axis=0,
+                )
+                * 2
+            )
+            change_angmom_md = new_snap.particles.angmom[0]
+            assert np.allclose(expected_change_angmom_md, change_angmom_md)
+
+            # check the constituent velocities match the central particle
+            # since orientation is stuck at [1, 0, 0, 0], angular velocity
+            # is 0.5 * real part of angmom / inertia.
+            new_angmom = new_snap.particles.angmom[0]
+            omega = [
+                0 if i == 0 else 0.5 * a / i
+                for i, a in zip(properties_rigid["inertia"], new_angmom[1:])
+            ]
+            expected_tangential_velocity = np.cross(omega, def_rigid["positions"])
+            expected_velocity = np.add(expected_tangential_velocity, new_velo_central)
+            assert np.allclose(new_velo_constituent, expected_velocity)
+
+            # check the solvent particle in the cell with the central particle
+            # changed even though the central particle doesn't participate in
+            # collisions
+            assert np.all(np.logical_not(np.isclose(velo_mpcd, new_velo_mpcd)))

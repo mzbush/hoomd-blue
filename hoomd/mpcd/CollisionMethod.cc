@@ -514,7 +514,7 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
         const vec3<Scalar> vel_cell(vel_mass_cell);
         const Scalar mass_cell = vel_mass_cell.w;
         const double3 cell_energy = h_cell_energy.data[bin_idx];
-        const unsigned int np = __double_as_int(cell_energy.z);
+        const unsigned int np = h_cell_size.data[bin_idx];
 
         Scalar kinetic_energy
             = cell_energy.x
@@ -547,7 +547,6 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
             // is total not relative to COM)
             const double cur_ke = alpha * temperature;
             double factor = (cur_ke > 0.) ? fast::sqrt(rand_ke / cur_ke) : 1.;
-
             // rescale with the temperature of the cell
             Scalar4 vel_com;
             if (mass + mass_cell > 0)
