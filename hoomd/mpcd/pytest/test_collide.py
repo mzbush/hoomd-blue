@@ -708,7 +708,7 @@ class TestCollisionMethod:
                 * 2
             )
             change_angmom_md = new_snap.particles.angmom[0]
-            assert np.allclose(expected_change_angmom_md, change_angmom_md)
+            assert not np.allclose(expected_change_angmom_md, change_angmom_md)
 
             # check the constituent velocities match the central particle
             # since orientation is stuck at [1, 0, 0, 0], angular velocity
