@@ -4,9 +4,15 @@ Change Log
 5.x
 ---
 
-*Changed*
-* The formulas in the docs for `variant.box.Interpolate` are now consistent (`#2060 <https://github.com/glotzerlab/hoomd-blue/pull/2060>`__).
+5.2.1 (not yet released)
+^^^^^^^^^^^^^^^^^^^^^^^^
 
+*Fixed*
+
+* The formulas in the docs for `variant.box.Interpolate` are now consistent
+  (`#2060 <https://github.com/glotzerlab/hoomd-blue/pull/2060>`__).
+* Do not increment z image in 2D simulation boxes
+  (`#2071 <https://github.com/glotzerlab/hoomd-blue/pull/2071>`__).
 
 5.2.0 (2025-05-06)
 ^^^^^^^^^^^^^^^^^^
