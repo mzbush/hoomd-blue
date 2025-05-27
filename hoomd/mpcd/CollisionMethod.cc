@@ -130,6 +130,7 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
             accumulateRigidBodyMomenta(timestep);
             transferRigidBodyMomenta(timestep);
             }
+        thermalizeCentral(timestep);
         m_rigid_bodies->updateCompositeParticles(timestep);
         }
     }
@@ -326,7 +327,6 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
 
 void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
     {
-    m_thermo_rigid_thermostat->compute(timestep);
     ArrayHandle<Scalar3> h_linmom_accum(m_linmom_accum, access_location::host, access_mode::read);
     ArrayHandle<Scalar3> h_angmom_accum(m_angmom_accum, access_location::host, access_mode::read);
 
@@ -346,35 +346,6 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
                                      access_location::host,
                                      access_mode::read);
     ArrayHandle<unsigned int> h_rtag(m_pdata->getRTags(), access_location::host, access_mode::read);
-
-    // for rescaling the velocity to match the thermostat
-    ArrayHandle<double4> h_cell_vel(m_thermo_rigid_thermostat->getCellVelocities(),
-                                    access_location::host,
-                                    access_mode::read);
-    ArrayHandle<double3> h_cell_energy(m_thermo_rigid_thermostat->getCellEnergies(),
-                                       access_location::host,
-                                       access_mode::read);
-    ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
-    ArrayHandle<unsigned int> h_cell_size(m_cl->getCellSizeArray(),
-                                          access_location::host,
-                                          access_mode::read);
-    ArrayHandle<unsigned int> h_cell_list(m_cl->getCellList(),
-                                          access_location::host,
-                                          access_mode::read);
-    ArrayHandle<Scalar4> h_vel_mpcd(m_mpcd_pdata->getVelocities(),
-                                    access_location::host,
-                                    access_mode::readwrite);
-    const Index2D& cli = m_cl->getCellListIndexer();
-    const BoxDim& box = m_pdata->getBox();
-    uchar3 periodic = box.getPeriodic();
-    uint3 cell_dim = m_cl->getDim();
-    const BoxDim& global_box = m_pdata->getGlobalBox();
-    const Scalar3 grid_shift = m_cl->getGridShift();
-    uint3 n_global_cells = m_cl->getGlobalDim();
-    uint3 h_global_cell_dim = m_cl->getGlobalDim();
-    const Index3D& ci = m_cl->getCellIndexer();
-    const Index3D& global_ci = m_cl->getGlobalCellIndexer();
-    const int3& h_origin_idx = m_cl->getOriginIndex();
 
     // add accumulated momentum to the central particle
     unsigned int num_total = m_pdata->getN();
@@ -432,6 +403,68 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
 
         // save update
         h_angmom.data[idx] = quat_to_scalar4(angmom);
+        }
+    }
+
+void mpcd::CollisionMethod::thermalizeCentral(uint64_t timestep)
+    {
+    m_thermo_rigid_thermostat->compute(timestep);
+    ArrayHandle<Scalar4> h_velocity(m_pdata->getVelocities(),
+                                    access_location::host,
+                                    access_mode::readwrite);
+    ArrayHandle<unsigned int> h_body(m_pdata->getBodies(),
+                                     access_location::host,
+                                     access_mode::read);
+    ArrayHandle<unsigned int> h_rtag(m_pdata->getRTags(), access_location::host, access_mode::read);
+
+    // for rescaling the velocity to match the thermostat
+    ArrayHandle<double4> h_cell_vel(m_thermo_rigid_thermostat->getCellVelocities(),
+                                    access_location::host,
+                                    access_mode::read);
+    ArrayHandle<double3> h_cell_energy(m_thermo_rigid_thermostat->getCellEnergies(),
+                                       access_location::host,
+                                       access_mode::read);
+    ArrayHandle<Scalar4> h_pos(m_pdata->getPositions(), access_location::host, access_mode::read);
+    ArrayHandle<unsigned int> h_cell_size(m_cl->getCellSizeArray(),
+                                          access_location::host,
+                                          access_mode::read);
+    ArrayHandle<unsigned int> h_cell_list(m_cl->getCellList(),
+                                          access_location::host,
+                                          access_mode::read);
+    ArrayHandle<Scalar4> h_vel_mpcd(m_mpcd_pdata->getVelocities(),
+                                    access_location::host,
+                                    access_mode::readwrite);
+    const Index2D& cli = m_cl->getCellListIndexer();
+    const BoxDim& box = m_pdata->getBox();
+    uchar3 periodic = box.getPeriodic();
+    uint3 cell_dim = m_cl->getDim();
+    const BoxDim& global_box = m_pdata->getGlobalBox();
+    const Scalar3 grid_shift = m_cl->getGridShift();
+    uint3 n_global_cells = m_cl->getGlobalDim();
+    uint3 h_global_cell_dim = m_cl->getGlobalDim();
+    const Index3D& ci = m_cl->getCellIndexer();
+    const Index3D& global_ci = m_cl->getGlobalCellIndexer();
+    const int3& h_origin_idx = m_cl->getOriginIndex();
+
+    // add accumulated momentum to the central particle
+    unsigned int num_total = m_pdata->getN();
+    for (unsigned int idx = 0; idx < num_total; ++idx)
+        {
+        // check that the particle is in a rigid body and a central particle
+        const unsigned int central_tag = h_body.data[idx];
+        if (central_tag >= MIN_FLOPPY)
+            {
+            continue;
+            }
+        const unsigned int central_idx = h_rtag.data[central_tag];
+        if (central_idx != idx)
+            {
+            continue;
+            }
+
+        // get current velocity and mass
+        Scalar4 vel_mass = h_velocity.data[idx];
+        const Scalar mass = vel_mass.w;
 
         // find the cell this particle would belong to
         Scalar4 postype_i = h_pos.data[idx];
@@ -578,6 +611,7 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
             }
         }
     }
+
 void mpcd::CollisionMethod::attachRigidCallbacks()
     {
     assert(m_thermo_rigid_thermostat);

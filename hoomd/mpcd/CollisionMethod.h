@@ -163,6 +163,9 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
     //! Finish process of applying collisions to rigid bodies
     void transferRigidBodyMomenta(uint64_t timestep);
 
+    //! Thermalize central particles to match temperature
+    void thermalizeCentral(uint64_t timestep);
+
     //! Attach callback signals
     void attachRigidCallbacks();
 
