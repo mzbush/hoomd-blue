@@ -546,42 +546,46 @@ void mpcd::CollisionMethod::thermalizeCentral(uint64_t timestep)
             = cell_energy.x
               + 0.5 * mass
                     * (vel_mass.x * vel_mass.x + vel_mass.y * vel_mass.y + vel_mass.z * vel_mass.z);
-        Scalar temperature = 2 * kinetic_energy / (3 * (np - 1 + 1));
-
-        // thermostat relative velocities
-        // get the global index from the bin numbers found
-        const int3 global_cell = m_cl->getGlobalCell(bin);
-        const unsigned int global_idx = global_ci(global_cell.x, global_cell.y, global_cell.z);
-        // get the rng
-        uint16_t seed = m_sysdef->getSeed();
-        hoomd::RandomGenerator rng(
-            hoomd::Seed(hoomd::RNGIdentifier::CollisionMethod, timestep, seed),
-            hoomd::Counter(global_idx));
-
-        // the total number of degrees of freedom in the cell divided by 2
-        const double alpha = m_sysdef->getNDimensions() * (np - 1 + 1) / (double)2.;
-
-        // rescale velocity if there are other particles in the cell
-        if (alpha > 0)
+        if (mass + mass_cell > 0)
             {
-            // draw a random kinetic energy for the cell at the set temperature
-            hoomd::GammaDistribution<double> gamma_gen(alpha, 1.0);
-            const double rand_ke = gamma_gen(rng);
-
-            // generate the scale factor from the current temperature
-            // (don't use the kinetic energy of this cell, since this
-            // is total not relative to COM)
-            const double cur_ke = alpha * temperature;
-            double factor = (cur_ke > 0.) ? fast::sqrt(rand_ke / cur_ke) : 1.;
-            // rescale with the temperature of the cell
+            // calculate the center of mass velocity and subtract its contribution to kinetic energy
             Scalar4 vel_com;
-            if (mass + mass_cell > 0)
-                {
-                vel_com.x = (vel_mass.x * mass + vel_mass_cell.x * mass_cell) / (mass + mass_cell);
-                vel_com.y = (vel_mass.y * mass + vel_mass_cell.y * mass_cell) / (mass + mass_cell);
-                vel_com.z = (vel_mass.z * mass + vel_mass_cell.z * mass_cell) / (mass + mass_cell);
-                vel_com.w = mass + mass_cell;
+            vel_com.x = (vel_mass.x * mass + vel_mass_cell.x * mass_cell) / (mass + mass_cell);
+            vel_com.y = (vel_mass.y * mass + vel_mass_cell.y * mass_cell) / (mass + mass_cell);
+            vel_com.z = (vel_mass.z * mass + vel_mass_cell.z * mass_cell) / (mass + mass_cell);
+            vel_com.w = mass + mass_cell;
+            const double ke_com
+                = 0.5 * (mass + mass_cell)
+                  * (vel_com.x * vel_com.x + vel_com.y * vel_com.y + vel_com.z * vel_com.z);
+            Scalar temperature = 2 * (kinetic_energy - ke_com) / (3 * (np - 1 + 1));
 
+            // thermostat relative velocities
+            // get the global index from the bin numbers found
+            const int3 global_cell = m_cl->getGlobalCell(bin);
+            const unsigned int global_idx = global_ci(global_cell.x, global_cell.y, global_cell.z);
+            // get the rng
+            uint16_t seed = m_sysdef->getSeed();
+            hoomd::RandomGenerator rng(
+                hoomd::Seed(hoomd::RNGIdentifier::CollisionMethod, timestep, seed),
+                hoomd::Counter(global_idx));
+
+            // the total number of degrees of freedom in the cell divided by 2
+            const double alpha = m_sysdef->getNDimensions() * (np - 1 + 1) / (double)2.;
+
+            // rescale velocity if there are other particles in the cell
+            if (alpha > 0)
+                {
+                // draw a random kinetic energy for the cell at the set temperature
+                hoomd::GammaDistribution<double> gamma_gen(alpha, 1.0);
+                const double rand_ke = gamma_gen(rng);
+
+                // generate the scale factor from the current temperature
+                // (don't use the kinetic energy of this cell, since this
+                // is total not relative to COM)
+                const double cur_ke = alpha * temperature;
+                double factor = (cur_ke > 0.) ? fast::sqrt(rand_ke / cur_ke) : 1.;
+
+                // rescale with the temperature of the cell
                 vel_mass.x = vel_com.x + (vel_mass.x - vel_com.x) * factor;
                 vel_mass.y = vel_com.y + (vel_mass.y - vel_com.y) * factor;
                 vel_mass.z = vel_com.z + (vel_mass.z - vel_com.z) * factor;
