@@ -597,7 +597,6 @@ void mpcd::CollisionMethod::thermalizeCentral(uint64_t timestep)
                 for (unsigned int offset = 0; offset < np; ++offset)
                     {
                     // Load particle data
-                    // NOTE: unsure if bin_idx is correct here
                     const unsigned int cur_p = h_cell_list.data[cli(offset, bin_idx)];
                     if (cur_p < N_mpcd)
                         {
