@@ -132,6 +132,33 @@ class TestCollisionMethod:
         )
         sim.run(1)
 
+
+@pytest.mark.parametrize(
+    "cls, init_args",
+    [
+        (
+            hoomd.mpcd.collide.AndersenThermostat,
+            {
+                "kT": 1.0,
+            },
+        ),
+        (
+            hoomd.mpcd.collide.StochasticRotationDynamics,
+            {
+                "angle": 90,
+                "kT": 1.0,
+            },
+        ),
+        (
+            hoomd.mpcd.collide.StochasticRotationDynamics,
+            {
+                "angle": 90,
+            },
+        ),
+    ],
+    ids=["AndersenThermostat", "StochasticRotationDynamics", "Non-thermostated SRD"],
+)
+class TestCollisionRigid:
     @pytest.mark.parametrize(
         "velo_rigid", [[0, 0, 0], [1, 2, 3]], ids=["Stationary", "Moving"]
     )
@@ -206,11 +233,13 @@ class TestCollisionMethod:
         properties_rigid,
     ):
         if "kT" not in init_args:
-            init_args["kT"] = 1.0
+            kT = 1.0
+        else:
+            kT = init_args["kT"]
 
         N_mpcd = len(def_rigid["constituent_types"])
         rng = np.random.default_rng(seed=42)
-        velo_mpcd = rng.normal(0.0, np.sqrt(init_args["kT"]), (N_mpcd, 3))
+        velo_mpcd = rng.normal(0.0, np.sqrt(kT), (N_mpcd, 3))
         velo_mpcd -= np.mean(velo_mpcd, axis=0)
 
         # create simulation
@@ -272,6 +301,7 @@ class TestCollisionMethod:
             new_velo_central = new_snap.particles.velocity[central_flag]
             new_velo_constituent = new_snap.particles.velocity[constit_flag]
             new_velo_mpcd = new_snap.mpcd.velocity
+            new_angmom_central = np.squeeze(new_snap.particles.angmom[central_flag])
             # solve for expected central particle velocity based on linear momentum
             initial_momentum_mpcd = np.sum(velo_mpcd, axis=0)
             initial_momentum_md = np.array(velo_rigid) * total_mass
@@ -292,20 +322,57 @@ class TestCollisionMethod:
                 )
                 * 2
             )
-            change_angmom_md = new_snap.particles.angmom[0] - angmom_rigid
-            assert np.allclose(expected_change_angmom_md, change_angmom_md)
+            change_angmom_md = new_angmom_central - angmom_rigid
+            # the change in angular momentum is a multiple of the expected change
+            nonzero_change = expected_change_angmom_md != 0
+            factor = (
+                expected_change_angmom_md[nonzero_change]
+                / change_angmom_md[nonzero_change]
+            )
+            assert np.array_equal(nonzero_change, (change_angmom_md != 0))
+            assert np.allclose(factor, np.mean(factor))
+            assert not np.allclose(expected_change_angmom_md, change_angmom_md)
 
             # check the constituent velocities match the central particle
             # since orientation is stuck at [1, 0, 0, 0], angular velocity
             # is 0.5 * real part of angmom / inertia.
-            new_angmom = new_snap.particles.angmom[0]
             omega = [
                 0 if i == 0 else 0.5 * a / i
-                for i, a in zip(properties_rigid["inertia"], new_angmom[1:])
+                for i, a in zip(properties_rigid["inertia"], new_angmom_central[1:])
             ]
             expected_tangential_velocity = np.cross(omega, def_rigid["positions"])
             expected_velocity = np.add(expected_tangential_velocity, new_velo_central)
             assert np.allclose(new_velo_constituent, expected_velocity)
+
+            # check for conservation of kinetic energy
+            if "kT" not in init_args:
+                initial_kinetic_energy_md = np.sum(
+                    [
+                        0 if i == 0 else ((0.5 * a) ** 2) / i
+                        for i, a in zip(properties_rigid["inertia"], angmom_rigid[1:])
+                    ]
+                ) * 0.5 + 0.5 * total_mass * np.sum(np.array(velo_rigid) ** 2)
+                initial_kinetic_energy_mpcd = np.sum(
+                    np.sum(velo_mpcd**2, axis=1) * new_snap.mpcd.mass * 0.5
+                )
+                final_kinetic_energy_md = np.sum(
+                    [
+                        0 if i == 0 else ((0.5 * a) ** 2) / i
+                        for i, a in zip(
+                            properties_rigid["inertia"], new_angmom_central[1:]
+                        )
+                    ]
+                ) * 0.5 + 0.5 * total_mass * np.sum(new_velo_central**2)
+                final_kinetic_energy_mpcd = np.sum(
+                    np.sum(new_velo_mpcd**2, axis=1) * new_snap.mpcd.mass * 0.5
+                )
+                change_kinetic_energy = (
+                    final_kinetic_energy_md
+                    + final_kinetic_energy_mpcd
+                    - initial_kinetic_energy_md
+                    - initial_kinetic_energy_mpcd
+                )
+                assert change_kinetic_energy == pytest.approx(0)
 
     @pytest.mark.parametrize(
         "embedded_filter_flags",
@@ -341,10 +408,13 @@ class TestCollisionMethod:
             "mass": np.array([1 / 4, 1 / 16, 1 / 16, 1 / 16, 1 / 16]),
         }
         if "kT" not in init_args:
-            init_args["kT"] = 1.0
+            kT = 1.0
+        else:
+            kT = init_args["kT"]
+
         N_mpcd = len(def_rigid["constituent_types"])
         rng = np.random.default_rng(seed=42)
-        velo_mpcd = rng.normal(0.0, np.sqrt(init_args["kT"]), (N_mpcd, 3))
+        velo_mpcd = rng.normal(0.0, np.sqrt(kT), (N_mpcd, 3))
         velo_mpcd -= np.mean(velo_mpcd, axis=0)
 
         # create simulation
@@ -425,6 +495,7 @@ class TestCollisionMethod:
             new_velo_constituent = new_snap.particles.velocity[constit_flag]
             new_velo_free = new_snap.particles.velocity[free_flag]
             new_velo_mpcd = new_snap.mpcd.velocity
+            new_angmom_central = np.squeeze(new_snap.particles.angmom[central_flag])
 
             # solve for expected central particle velocity based on linear momentum
             initial_momentum_nonrigid = (
@@ -456,20 +527,58 @@ class TestCollisionMethod:
                 )
                 * 2
             )
-            change_angmom_md = new_snap.particles.angmom[central_flag] - np.array(
-                [0, 0, 0, 0]
+            change_angmom_md = np.squeeze(
+                new_snap.particles.angmom[central_flag] - np.array([0, 0, 0, 0])
             )
-            assert np.allclose(expected_change_angmom_md, change_angmom_md)
+            # the change in angular momentum is a multiple of the expected change
+            nonzero_change = expected_change_angmom_md != 0
+            factor = (
+                expected_change_angmom_md[nonzero_change]
+                / change_angmom_md[nonzero_change]
+            )
+            assert np.array_equal(nonzero_change, (change_angmom_md != 0))
+            assert np.allclose(factor, np.mean(factor))
 
             # check the constituent velocities match the central particle
             # since orientation is stuck at [1, 0, 0, 0], angular velocity
             # is 0.5 * real part of angmom / inertia.
-            new_angmom = new_snap.particles.angmom[central_flag]
             omega = [
                 0 if i == 0 else 0.5 * a / i
-                for i, a in zip(properties_rigid["inertia"], new_angmom[0, 1:])
+                for i, a in zip(properties_rigid["inertia"], new_angmom_central[1:])
             ]
             expected_tangential_velocity = np.cross(omega, def_rigid["positions"])
 
             expected_velocity = np.add(expected_tangential_velocity, new_velo_central)
             assert np.allclose(new_velo_constituent, expected_velocity)
+
+            # check for conservation of kinetic energy
+            if "kT" not in init_args:
+                initial_kinetic_energy_md = (
+                    0.5 * total_mass * np.sum(np.array([0, 2, 0]) ** 2)
+                ) + 0.5 * np.sum(np.array([0, 1, 0]) ** 2)
+                initial_kinetic_energy_mpcd = np.sum(
+                    np.sum(velo_mpcd**2, axis=1) * new_snap.mpcd.mass * 0.5
+                )
+                final_kinetic_energy_md = (
+                    np.sum(
+                        [
+                            0 if i == 0 else ((0.5 * a) ** 2) / i
+                            for i, a in zip(
+                                properties_rigid["inertia"], new_angmom_central[1:]
+                            )
+                        ]
+                    )
+                    * 0.5
+                    + 0.5 * total_mass * np.sum(new_velo_central**2)
+                    + 0.5 * np.sum(new_velo_free**2)
+                )
+                final_kinetic_energy_mpcd = np.sum(
+                    np.sum(new_velo_mpcd**2, axis=1) * new_snap.mpcd.mass * 0.5
+                )
+                change_kinetic_energy = (
+                    final_kinetic_energy_md
+                    + final_kinetic_energy_mpcd
+                    - initial_kinetic_energy_md
+                    - initial_kinetic_energy_mpcd
+                )
+                assert change_kinetic_energy == pytest.approx(0)

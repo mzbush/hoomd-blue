@@ -26,7 +26,7 @@ mpcd::CollisionMethod::CollisionMethod(std::shared_ptr<SystemDefinition> sysdef,
     : m_sysdef(sysdef), m_pdata(m_sysdef->getParticleData()),
       m_mpcd_pdata(sysdef->getMPCDParticleData()), m_exec_conf(m_pdata->getExecConf()),
       m_period(period), m_checked_collision_warnings(false), m_initial_velocity(m_exec_conf),
-      m_linmom_accum(m_exec_conf), m_angmom_accum(m_exec_conf)
+      m_linmom_accum(m_exec_conf), m_angmom_accum(m_exec_conf), m_ke_accum(m_exec_conf)
     {
     // setup next timestep for collision
     m_next_timestep = cur_timestep;
@@ -96,6 +96,8 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
             m_linmom_accum.swap(linmom_accum);
             GPUArray<Scalar3> angmom_accum(num_total, m_exec_conf);
             m_angmom_accum.swap(angmom_accum);
+            GPUArray<Scalar> ke_accum(num_total, m_exec_conf);
+            m_ke_accum.swap(ke_accum);
             }
 
 #ifdef ENABLE_HIP
@@ -243,6 +245,7 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
     // zero accumulators
     m_linmom_accum.zeroFill();
     m_angmom_accum.zeroFill();
+    m_ke_accum.zeroFill();
 
     const unsigned int num_group = m_embed_group->getNumMembers();
     ArrayHandle<unsigned int> h_embed_group(m_embed_group->getIndexArray(),
@@ -271,6 +274,7 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
     ArrayHandle<Scalar3> h_angmom_accum(m_angmom_accum,
                                         access_location::host,
                                         access_mode::readwrite);
+    ArrayHandle<Scalar> h_ke_accum(m_ke_accum, access_location::host, access_mode::readwrite);
 
     for (unsigned int idx = 0; idx < num_group; ++idx)
         {
@@ -316,9 +320,19 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
         const vec3<Scalar> linmom_change = mass_const * (vel_const - initial_vel_const);
         const vec3<Scalar> angmom_change = cross(displacement, linmom_change);
 
+        // change in kinetic energy
+        Scalar ke_change = 0;
+        ke_change += 0.5 * mass_const
+                     * (vel_const.x * vel_const.x - initial_vel_const.x * initial_vel_const.x);
+        ke_change += 0.5 * mass_const
+                     * (vel_const.y * vel_const.y - initial_vel_const.y * initial_vel_const.y);
+        ke_change += 0.5 * mass_const
+                     * (vel_const.z * vel_const.z - initial_vel_const.z * initial_vel_const.z);
+
         // accumulate onto central particle
         h_linmom_accum.data[central_idx] += vec_to_scalar3(linmom_change);
         h_angmom_accum.data[central_idx] += vec_to_scalar3(angmom_change);
+        h_ke_accum.data[central_idx] += ke_change;
         }
     }
 
@@ -326,6 +340,7 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
     {
     ArrayHandle<Scalar3> h_linmom_accum(m_linmom_accum, access_location::host, access_mode::read);
     ArrayHandle<Scalar3> h_angmom_accum(m_angmom_accum, access_location::host, access_mode::read);
+    ArrayHandle<Scalar> h_ke_accum(m_ke_accum, access_location::host, access_mode::read);
 
     ArrayHandle<Scalar4> h_velocity(m_pdata->getVelocities(),
                                     access_location::host,
@@ -359,13 +374,20 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
             continue;
             }
 
-        // get accumulated momentum for particle
+        // get accumulated momentum and kinetic energy for particle
         const Scalar3 linmom_accum(h_linmom_accum.data[idx]);
         const vec3<Scalar> angmom_accum(h_angmom_accum.data[idx]);
+        const Scalar ke_accum(h_ke_accum.data[idx]);
 
-        // compute and store new velocity
+        // get central velocity
         Scalar4 vel_mass = h_velocity.data[idx];
         const Scalar mass = vel_mass.w;
+
+        // compute initial kinetic energy
+        Scalar ke_tra_change
+            = -0.5 * mass
+              * (vel_mass.x * vel_mass.x + vel_mass.y * vel_mass.y + vel_mass.z * vel_mass.z);
+        // compute and store change in velocity
         if (mass > 0)
             {
             vel_mass.x += linmom_accum.x / mass;
@@ -374,6 +396,9 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
             h_velocity.data[idx] = vel_mass;
             }
 
+        ke_tra_change
+            += 0.5 * mass
+               * (vel_mass.x * vel_mass.x + vel_mass.y * vel_mass.y + vel_mass.z * vel_mass.z);
         // compute new angular momentum
         quat<Scalar> angmom(h_angmom.data[idx]);
         const quat<Scalar> orientation(h_orientation.data[idx]);
@@ -395,6 +420,66 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
             {
             angmom_change_body.z = Scalar(0);
             }
+
+        // calculate scaling factor
+        Scalar a = 0;
+        Scalar b = 0;
+        Scalar c = 0;
+        Scalar s = 0;
+
+        const quat<Scalar> initial_angmom_body = Scalar(0.5) * conj(orientation) * angmom;
+        if (inertia.x > Scalar(0))
+            {
+            a += angmom_change_body.x * angmom_change_body.x / inertia.x;
+            b += initial_angmom_body.v.x * angmom_change_body.x / inertia.x;
+            }
+
+        if (inertia.y > Scalar(0))
+            {
+            a += angmom_change_body.y * angmom_change_body.y / inertia.y;
+            b += initial_angmom_body.v.y * angmom_change_body.y / inertia.y;
+            }
+
+        if (inertia.z > Scalar(0))
+            {
+            a += angmom_change_body.z * angmom_change_body.z / inertia.z;
+            b += initial_angmom_body.v.z * angmom_change_body.z / inertia.z;
+            }
+        a *= 0.5;
+        c = ke_tra_change - ke_accum;
+
+        // check if there are imaginary roots
+        Scalar d = b * b - 4 * a * c;
+        if (d < 0.0)
+            {
+            m_exec_conf->msg->error() << "No roots for the scaling factor were found" << "a=" << a
+                                      << " b=" << b << " c=" << c << std::endl;
+            }
+
+        // choose the root for the scaling factor
+        Scalar root1 = (-b - sqrt(d)) / (2 * a);
+        Scalar root2 = (-b + sqrt(d)) / (2 * a);
+
+        if (root1 <= 0.0 && root2 <= 0.0)
+            {
+            m_exec_conf->msg->error()
+                << "No positive roots found" << "a=" << a << " b=" << b << " c=" << c << std::endl;
+            }
+        else if (root1 > 0 && root2 > 0)
+            {
+            s = (fabs(root1 - 1) > fabs(root2 - 1)) ? root2 : root1;
+            }
+        else
+            {
+            s = (root1 <= 0) ? root2 : root1;
+            }
+
+        // scale change in angular momentum
+        angmom_change_body.x *= s;
+        angmom_change_body.y *= s;
+        angmom_change_body.z *= s;
+
+        // rotate to space frame
         angmom += Scalar(2.0) * orientation * quat(0.0, angmom_change_body);
 
         // save update
