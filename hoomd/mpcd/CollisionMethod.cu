@@ -35,6 +35,7 @@ __global__ void store_initial_embedded_group_velocities(Scalar4* d_initial_vel,
 
 __global__ void accumulate_rigid_body_momenta(Scalar3* d_linmom_accum,
                                               Scalar3* d_angmom_accum,
+                                              Scalar* d_ke_accum,
                                               const Scalar4* d_initial_vel,
                                               const unsigned int* d_embed_group,
                                               const Scalar4* d_postype,
@@ -91,6 +92,15 @@ __global__ void accumulate_rigid_body_momenta(Scalar3* d_linmom_accum,
     const vec3<Scalar> linmom_change = mass_const * (vel_const - initial_vel_const);
     const vec3<Scalar> angmom_change = cross(displacement, linmom_change);
 
+    // change in kinetic energy
+    Scalar ke_change = 0;
+    ke_change += 0.5 * mass_const
+                 * (vel_const.x * vel_const.x - initial_vel_const.x * initial_vel_const.x);
+    ke_change += 0.5 * mass_const
+                 * (vel_const.y * vel_const.y - initial_vel_const.y * initial_vel_const.y);
+    ke_change += 0.5 * mass_const
+                 * (vel_const.z * vel_const.z - initial_vel_const.z * initial_vel_const.z);
+
     // accumulate onto central particle
     atomicAdd(&d_linmom_accum[central_idx].x, linmom_change.x);
     atomicAdd(&d_linmom_accum[central_idx].y, linmom_change.y);
@@ -98,10 +108,12 @@ __global__ void accumulate_rigid_body_momenta(Scalar3* d_linmom_accum,
     atomicAdd(&d_angmom_accum[central_idx].x, angmom_change.x);
     atomicAdd(&d_angmom_accum[central_idx].y, angmom_change.y);
     atomicAdd(&d_angmom_accum[central_idx].z, angmom_change.z);
+    atomicAdd(&d_ke_accum[central_idx], ke_change);
     }
 
 __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
                                             Scalar3* d_angmom_accum,
+                                            Scalar* d_ke_accum,
                                             Scalar4* d_velocity,
                                             const Scalar4* d_orientation,
                                             Scalar4* d_angmom,
@@ -132,10 +144,18 @@ __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
     // get accumulated momentum for particle
     const Scalar3 linmom_accum(d_linmom_accum[idx]);
     const vec3<Scalar> angmom_accum(d_angmom_accum[idx]);
+    const Scalar ke_accum(d_ke_accum[idx]);
 
-    // compute and store new velocity
+    // get central velocity
     Scalar4 vel_mass = d_velocity[idx];
     const Scalar mass = vel_mass.w;
+
+    // compute initial kinetic energy
+    Scalar ke_tra_change
+        = -0.5 * mass
+          * (vel_mass.x * vel_mass.x + vel_mass.y * vel_mass.y + vel_mass.z * vel_mass.z);
+
+    // compute and store change in velocity
     if (mass > 0)
         {
         vel_mass.x += linmom_accum.x / mass;
@@ -143,6 +163,10 @@ __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
         vel_mass.z += linmom_accum.z / mass;
         d_velocity[idx] = vel_mass;
         }
+
+    ke_tra_change
+        += 0.5 * mass
+           * (vel_mass.x * vel_mass.x + vel_mass.y * vel_mass.y + vel_mass.z * vel_mass.z);
 
     // compute new angular momentum
     quat<Scalar> angmom(d_angmom[idx]);
@@ -165,6 +189,63 @@ __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
         {
         angmom_change_body.z = Scalar(0);
         }
+
+    // calculate scaling factor
+    Scalar a = 0;
+    Scalar b = 0;
+    Scalar c = 0;
+    Scalar s = 0;
+
+    const quat<Scalar> initial_angmom_body = Scalar(0.5) * conj(orientation) * angmom;
+    if (inertia.x > Scalar(0))
+        {
+        a += angmom_change_body.x * angmom_change_body.x / inertia.x;
+        b += initial_angmom_body.v.x * angmom_change_body.x / inertia.x;
+        }
+
+    if (inertia.y > Scalar(0))
+        {
+        a += angmom_change_body.y * angmom_change_body.y / inertia.y;
+        b += initial_angmom_body.v.y * angmom_change_body.y / inertia.y;
+        }
+
+    if (inertia.z > Scalar(0))
+        {
+        a += angmom_change_body.z * angmom_change_body.z / inertia.z;
+        b += initial_angmom_body.v.z * angmom_change_body.z / inertia.z;
+        }
+    a *= 0.5;
+    c = ke_tra_change - ke_accum;
+
+    // check if there are imaginary roots
+    Scalar d = b * b - 4 * a * c;
+    if (d < 0.0)
+        {
+        // add errors here
+        }
+
+    // choose the root for the scaling factor
+    Scalar root1 = (-b - sqrt(d)) / (2 * a);
+    Scalar root2 = (-b + sqrt(d)) / (2 * a);
+
+    if (root1 <= 0.0 && root2 <= 0.0)
+        {
+        // add errors here
+        }
+    else if (root1 > 0 && root2 > 0)
+        {
+        s = (fabs(root1 - 1) > fabs(root2 - 1)) ? root2 : root1;
+        }
+    else
+        {
+        s = (root1 <= 0) ? root2 : root1;
+        }
+
+    // scale change in angular momentum
+    angmom_change_body.x *= s;
+    angmom_change_body.y *= s;
+    angmom_change_body.z *= s;
+    // rotate to space frame
     angmom += Scalar(2.0) * orientation * quat(0.0, angmom_change_body);
 
     // save update
@@ -198,6 +279,7 @@ cudaError_t store_initial_embedded_group_velocities(Scalar4* d_initial_vel,
 
 cudaError_t accumulate_rigid_body_momenta(Scalar3* d_linmom_accum,
                                           Scalar3* d_angmom_accum,
+                                          Scalar* d_ke_accum,
                                           const Scalar4* d_initial_vel,
                                           const unsigned int* d_embed_group,
                                           const Scalar4* d_postype,
@@ -219,6 +301,7 @@ cudaError_t accumulate_rigid_body_momenta(Scalar3* d_linmom_accum,
     dim3 grid(num_group / run_block_size + 1);
     mpcd::gpu::kernel::accumulate_rigid_body_momenta<<<grid, run_block_size>>>(d_linmom_accum,
                                                                                d_angmom_accum,
+                                                                               d_ke_accum,
                                                                                d_initial_vel,
                                                                                d_embed_group,
                                                                                d_postype,
@@ -234,6 +317,7 @@ cudaError_t accumulate_rigid_body_momenta(Scalar3* d_linmom_accum,
 
 cudaError_t transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
                                         Scalar3* d_angmom_accum,
+                                        Scalar* d_ke_accum,
                                         Scalar4* d_velocity,
                                         const Scalar4* d_orientation,
                                         Scalar4* d_angmom,
@@ -253,6 +337,7 @@ cudaError_t transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
     dim3 grid(num_total / run_block_size + 1);
     mpcd::gpu::kernel::transfer_rigid_body_momenta<<<grid, run_block_size>>>(d_linmom_accum,
                                                                              d_angmom_accum,
+                                                                             d_ke_accum,
                                                                              d_velocity,
                                                                              d_orientation,
                                                                              d_angmom,

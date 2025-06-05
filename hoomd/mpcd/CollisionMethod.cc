@@ -452,8 +452,10 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
         Scalar d = b * b - 4 * a * c;
         if (d < 0.0)
             {
-            m_exec_conf->msg->error() << "No roots for the scaling factor were found" << "a=" << a
-                                      << " b=" << b << " c=" << c << std::endl;
+            m_exec_conf->msg->error()
+                << "No real roots for the scaling factor were found" << std::endl;
+            throw std::runtime_error(
+                "No real roots found for scaling angular momentum in CollisionMethod");
             }
 
         // choose the root for the scaling factor
@@ -462,8 +464,9 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
 
         if (root1 <= 0.0 && root2 <= 0.0)
             {
-            m_exec_conf->msg->error()
-                << "No positive roots found" << "a=" << a << " b=" << b << " c=" << c << std::endl;
+            m_exec_conf->msg->error() << "No positive roots found" << std::endl;
+            throw std::runtime_error(
+                "CollisionMethod could not scale angular momentum with positive roots.");
             }
         else if (root1 > 0 && root2 > 0)
             {
@@ -517,6 +520,7 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomentaGPU(uint64_t timestep)
     // zero accumulators
     m_linmom_accum.zeroFill();
     m_angmom_accum.zeroFill();
+    m_ke_accum.zeroFill();
 
     ArrayHandle<unsigned int> d_embed_group(m_embed_group->getIndexArray(),
                                             access_location::device,
@@ -546,9 +550,11 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomentaGPU(uint64_t timestep)
     ArrayHandle<Scalar3> d_angmom_accum(m_angmom_accum,
                                         access_location::device,
                                         access_mode::readwrite);
+    ArrayHandle<Scalar> d_ke_accum(m_ke_accum, access_location::device, access_mode::readwrite);
     m_accumulate_tuner->begin();
     mpcd::gpu::accumulate_rigid_body_momenta(d_linmom_accum.data,
                                              d_angmom_accum.data,
+                                             d_ke_accum.data,
                                              d_initial_vel.data,
                                              d_embed_group.data,
                                              d_postype.data,
@@ -569,6 +575,7 @@ void mpcd::CollisionMethod::transferRigidBodyMomentaGPU(uint64_t timestep)
     {
     ArrayHandle<Scalar3> d_linmom_accum(m_linmom_accum, access_location::device, access_mode::read);
     ArrayHandle<Scalar3> d_angmom_accum(m_angmom_accum, access_location::device, access_mode::read);
+    ArrayHandle<Scalar> d_ke_accum(m_ke_accum, access_location::device, access_mode::read);
 
     ArrayHandle<Scalar4> d_velocity(m_pdata->getVelocities(),
                                     access_location::device,
@@ -592,6 +599,7 @@ void mpcd::CollisionMethod::transferRigidBodyMomentaGPU(uint64_t timestep)
     m_transfer_tuner->begin();
     mpcd::gpu::transfer_rigid_body_momenta(d_linmom_accum.data,
                                            d_angmom_accum.data,
+                                           d_ke_accum.data,
                                            d_velocity.data,
                                            d_orientation.data,
                                            d_angmom.data,
