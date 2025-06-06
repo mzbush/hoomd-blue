@@ -325,13 +325,7 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
         const vec3<Scalar> angmom_change = cross(displacement, linmom_change);
 
         // change in kinetic energy
-        Scalar ke_change = 0;
-        ke_change += 0.5 * mass_const
-                     * (vel_const.x * vel_const.x - initial_vel_const.x * initial_vel_const.x);
-        ke_change += 0.5 * mass_const
-                     * (vel_const.y * vel_const.y - initial_vel_const.y * initial_vel_const.y);
-        ke_change += 0.5 * mass_const
-                     * (vel_const.z * vel_const.z - initial_vel_const.z * initial_vel_const.z);
+        const Scalar ke_change = Scalar(0.5) * mass_const * (dot(vel_const, vel_const) - dot(initial_vel_const, initial_vel_const));
 
         // accumulate onto central particle
         h_linmom_accum.data[central_idx] += vec_to_scalar3(linmom_change);
