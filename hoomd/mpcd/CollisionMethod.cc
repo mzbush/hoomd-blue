@@ -396,7 +396,7 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
             }
 
         ke_tra_change
-            += 0.5 * mass
+            += Scalar(0.5) * mass
                * (vel_mass.x * vel_mass.x + vel_mass.y * vel_mass.y + vel_mass.z * vel_mass.z);
         // compute new angular momentum
         quat<Scalar> angmom(h_angmom.data[idx]);
