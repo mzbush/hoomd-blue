@@ -93,13 +93,9 @@ __global__ void accumulate_rigid_body_momenta(Scalar3* d_linmom_accum,
     const vec3<Scalar> angmom_change = cross(displacement, linmom_change);
 
     // change in kinetic energy
-    Scalar ke_change = 0;
-    ke_change += 0.5 * mass_const
-                 * (vel_const.x * vel_const.x - initial_vel_const.x * initial_vel_const.x);
-    ke_change += 0.5 * mass_const
-                 * (vel_const.y * vel_const.y - initial_vel_const.y * initial_vel_const.y);
-    ke_change += 0.5 * mass_const
-                 * (vel_const.z * vel_const.z - initial_vel_const.z * initial_vel_const.z);
+    const Scalar ke_change
+        = Scalar(0.5) * mass_const
+          * (dot(vel_const, vel_const) - dot(initial_vel_const, initial_vel_const));
 
     // accumulate onto central particle
     atomicAdd(&d_linmom_accum[central_idx].x, linmom_change.x);
@@ -153,7 +149,7 @@ __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
 
     // compute initial kinetic energy
     Scalar ke_tra_change
-        = -0.5 * mass
+        = -Scalar(0.5) * mass
           * (vel_mass.x * vel_mass.x + vel_mass.y * vel_mass.y + vel_mass.z * vel_mass.z);
 
     // compute and store change in velocity
@@ -166,7 +162,7 @@ __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
         }
 
     ke_tra_change
-        += 0.5 * mass
+        += Scalar(0.5) * mass
            * (vel_mass.x * vel_mass.x + vel_mass.y * vel_mass.y + vel_mass.z * vel_mass.z);
 
     // compute new angular momentum
@@ -215,7 +211,7 @@ __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
         a += angmom_change_body.z * angmom_change_body.z / inertia.z;
         b += initial_angmom_body.v.z * angmom_change_body.z / inertia.z;
         }
-    a *= 0.5;
+    a *= Scalar(0.5);
     c = ke_tra_change - ke_accum;
 
     // check if there are imaginary roots
@@ -223,6 +219,7 @@ __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
     if (d < 0.0)
         {
         (*d_errors).x = 1;
+        return;
         }
 
     // choose the root for the scaling factor
@@ -232,6 +229,7 @@ __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
     if (root1 <= 0.0 && root2 <= 0.0)
         {
         (*d_errors).y = 1;
+        return;
         }
     else if (root1 > 0 && root2 > 0)
         {
