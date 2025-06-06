@@ -444,7 +444,7 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
             a += angmom_change_body.z * angmom_change_body.z / inertia.z;
             b += initial_angmom_body.v.z * angmom_change_body.z / inertia.z;
             }
-        a *= 0.5;
+        a *= Scalar(0.5);
         c = ke_tra_change - ke_accum;
 
         // check if there are imaginary roots
