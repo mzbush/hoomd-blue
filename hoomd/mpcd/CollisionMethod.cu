@@ -120,7 +120,8 @@ __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
                                             const Scalar3* d_inertia,
                                             const unsigned int* d_body,
                                             const unsigned int* d_rtag,
-                                            const unsigned int num_total)
+                                            const unsigned int num_total,
+                                            uint3* d_errors)
     {
     // one thread per particle
     const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -221,7 +222,7 @@ __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
     Scalar d = b * b - 4 * a * c;
     if (d < 0.0)
         {
-        // add errors here
+        (*d_errors).x = 1;
         }
 
     // choose the root for the scaling factor
@@ -230,7 +231,7 @@ __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
 
     if (root1 <= 0.0 && root2 <= 0.0)
         {
-        // add errors here
+        (*d_errors).y = 1;
         }
     else if (root1 > 0 && root2 > 0)
         {
@@ -325,6 +326,7 @@ cudaError_t transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
                                         const unsigned int* d_body,
                                         const unsigned int* d_rtag,
                                         const unsigned int num_total,
+                                        uint3* d_errors,
                                         const unsigned int block_size)
     {
     unsigned int max_block_size;
@@ -344,7 +346,8 @@ cudaError_t transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
                                                                              d_inertia,
                                                                              d_body,
                                                                              d_rtag,
-                                                                             num_total);
+                                                                             num_total,
+                                                                             d_errors);
 
     return cudaSuccess;
     }

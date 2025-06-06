@@ -47,6 +47,7 @@ cudaError_t transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
                                         const unsigned int* d_body,
                                         const unsigned int* d_rtag,
                                         const unsigned int num_total,
+                                        uint3* d_errors,
                                         const unsigned int block_size);
 
     } // end namespace gpu

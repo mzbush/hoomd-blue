@@ -131,6 +131,7 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
     GPUArray<Scalar3> m_linmom_accum;     //!< Accumulated change in linear momentum of rigid bodies
     GPUArray<Scalar3> m_angmom_accum; //!< Accumulated change in angular momentum of rigid bodies
     GPUArray<Scalar> m_ke_accum;      //!< Accumulated change in kinetic energy of constituents
+    GPUFlags<uint3> m_errors; //!< Detect errors that prevented the collision step from completing
 
     //! Check if a collision should occur and advance the timestep counter
     virtual bool shouldCollide(uint64_t timestep);
@@ -146,6 +147,9 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
 
     //! Finish process of applying collisions to rigid bodies
     void transferRigidBodyMomenta(uint64_t timestep);
+
+    //! Check if the collision step was able to finish
+    void checkPostCollisionErrors();
 
 #ifdef ENABLE_HIP
     //! Begin process of applying collisions to rigid bodies (GPU version)

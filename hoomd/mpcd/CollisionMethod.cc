@@ -26,7 +26,8 @@ mpcd::CollisionMethod::CollisionMethod(std::shared_ptr<SystemDefinition> sysdef,
     : m_sysdef(sysdef), m_pdata(m_sysdef->getParticleData()),
       m_mpcd_pdata(sysdef->getMPCDParticleData()), m_exec_conf(m_pdata->getExecConf()),
       m_period(period), m_checked_collision_warnings(false), m_initial_velocity(m_exec_conf),
-      m_linmom_accum(m_exec_conf), m_angmom_accum(m_exec_conf), m_ke_accum(m_exec_conf)
+      m_linmom_accum(m_exec_conf), m_angmom_accum(m_exec_conf), m_ke_accum(m_exec_conf),
+      m_errors(m_exec_conf)
     {
     // setup next timestep for collision
     m_next_timestep = cur_timestep;
@@ -57,6 +58,8 @@ mpcd::CollisionMethod::CollisionMethod(std::shared_ptr<SystemDefinition> sysdef,
 
 void mpcd::CollisionMethod::collide(uint64_t timestep)
     {
+    m_errors.resetFlags(make_uint3(0, 0, 0));
+
     if (!shouldCollide(timestep))
         return;
 
@@ -130,6 +133,7 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
             accumulateRigidBodyMomenta(timestep);
             transferRigidBodyMomenta(timestep);
             }
+        checkPostCollisionErrors();
         m_rigid_bodies->updateCompositeParticles(timestep);
         }
     }
@@ -338,6 +342,7 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
 
 void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
     {
+    uint3 errors = make_uint3(0, 0, 0);
     ArrayHandle<Scalar3> h_linmom_accum(m_linmom_accum, access_location::host, access_mode::read);
     ArrayHandle<Scalar3> h_angmom_accum(m_angmom_accum, access_location::host, access_mode::read);
     ArrayHandle<Scalar> h_ke_accum(m_ke_accum, access_location::host, access_mode::read);
@@ -452,10 +457,9 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
         Scalar d = b * b - 4 * a * c;
         if (d < 0.0)
             {
-            m_exec_conf->msg->error()
-                << "No real roots for the scaling factor were found" << std::endl;
-            throw std::runtime_error(
-                "No real roots found for scaling angular momentum in CollisionMethod");
+            errors.x = 1;
+            m_errors.resetFlags(errors);
+            return;
             }
 
         // choose the root for the scaling factor
@@ -464,9 +468,9 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
 
         if (root1 <= 0.0 && root2 <= 0.0)
             {
-            m_exec_conf->msg->error() << "No positive roots found" << std::endl;
-            throw std::runtime_error(
-                "CollisionMethod could not scale angular momentum with positive roots.");
+            errors.y = 1;
+            m_errors.resetFlags(errors);
+            return;
             }
         else if (root1 > 0 && root2 > 0)
             {
@@ -488,6 +492,25 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
         // save update
         h_angmom.data[idx] = quat_to_scalar4(angmom);
         }
+    }
+
+void mpcd::CollisionMethod::checkPostCollisionErrors()
+    {
+    uint3 errors = m_errors.readFlags();
+    if (errors.x == 1)
+        {
+        m_exec_conf->msg->error() << "No real roots for the scaling factor were found" << std::endl;
+        throw std::runtime_error(
+            "No real roots found for scaling angular momentum in CollisionMethod");
+        }
+    else if (errors.y == 1)
+        {
+        m_exec_conf->msg->error() << "No positive roots found" << std::endl;
+        throw std::runtime_error(
+            "CollisionMethod could not scale angular momentum with positive roots.");
+        }
+
+    m_errors.resetFlags(make_uint3(0, 0, 0));
     }
 
 #ifdef ENABLE_HIP
@@ -607,6 +630,7 @@ void mpcd::CollisionMethod::transferRigidBodyMomentaGPU(uint64_t timestep)
                                            d_body.data,
                                            d_rtag.data,
                                            m_pdata->getN(),
+                                           m_errors.getDeviceFlags(),
                                            m_transfer_tuner->getParam()[0]);
     if (m_exec_conf->isCUDAErrorCheckingEnabled())
         CHECK_CUDA_ERROR();
