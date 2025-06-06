@@ -997,8 +997,8 @@ void ForceComposite::updateCompositeParticles(uint64_t timestep)
          */
         const quat<Scalar> angmom(h_angmom.data[central_idx]);
         const vec3<Scalar> inertia(h_inertia.data[central_idx]);
-        const quat<Scalar> angmom_body_quat = Scalar(0.5) * conj(orientation) * angmom;
-        vec3<Scalar> angvel_body = angmom_body_quat.v;
+        const quat<Scalar> angvel_body_quat = Scalar(0.5) * conj(orientation) * angmom;
+        vec3<Scalar> angvel_body = angvel_body_quat.v;
         if (inertia.x != Scalar(0))
             {
             angvel_body.x /= inertia.x;
