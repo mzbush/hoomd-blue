@@ -8,6 +8,8 @@
 
 #include "CollisionMethod.cuh"
 #include "hoomd/ParticleData.cuh"
+#include "hoomd/RNGIdentifiers.h"
+#include "hoomd/RandomNumbers.h"
 
 namespace hoomd
     {
@@ -117,6 +119,10 @@ __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
                                             const unsigned int* d_body,
                                             const unsigned int* d_rtag,
                                             const unsigned int num_total,
+                                            const uint16_t seed,
+                                            const uint64_t timestep,
+                                            const Scalar T_set,
+                                            const unsigned int n_dimensions,
                                             uint3* d_errors)
     {
     // one thread per particle
@@ -244,11 +250,43 @@ __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
     angmom_change_body.x *= s;
     angmom_change_body.y *= s;
     angmom_change_body.z *= s;
+
+    // add scale factor to final angular momentum
+    vec3<Scalar> new_angmom = initial_angmom_body.v;
+    new_angmom.x += angmom_change_body.x;
+    new_angmom.y += angmom_change_body.y;
+    new_angmom.z += angmom_change_body.z;
+
+    Scalar new_rot_ke = 0;
+    if (inertia.x > 0)
+        {
+        new_rot_ke += new_angmom.x * new_angmom.x / inertia.x;
+        }
+    if (inertia.y > 0)
+        {
+        new_rot_ke += new_angmom.y * new_angmom.y / inertia.y;
+        }
+    if (inertia.z > 0)
+        {
+        new_rot_ke += new_angmom.z * new_angmom.z / inertia.z;
+        }
+
+    hoomd::RandomGenerator rng(hoomd::Seed(hoomd::RNGIdentifier::CollisionMethod, timestep, seed),
+                               hoomd::Counter(idx));
+    const double alpha = n_dimensions / (double)2.0;
+
+    hoomd::GammaDistribution<double> gamma_gen(alpha, T_set);
+    const Scalar random_ke = Scalar(gamma_gen(rng));
+    const Scalar scale = sqrt(random_ke / new_rot_ke);
+
+    new_angmom.x *= scale;
+    new_angmom.y *= scale;
+    new_angmom.z *= scale;
     // rotate to space frame
-    angmom += Scalar(2.0) * orientation * quat(0.0, angmom_change_body);
+    quat<Scalar> new_angmom_space = Scalar(2.0) * orientation * quat(0.0, new_angmom);
 
     // save update
-    d_angmom[idx] = quat_to_scalar4(angmom);
+    d_angmom[idx] = quat_to_scalar4(new_angmom_space);
     }
     } // end namespace kernel
 
@@ -324,6 +362,10 @@ cudaError_t transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
                                         const unsigned int* d_body,
                                         const unsigned int* d_rtag,
                                         const unsigned int num_total,
+                                        const uint16_t seed,
+                                        const uint64_t timestep,
+                                        const Scalar T_set,
+                                        const unsigned int n_dimensions,
                                         uint3* d_errors,
                                         const unsigned int block_size)
     {
@@ -345,6 +387,10 @@ cudaError_t transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
                                                                              d_body,
                                                                              d_rtag,
                                                                              num_total,
+                                                                             seed,
+                                                                             timestep,
+                                                                             T_set,
+                                                                             n_dimensions,
                                                                              d_errors);
 
     return cudaSuccess;

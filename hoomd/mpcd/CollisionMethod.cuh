@@ -47,6 +47,10 @@ cudaError_t transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
                                         const unsigned int* d_body,
                                         const unsigned int* d_rtag,
                                         const unsigned int num_total,
+                                        const uint16_t seed,
+                                        const uint64_t timestep,
+                                        const Scalar T_set,
+                                        const unsigned int n_dimensions,
                                         uint3* d_errors,
                                         const unsigned int block_size);
 

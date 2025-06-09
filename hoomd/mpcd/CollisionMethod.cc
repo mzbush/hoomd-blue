@@ -10,6 +10,8 @@
 #ifdef ENABLE_MPI
 #include "hoomd/Communicator.h"
 #endif // ENABLE_MPI
+#include "hoomd/RNGIdentifiers.h"
+#include "hoomd/RandomNumbers.h"
 namespace hoomd
     {
 /*!
@@ -325,7 +327,9 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
         const vec3<Scalar> angmom_change = cross(displacement, linmom_change);
 
         // change in kinetic energy
-        const Scalar ke_change = Scalar(0.5) * mass_const * (dot(vel_const, vel_const) - dot(initial_vel_const, initial_vel_const));
+        const Scalar ke_change
+            = Scalar(0.5) * mass_const
+              * (dot(vel_const, vel_const) - dot(initial_vel_const, initial_vel_const));
 
         // accumulate onto central particle
         h_linmom_accum.data[central_idx] += vec_to_scalar3(linmom_change);
@@ -357,6 +361,7 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
                                      access_location::host,
                                      access_mode::read);
     ArrayHandle<unsigned int> h_rtag(m_pdata->getRTags(), access_location::host, access_mode::read);
+    Scalar T_set(1.0);
     // add accumulated momentum to the central particle
     unsigned int num_total = m_pdata->getN();
     for (unsigned int idx = 0; idx < num_total; ++idx)
@@ -480,11 +485,43 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
         angmom_change_body.y *= s;
         angmom_change_body.z *= s;
 
+        // add scale factor to final angular momentum
+        vec3<Scalar> new_angmom = initial_angmom_body.v;
+        new_angmom.x += angmom_change_body.x;
+        new_angmom.y += angmom_change_body.y;
+        new_angmom.z += angmom_change_body.z;
+
+        Scalar new_rot_ke = 0;
+        if (inertia.x > 0)
+            {
+            new_rot_ke += new_angmom.x * new_angmom.x / inertia.x;
+            }
+        if (inertia.y > 0)
+            {
+            new_rot_ke += new_angmom.y * new_angmom.y / inertia.y;
+            }
+        if (inertia.z > 0)
+            {
+            new_rot_ke += new_angmom.z * new_angmom.z / inertia.z;
+            }
+
+        hoomd::RandomGenerator rng(
+            hoomd::Seed(hoomd::RNGIdentifier::CollisionMethod, timestep, m_sysdef->getSeed()),
+            hoomd::Counter(idx));
+        const double alpha = m_sysdef->getNDimensions() / (double)2.0;
+
+        hoomd::GammaDistribution<double> gamma_gen(alpha, T_set);
+        const Scalar random_ke = Scalar(gamma_gen(rng));
+        const Scalar scale = sqrt(random_ke / new_rot_ke);
+
+        new_angmom.x *= scale;
+        new_angmom.y *= scale;
+        new_angmom.z *= scale;
         // rotate to space frame
-        angmom += Scalar(2.0) * orientation * quat(0.0, angmom_change_body);
+        quat<Scalar> new_angmom_space = Scalar(2.0) * orientation * quat(0.0, new_angmom);
 
         // save update
-        h_angmom.data[idx] = quat_to_scalar4(angmom);
+        h_angmom.data[idx] = quat_to_scalar4(new_angmom_space);
         }
     }
 
@@ -624,6 +661,10 @@ void mpcd::CollisionMethod::transferRigidBodyMomentaGPU(uint64_t timestep)
                                            d_body.data,
                                            d_rtag.data,
                                            m_pdata->getN(),
+                                           m_sysdef->getSeed(),
+                                           timestep,
+                                           Scalar(1.0),
+                                           m_sysdef->getNDimensions(),
                                            m_errors.getDeviceFlags(),
                                            m_transfer_tuner->getParam()[0]);
     if (m_exec_conf->isCUDAErrorCheckingEnabled())
