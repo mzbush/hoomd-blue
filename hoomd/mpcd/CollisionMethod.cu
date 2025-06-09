@@ -144,6 +144,13 @@ __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
         return;
         }
 
+    // check for zero moment of inertia
+    const vec3<Scalar> I(d_inertia[central_idx]);
+    bool x_zero, y_zero, z_zero;
+    x_zero = (I.x == 0);
+    y_zero = (I.y == 0);
+    z_zero = (I.z == 0);
+
     // get accumulated momentum for particle
     const Scalar3 linmom_accum(d_linmom_accum[idx]);
     const vec3<Scalar> angmom_accum(d_angmom_accum[idx]);
@@ -178,17 +185,17 @@ __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
     // convert angular momentum to quaternion and update
     const vec3<Scalar> inertia(d_inertia[central_idx]);
     vec3<Scalar> angmom_change_body = rotate(conj(orientation), angmom_accum);
-    if (inertia.x == Scalar(0))
+    if (x_zero)
         {
         angmom_change_body.x = Scalar(0);
         }
 
-    if (inertia.y == Scalar(0))
+    if (y_zero)
         {
         angmom_change_body.y = Scalar(0);
         }
 
-    if (inertia.z == Scalar(0))
+    if (z_zero)
         {
         angmom_change_body.z = Scalar(0);
         }
@@ -200,22 +207,22 @@ __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
     Scalar s = 0;
 
     const quat<Scalar> initial_angmom_body = Scalar(0.5) * conj(orientation) * angmom;
-    if (inertia.x > Scalar(0))
+    if (!x_zero)
         {
-        a += angmom_change_body.x * angmom_change_body.x / inertia.x;
-        b += initial_angmom_body.v.x * angmom_change_body.x / inertia.x;
+        a += angmom_change_body.x * angmom_change_body.x / I.x;
+        b += initial_angmom_body.v.x * angmom_change_body.x / I.x;
         }
 
-    if (inertia.y > Scalar(0))
+    if (!y_zero)
         {
-        a += angmom_change_body.y * angmom_change_body.y / inertia.y;
-        b += initial_angmom_body.v.y * angmom_change_body.y / inertia.y;
+        a += angmom_change_body.y * angmom_change_body.y / I.y;
+        b += initial_angmom_body.v.y * angmom_change_body.y / I.y;
         }
 
-    if (inertia.z > Scalar(0))
+    if (!z_zero)
         {
-        a += angmom_change_body.z * angmom_change_body.z / inertia.z;
-        b += initial_angmom_body.v.z * angmom_change_body.z / inertia.z;
+        a += angmom_change_body.z * angmom_change_body.z / I.z;
+        b += initial_angmom_body.v.z * angmom_change_body.z / I.z;
         }
     a *= Scalar(0.5);
     c = ke_tra_change - ke_accum;
@@ -258,17 +265,17 @@ __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
     new_angmom.z += angmom_change_body.z;
 
     Scalar new_rot_ke = 0;
-    if (inertia.x > 0)
+    if (!x_zero)
         {
-        new_rot_ke += new_angmom.x * new_angmom.x / inertia.x;
+        new_rot_ke += new_angmom.x * new_angmom.x / I.x;
         }
-    if (inertia.y > 0)
+    if (!y_zero)
         {
-        new_rot_ke += new_angmom.y * new_angmom.y / inertia.y;
+        new_rot_ke += new_angmom.y * new_angmom.y / I.y;
         }
-    if (inertia.z > 0)
+    if (!z_zero)
         {
-        new_rot_ke += new_angmom.z * new_angmom.z / inertia.z;
+        new_rot_ke += new_angmom.z * new_angmom.z / I.z;
         }
 
     hoomd::RandomGenerator rng(hoomd::Seed(hoomd::RNGIdentifier::CollisionMethod, timestep, seed),
