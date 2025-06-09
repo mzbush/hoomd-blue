@@ -498,15 +498,15 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
         Scalar new_rot_ke = 0;
         if (!x_zero)
             {
-            new_rot_ke += new_angmom.x * new_angmom.x / I.x;
+            new_rot_ke += Scalar(0.5) * new_angmom.x * new_angmom.x / I.x;
             }
         if (!y_zero)
             {
-            new_rot_ke += new_angmom.y * new_angmom.y / I.y;
+            new_rot_ke += Scalar(0.5) * new_angmom.y * new_angmom.y / I.y;
             }
         if (!z_zero)
             {
-            new_rot_ke += new_angmom.z * new_angmom.z / I.z;
+            new_rot_ke += Scalar(0.5) * new_angmom.z * new_angmom.z / I.z;
             }
 
         hoomd::RandomGenerator rng(
