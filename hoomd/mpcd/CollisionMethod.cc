@@ -463,8 +463,7 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
         if (d < 0.0)
             {
             errors.x = 1;
-            m_errors.resetFlags(errors);
-            return;
+            break;
             }
 
         // choose the root for the scaling factor
@@ -474,8 +473,7 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
         if (root1 <= 0.0 && root2 <= 0.0)
             {
             errors.y = 1;
-            m_errors.resetFlags(errors);
-            return;
+            break;
             }
         else if (root1 > 0 && root2 > 0)
             {
@@ -529,6 +527,7 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
         // save update
         h_angmom.data[idx] = quat_to_scalar4(new_angmom_space);
         }
+    m_errors.resetFlags(errors);
     }
 
 void mpcd::CollisionMethod::checkPostCollisionErrors()
