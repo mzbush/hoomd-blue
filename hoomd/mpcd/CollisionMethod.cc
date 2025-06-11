@@ -254,7 +254,7 @@ void mpcd::CollisionMethod::thermalizeConstituentParticles(uint64_t timestep)
                                     access_mode::read);
     ArrayHandle<Scalar4> h_alt_vel(m_pdata->getAltVelocities(),
                                    access_location::host,
-                                   access_mode::overwrite);
+                                   access_mode::readwrite);
     ArrayHandle<unsigned int> h_body(m_pdata->getBodies(),
                                      access_location::host,
                                      access_mode::read);
@@ -320,7 +320,61 @@ void mpcd::CollisionMethod::thermalizeConstituentParticles(uint64_t timestep)
             continue;
             }
         Scalar mass = h_velocity.data[idx].w;
-        h_linmom_accum.data[central_idx] /= mass;
+        Scalar3 net_velocity = h_linmom_accum.data[central_idx] / mass;
+        h_alt_vel.data[central_idx]
+            = make_scalar4(net_velocity.x, net_velocity.y, net_velocity.z, mass);
+        }
+
+    ArrayHandle<Scalar4> h_postype(m_pdata->getPositions(),
+                                   access_location::host,
+                                   access_mode::read);
+    ArrayHandle<int3> h_image(m_pdata->getImages(), access_location::host, access_mode::read);
+    const BoxDim& global_box = m_pdata->getGlobalBox();
+
+    // Calculate net angular momentum
+    for (unsigned int idx = 0; idx < num_total; ++idx)
+        {
+        // get the index from the embedded group and check if in a rigid body
+        const unsigned int central_tag = h_body.data[idx];
+        if (central_tag >= MIN_FLOPPY)
+            {
+            continue;
+            }
+        const unsigned int central_idx = h_rtag.data[central_tag];
+        // if the central particle is not local, cannot read or write to it.
+        assert(central_idx != NOT_LOCAL);
+
+        // do not need to thermalize central particle
+        if (idx == central_idx)
+            {
+            continue;
+            }
+
+        // get velocities and masses
+        const Scalar4 vel_mass_const = h_alt_vel.data[idx];
+        const vec3<Scalar> vel_const(vel_mass_const);
+        const Scalar mass_const = vel_mass_const.w;
+        const Scalar4 net_vel_mass = h_alt_vel.data[central_idx];
+        const vec3<Scalar> net_vel(net_vel_mass);
+        // get displacement
+        const Scalar4 postype_const = h_postype.data[idx];
+        const vec3<Scalar> pos_const(postype_const);
+        const int3 img_const = h_image.data[idx];
+
+        const Scalar4 postype_central = h_postype.data[central_idx];
+        const vec3<Scalar> pos_central(postype_central);
+        const int3 img_central = h_image.data[central_idx];
+
+        vec3<Scalar> displacement = pos_const - pos_central;
+        const int3 displacement_img = make_int3(img_const.x - img_central.x,
+                                                img_const.y - img_central.y,
+                                                img_const.z - img_central.z);
+        displacement = global_box.shift(displacement, displacement_img);
+
+        // add to net momentum
+        const vec3<Scalar> velo_change = vel_const - net_vel;
+        const vec3<Scalar> angmom_change = mass_const * cross(displacement, velo_change);
+        h_angmom_accum.data[central_idx] += vec_to_scalar3(angmom_change);
         }
     }
 
