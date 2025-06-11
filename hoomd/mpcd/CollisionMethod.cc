@@ -304,7 +304,26 @@ void mpcd::CollisionMethod::thermalizeConstituentParticles(uint64_t timestep)
         const Scalar3 linmom_change = mass * vel;
         h_linmom_accum.data[central_idx] += linmom_change;
         }
+
+    // divide by total mass to get net velocity of random vectors
+    for (unsigned int idx = 0; idx < num_total; ++idx)
+        {
+        // check that the particle is in a rigid body and a central particle
+        const unsigned int central_tag = h_body.data[idx];
+        if (central_tag >= MIN_FLOPPY)
+            {
+            continue;
+            }
+        const unsigned int central_idx = h_rtag.data[central_tag];
+        if (central_idx != idx)
+            {
+            continue;
+            }
+        Scalar mass = h_velocity.data[idx].w;
+        h_linmom_accum.data[central_idx] /= mass;
+        }
     }
+
 void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
     {
     // zero accumulators
