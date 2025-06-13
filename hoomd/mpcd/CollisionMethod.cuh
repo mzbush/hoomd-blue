@@ -51,9 +51,9 @@ cudaError_t get_net_velocity_rigid_body(const Scalar3* d_linmom_accum,
                                         const unsigned int block_size);
 
 cudaError_t apply_thermalized_velocity_vectors(const Scalar3* d_angmom_accum,
-                                               Scalar4* d_alt_vel,
+                                               const Scalar4* d_alt_vel,
                                                const Scalar4* d_postype,
-                                               const Scalar4* d_velocity,
+                                               Scalar4* d_velocity,
                                                const int3* d_image,
                                                const unsigned int* d_body,
                                                const unsigned int* d_rtag,
