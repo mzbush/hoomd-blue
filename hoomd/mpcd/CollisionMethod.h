@@ -168,10 +168,13 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
     //! Finish process of applying collisions to rigid bodies (GPU version)
     void transferRigidBodyMomentaGPU(uint64_t timestep);
 
-    std::shared_ptr<Autotuner<1>> m_store_tuner;      //!< Tuner for storing velocities
-    std::shared_ptr<Autotuner<1>> m_accumulate_tuner; //!< Tuner for accumulating momenta
-    std::shared_ptr<Autotuner<1>> m_transfer_tuner;   //!< Tuner for transfering momenta
-#endif                                                // ENABLE_HIP
+    std::shared_ptr<Autotuner<1>> m_store_tuner;        //!< Tuner for storing velocities
+    std::shared_ptr<Autotuner<1>> m_drawrandvec_tuner;  //!< Tuner for drawing random vectors
+    std::shared_ptr<Autotuner<1>> m_netvelo_tuner;      //!< Tuner for finding net velocity
+    std::shared_ptr<Autotuner<1>> m_applyrandvec_tuner; //!< Tuner for applying random vectors
+    std::shared_ptr<Autotuner<1>> m_accumulate_tuner;   //!< Tuner for accumulating momenta
+    std::shared_ptr<Autotuner<1>> m_transfer_tuner;     //!< Tuner for transfering momenta
+#endif                                                  // ENABLE_HIP
 
     //! Call the collision rule
     virtual void rule(uint64_t timestep) { }

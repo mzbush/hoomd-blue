@@ -33,6 +33,107 @@ __global__ void store_initial_embedded_group_velocities(Scalar4* d_initial_vel,
     d_initial_vel[idx] = d_velocity[particle_idx];
     }
 
+__global__ void draw_velocities_constituent_particles(Scalar3* d_linmom_accum,
+                                                      Scalar3* d_angmom_accum,
+                                                      Scalar4* d_alt_vel,
+                                                      const Scalar4* d_postype,
+                                                      const Scalar4* d_velocity,
+                                                      const int3* d_image,
+                                                      const unsigned int* d_body,
+                                                      const unsigned int* d_tag,
+                                                      const unsigned int* d_rtag,
+                                                      const BoxDim& global_box,
+                                                      const uint64_t timestep,
+                                                      const uint16_t seed,
+                                                      const Scalar T,
+                                                      const unsigned int num_total)
+    {
+    // one thread per particle
+    const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= num_total)
+        return;
+
+    // check if in a rigid body
+    const unsigned int central_tag = d_body[idx];
+    if (central_tag >= MIN_FLOPPY)
+        {
+        return;
+        }
+    const unsigned int central_idx = d_rtag[central_tag];
+    // if the central particle is not local, cannot read or write to it.
+    assert(central_idx != NOT_LOCAL);
+
+    // do not thermalize central particle
+    if (idx == central_idx)
+        {
+        return;
+        }
+    }
+
+__global__ void get_net_velocity_rigid_body(Scalar3* d_linmom_accum,
+                                            Scalar3* d_angmom_accum,
+                                            Scalar4* d_alt_vel,
+                                            const Scalar4* d_velocity,
+                                            const Scalar4* d_orientation,
+                                            const Scalar3* d_inertia,
+                                            const unsigned int* d_body,
+                                            const unsigned int* d_rtag,
+                                            const unsigned int num_total)
+    {
+    // one thread per particle
+    const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= num_total)
+        return;
+
+    // check if in a rigid body
+    const unsigned int central_tag = d_body[idx];
+    if (central_tag >= MIN_FLOPPY)
+        {
+        return;
+        }
+    const unsigned int central_idx = d_rtag[central_tag];
+    // if the central particle is not local, cannot read or write to it.
+    assert(central_idx != NOT_LOCAL);
+
+    // must be central particle
+    if (idx != central_idx)
+        {
+        return;
+        }
+    }
+
+__global__ void apply_thermalized_velocity_vectors(Scalar3* d_linmom_accum,
+                                                   Scalar3* d_angmom_accum,
+                                                   Scalar4* d_alt_vel,
+                                                   const Scalar4* d_postype,
+                                                   const Scalar4* d_velocity,
+                                                   const int3* d_image,
+                                                   const unsigned int* d_body,
+                                                   const unsigned int* d_rtag,
+                                                   const BoxDim& global_box,
+                                                   const unsigned int num_total)
+    {
+    // one thread per particle
+    const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= num_total)
+        return;
+
+    // check if in a rigid body
+    const unsigned int central_tag = d_body[idx];
+    if (central_tag >= MIN_FLOPPY)
+        {
+        return;
+        }
+    const unsigned int central_idx = d_rtag[central_tag];
+    // if the central particle is not local, cannot read or write to it.
+    assert(central_idx != NOT_LOCAL);
+
+    // do not thermalize central particle
+    if (idx == central_idx)
+        {
+        return;
+        }
+    }
 __global__ void accumulate_rigid_body_momenta(Scalar3* d_linmom_accum,
                                               Scalar3* d_angmom_accum,
                                               const Scalar4* d_initial_vel,
@@ -196,10 +297,16 @@ cudaError_t store_initial_embedded_group_velocities(Scalar4* d_initial_vel,
     return cudaSuccess;
     }
 
-cudaError_t draw_velocities_constituent_particles(Scalar4* d_alt_vel,
+cudaError_t draw_velocities_constituent_particles(Scalar3* d_linmom_accum,
+                                                  Scalar3* d_angmom_accum,
+                                                  Scalar4* d_alt_vel,
+                                                  const Scalar4* d_postype,
+                                                  const Scalar4* d_velocity,
+                                                  const int3* d_image,
                                                   const unsigned int* d_body,
                                                   const unsigned int* d_tag,
                                                   const unsigned int* d_rtag,
+                                                  const BoxDim& global_box,
                                                   const uint64_t timestep,
                                                   const uint16_t seed,
                                                   const Scalar T,
@@ -209,20 +316,35 @@ cudaError_t draw_velocities_constituent_particles(Scalar4* d_alt_vel,
     unsigned int max_block_size;
     cudaFuncAttributes attr;
     cudaFuncGetAttributes(&attr,
-                          (const void*)mpcd::gpu::kernel::store_initial_embedded_group_velocities);
+                          (const void*)mpcd::gpu::kernel::draw_velocities_constituent_particles);
     max_block_size = attr.maxThreadsPerBlock;
 
     unsigned int run_block_size = min(block_size, max_block_size);
 
     dim3 grid(num_total / run_block_size + 1);
+    mpcd::gpu::kernel::draw_velocities_constituent_particles<<<grid, run_block_size>>>(
+        d_linmom_accum,
+        d_angmom_accum,
+        d_alt_vel,
+        d_postype,
+        d_velocity,
+        d_image,
+        d_body,
+        d_tag,
+        d_rtag,
+        global_box,
+        timestep,
+        seed,
+        T,
+        num_total);
     return cudaSuccess;
     }
 
 cudaError_t get_net_velocity_rigid_body(Scalar3* d_linmom_accum,
                                         Scalar3* d_angmom_accum,
                                         Scalar4* d_alt_vel,
+                                        const Scalar4* d_velocity,
                                         const Scalar4* d_orientation,
-                                        Scalar4* d_angmom,
                                         const Scalar3* d_inertia,
                                         const unsigned int* d_body,
                                         const unsigned int* d_rtag,
@@ -231,13 +353,21 @@ cudaError_t get_net_velocity_rigid_body(Scalar3* d_linmom_accum,
     {
     unsigned int max_block_size;
     cudaFuncAttributes attr;
-    cudaFuncGetAttributes(&attr,
-                          (const void*)mpcd::gpu::kernel::store_initial_embedded_group_velocities);
+    cudaFuncGetAttributes(&attr, (const void*)mpcd::gpu::kernel::get_net_velocity_rigid_body);
     max_block_size = attr.maxThreadsPerBlock;
 
     unsigned int run_block_size = min(block_size, max_block_size);
 
     dim3 grid(num_total / run_block_size + 1);
+    mpcd::gpu::kernel::get_net_velocity_rigid_body<<<grid, run_block_size>>>(d_linmom_accum,
+                                                                             d_angmom_accum,
+                                                                             d_alt_vel,
+                                                                             d_velocity,
+                                                                             d_orientation,
+                                                                             d_inertia,
+                                                                             d_body,
+                                                                             d_rtag,
+                                                                             num_total);
     return cudaSuccess;
     }
 
@@ -256,12 +386,22 @@ cudaError_t apply_thermalized_velocity_vectors(Scalar3* d_linmom_accum,
     unsigned int max_block_size;
     cudaFuncAttributes attr;
     cudaFuncGetAttributes(&attr,
-                          (const void*)mpcd::gpu::kernel::store_initial_embedded_group_velocities);
+                          (const void*)mpcd::gpu::kernel::apply_thermalized_velocity_vectors);
     max_block_size = attr.maxThreadsPerBlock;
 
     unsigned int run_block_size = min(block_size, max_block_size);
 
     dim3 grid(num_total / run_block_size + 1);
+    mpcd::gpu::kernel::apply_thermalized_velocity_vectors<<<grid, run_block_size>>>(d_linmom_accum,
+                                                                                    d_angmom_accum,
+                                                                                    d_alt_vel,
+                                                                                    d_postype,
+                                                                                    d_velocity,
+                                                                                    d_image,
+                                                                                    d_body,
+                                                                                    d_rtag,
+                                                                                    global_box,
+                                                                                    num_total);
     return cudaSuccess;
     }
 

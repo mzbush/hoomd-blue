@@ -263,8 +263,8 @@ void mpcd::CollisionMethod::thermalizeConstituentParticles(uint64_t timestep)
     ArrayHandle<unsigned int> h_body(m_pdata->getBodies(),
                                      access_location::host,
                                      access_mode::read);
-    ArrayHandle<unsigned int> h_rtag(m_pdata->getRTags(), access_location::host, access_mode::read);
     ArrayHandle<unsigned int> h_tag(m_pdata->getTags(), access_location::host, access_mode::read);
+    ArrayHandle<unsigned int> h_rtag(m_pdata->getRTags(), access_location::host, access_mode::read);
     ArrayHandle<Scalar4> h_postype(m_pdata->getPositions(),
                                    access_location::host,
                                    access_mode::read);
@@ -644,11 +644,144 @@ void mpcd::CollisionMethod::storeInitialEmbeddedGroupVelocitiesGPU(uint64_t time
     m_store_tuner->end();
     }
 
-void mpcd::CollisionMethod::drawVelocitiesConstituentParticlesGPU(uint64_t timestep) { }
+void mpcd::CollisionMethod::drawVelocitiesConstituentParticlesGPU(uint64_t timestep)
+    {
+    // zero accumulators
+    m_linmom_accum.zeroFill();
+    m_angmom_accum.zeroFill();
 
-void mpcd::CollisionMethod::getNetVelocityRigidBodyGPU(uint64_t timestep) { }
+    ArrayHandle<Scalar3> d_linmom_accum(m_linmom_accum,
+                                        access_location::device,
+                                        access_mode::readwrite);
+    ArrayHandle<Scalar3> d_angmom_accum(m_angmom_accum,
+                                        access_location::device,
+                                        access_mode::readwrite);
+    ArrayHandle<Scalar4> d_alt_vel(m_pdata->getAltVelocities(),
+                                   access_location::device,
+                                   access_mode::readwrite);
+    ArrayHandle<Scalar4> d_postype(m_pdata->getPositions(),
+                                   access_location::device,
+                                   access_mode::read);
+    ArrayHandle<Scalar4> d_velocity(m_pdata->getVelocities(),
+                                    access_location::device,
+                                    access_mode::read);
+    ArrayHandle<int3> d_image(m_pdata->getImages(), access_location::device, access_mode::read);
+    ArrayHandle<unsigned int> d_body(m_pdata->getBodies(),
+                                     access_location::device,
+                                     access_mode::read);
+    ArrayHandle<unsigned int> d_tag(m_pdata->getTags(), access_location::device, access_mode::read);
+    ArrayHandle<unsigned int> d_rtag(m_pdata->getRTags(),
+                                     access_location::device,
+                                     access_mode::read);
 
-void mpcd::CollisionMethod::applyThermalizedVelocityVectorsGPU(uint64_t timestep) { }
+    m_drawrandvec_tuner->begin();
+    mpcd::gpu::draw_velocities_constituent_particles(d_linmom_accum.data,
+                                                     d_angmom_accum.data,
+                                                     d_alt_vel.data,
+                                                     d_postype.data,
+                                                     d_velocity.data,
+                                                     d_image.data,
+                                                     d_body.data,
+                                                     d_tag.data,
+                                                     d_rtag.data,
+                                                     m_pdata->getGlobalBox(),
+                                                     timestep,
+                                                     m_sysdef->getSeed(),
+                                                     Scalar(1.0), // for debugging purposes
+                                                     m_pdata->getN(),
+                                                     m_drawrandvec_tuner->getParam()[0]);
+    if (m_exec_conf->isCUDAErrorCheckingEnabled())
+        CHECK_CUDA_ERROR();
+    m_drawrandvec_tuner->end();
+    }
+
+void mpcd::CollisionMethod::getNetVelocityRigidBodyGPU(uint64_t timestep)
+    {
+    ArrayHandle<Scalar3> d_linmom_accum(m_linmom_accum,
+                                        access_location::device,
+                                        access_mode::readwrite);
+    ArrayHandle<Scalar3> d_angmom_accum(m_angmom_accum,
+                                        access_location::device,
+                                        access_mode::readwrite);
+    ArrayHandle<Scalar4> d_alt_vel(m_pdata->getAltVelocities(),
+                                   access_location::device,
+                                   access_mode::readwrite);
+    ArrayHandle<Scalar4> d_velocity(m_pdata->getVelocities(),
+                                    access_location::device,
+                                    access_mode::readwrite);
+    ArrayHandle<Scalar4> d_orientation(m_pdata->getOrientationArray(),
+                                       access_location::device,
+                                       access_mode::read);
+    ArrayHandle<Scalar3> d_inertia(m_pdata->getMomentsOfInertiaArray(),
+                                   access_location::device,
+                                   access_mode::read);
+    ArrayHandle<unsigned int> d_body(m_pdata->getBodies(),
+                                     access_location::device,
+                                     access_mode::read);
+    ArrayHandle<unsigned int> d_rtag(m_pdata->getRTags(),
+                                     access_location::device,
+                                     access_mode::read);
+
+    m_netvelo_tuner->begin();
+    mpcd::gpu::get_net_velocity_rigid_body(d_linmom_accum.data,
+                                           d_angmom_accum.data,
+                                           d_alt_vel.data,
+                                           d_velocity.data,
+                                           d_orientation.data,
+                                           d_inertia.data,
+                                           d_body.data,
+                                           d_rtag.data,
+                                           m_pdata->getN(),
+                                           m_drawrandvec_tuner->getParam()[0]);
+    if (m_exec_conf->isCUDAErrorCheckingEnabled())
+        CHECK_CUDA_ERROR();
+    m_netvelo_tuner->end();
+    }
+
+void mpcd::CollisionMethod::applyThermalizedVelocityVectorsGPU(uint64_t timestep)
+    {
+    ArrayHandle<Scalar3> d_linmom_accum(m_linmom_accum,
+                                        access_location::device,
+                                        access_mode::readwrite);
+    ArrayHandle<Scalar3> d_angmom_accum(m_angmom_accum,
+                                        access_location::device,
+                                        access_mode::readwrite);
+    ArrayHandle<Scalar4> d_alt_vel(m_pdata->getAltVelocities(),
+                                   access_location::device,
+                                   access_mode::readwrite);
+
+    ArrayHandle<Scalar4> d_postype(m_pdata->getPositions(),
+                                   access_location::device,
+                                   access_mode::read);
+
+    ArrayHandle<Scalar4> d_velocity(m_pdata->getVelocities(),
+                                    access_location::device,
+                                    access_mode::readwrite);
+    ArrayHandle<int3> d_image(m_pdata->getImages(), access_location::device, access_mode::read);
+
+    ArrayHandle<unsigned int> d_body(m_pdata->getBodies(),
+                                     access_location::device,
+                                     access_mode::read);
+    ArrayHandle<unsigned int> d_rtag(m_pdata->getRTags(),
+                                     access_location::device,
+                                     access_mode::read);
+
+    m_applyrandvec_tuner->begin();
+    mpcd::gpu::apply_thermalized_velocity_vectors(d_linmom_accum.data,
+                                                  d_angmom_accum.data,
+                                                  d_alt_vel.data,
+                                                  d_postype.data,
+                                                  d_velocity.data,
+                                                  d_image.data,
+                                                  d_body.data,
+                                                  d_rtag.data,
+                                                  m_pdata->getGlobalBox(),
+                                                  m_pdata->getN(),
+                                                  m_drawrandvec_tuner->getParam()[0]);
+    if (m_exec_conf->isCUDAErrorCheckingEnabled())
+        CHECK_CUDA_ERROR();
+    m_applyrandvec_tuner->end();
+    }
 
 //! Accumulate momenta changes of constituent particles of rigid bodies (GPU version)
 void mpcd::CollisionMethod::accumulateRigidBodyMomentaGPU(uint64_t timestep)
