@@ -196,6 +196,75 @@ cudaError_t store_initial_embedded_group_velocities(Scalar4* d_initial_vel,
     return cudaSuccess;
     }
 
+cudaError_t draw_velocities_constituent_particles(Scalar4* d_alt_vel,
+                                                  const unsigned int* d_body,
+                                                  const unsigned int* d_tag,
+                                                  const unsigned int* d_rtag,
+                                                  const uint64_t timestep,
+                                                  const uint16_t seed,
+                                                  const Scalar T,
+                                                  const unsigned int num_total,
+                                                  const unsigned int block_size)
+    {
+    unsigned int max_block_size;
+    cudaFuncAttributes attr;
+    cudaFuncGetAttributes(&attr,
+                          (const void*)mpcd::gpu::kernel::store_initial_embedded_group_velocities);
+    max_block_size = attr.maxThreadsPerBlock;
+
+    unsigned int run_block_size = min(block_size, max_block_size);
+
+    dim3 grid(num_total / run_block_size + 1);
+    return cudaSuccess;
+    }
+
+cudaError_t get_net_velocity_rigid_body(Scalar3* d_linmom_accum,
+                                        Scalar3* d_angmom_accum,
+                                        Scalar4* d_alt_vel,
+                                        const Scalar4* d_orientation,
+                                        Scalar4* d_angmom,
+                                        const Scalar3* d_inertia,
+                                        const unsigned int* d_body,
+                                        const unsigned int* d_rtag,
+                                        const unsigned int num_total,
+                                        const unsigned int block_size)
+    {
+    unsigned int max_block_size;
+    cudaFuncAttributes attr;
+    cudaFuncGetAttributes(&attr,
+                          (const void*)mpcd::gpu::kernel::store_initial_embedded_group_velocities);
+    max_block_size = attr.maxThreadsPerBlock;
+
+    unsigned int run_block_size = min(block_size, max_block_size);
+
+    dim3 grid(num_total / run_block_size + 1);
+    return cudaSuccess;
+    }
+
+cudaError_t apply_thermalized_velocity_vectors(Scalar3* d_linmom_accum,
+                                               Scalar3* d_angmom_accum,
+                                               Scalar4* d_alt_vel,
+                                               const Scalar4* d_postype,
+                                               const Scalar4* d_velocity,
+                                               const int3* d_image,
+                                               const unsigned int* d_body,
+                                               const unsigned int* d_rtag,
+                                               const BoxDim& global_box,
+                                               const unsigned int num_total,
+                                               const unsigned int block_size)
+    {
+    unsigned int max_block_size;
+    cudaFuncAttributes attr;
+    cudaFuncGetAttributes(&attr,
+                          (const void*)mpcd::gpu::kernel::store_initial_embedded_group_velocities);
+    max_block_size = attr.maxThreadsPerBlock;
+
+    unsigned int run_block_size = min(block_size, max_block_size);
+
+    dim3 grid(num_total / run_block_size + 1);
+    return cudaSuccess;
+    }
+
 cudaError_t accumulate_rigid_body_momenta(Scalar3* d_linmom_accum,
                                           Scalar3* d_angmom_accum,
                                           const Scalar4* d_initial_vel,

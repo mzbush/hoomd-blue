@@ -104,11 +104,16 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
         if (m_exec_conf->isCUDAEnabled())
             {
             storeInitialEmbeddedGroupVelocitiesGPU(timestep);
+            // thermalize constituent particles to add energy to the rigid body
+            drawVelocitiesConstituentParticlesGPU(timestep);
+            getNetVelocityRigidBodyGPU(timestep);
+            applyThermalizedVelocityVectorsGPU(timestep);
             }
         else
 #endif
             {
             storeInitialEmbeddedGroupVelocities(timestep);
+            // thermalize constituent particles to add energy to the rigid body
             thermalizeConstituentParticles(timestep);
             }
         }
@@ -299,7 +304,7 @@ void mpcd::CollisionMethod::thermalizeConstituentParticles(uint64_t timestep)
         unsigned int tag = h_tag.data[idx];
         // draw random velocities from normal distribution
         hoomd::RandomGenerator rng(
-            hoomd::Seed(hoomd::RNGIdentifier::ATCollisionMethod, timestep, seed),
+            hoomd::Seed(hoomd::RNGIdentifier::CollisionMethod, timestep, seed),
             hoomd::Counter(tag));
         hoomd::NormalDistribution<Scalar> gen(fast::sqrt(T_set / mass_const), 0.0);
         Scalar3 vel;
@@ -638,6 +643,12 @@ void mpcd::CollisionMethod::storeInitialEmbeddedGroupVelocitiesGPU(uint64_t time
         CHECK_CUDA_ERROR();
     m_store_tuner->end();
     }
+
+void mpcd::CollisionMethod::drawVelocitiesConstituentParticlesGPU(uint64_t timestep) { }
+
+void mpcd::CollisionMethod::getNetVelocityRigidBodyGPU(uint64_t timestep) { }
+
+void mpcd::CollisionMethod::applyThermalizedVelocityVectorsGPU(uint64_t timestep) { }
 
 //! Accumulate momenta changes of constituent particles of rigid bodies (GPU version)
 void mpcd::CollisionMethod::accumulateRigidBodyMomentaGPU(uint64_t timestep)
