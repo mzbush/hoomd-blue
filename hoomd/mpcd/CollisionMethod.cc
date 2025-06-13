@@ -745,7 +745,7 @@ void mpcd::CollisionMethod::getNetVelocityRigidBodyGPU(uint64_t timestep)
                                            d_body.data,
                                            d_rtag.data,
                                            m_pdata->getN(),
-                                           m_drawrandvec_tuner->getParam()[0]);
+                                           m_netvelo_tuner->getParam()[0]);
     if (m_exec_conf->isCUDAErrorCheckingEnabled())
         CHECK_CUDA_ERROR();
     m_netvelo_tuner->end();
@@ -775,16 +775,16 @@ void mpcd::CollisionMethod::applyThermalizedVelocityVectorsGPU(uint64_t timestep
                                      access_mode::read);
 
     m_applyrandvec_tuner->begin();
-    mpcd::gpu::apply_thermalized_velocity_vectors(d_angmom_accum.data,
-                                                  d_alt_vel.data,
-                                                  d_postype.data,
-                                                  d_velocity.data,
-                                                  d_image.data,
-                                                  d_body.data,
-                                                  d_rtag.data,
-                                                  m_pdata->getGlobalBox(),
-                                                  m_pdata->getN(),
-                                                  m_drawrandvec_tuner->getParam()[0]);
+    // mpcd::gpu::apply_thermalized_velocity_vectors(d_angmom_accum.data,
+    //                                               d_alt_vel.data,
+    //                                               d_postype.data,
+    //                                               d_velocity.data,
+    //                                               d_image.data,
+    //                                               d_body.data,
+    //                                               d_rtag.data,
+    //                                               m_pdata->getGlobalBox(),
+    //                                               m_pdata->getN(),
+    //                                               m_applyrandvec_tuner->getParam()[0]);
     if (m_exec_conf->isCUDAErrorCheckingEnabled())
         CHECK_CUDA_ERROR();
     m_applyrandvec_tuner->end();
