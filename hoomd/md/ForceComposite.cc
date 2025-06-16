@@ -430,13 +430,6 @@ void ForceComposite::validateRigidBodies()
 
 void ForceComposite::pyCreateRigidBodies(pybind11::dict charges, pybind11::dict masses)
     {
-    if (pybind11::len(charges) == 0 && pybind11::len(masses) == 0)
-        {
-        createRigidBodies(std::unordered_map<unsigned int, std::vector<Scalar>>(),
-                          std::unordered_map<unsigned int, std::vector<Scalar>>());
-        return;
-        }
-
     std::unordered_map<unsigned int, std::vector<Scalar>> charges_map;
     std::unordered_map<unsigned int, std::vector<Scalar>> masses_map;
         {
