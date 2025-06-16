@@ -137,11 +137,22 @@ def check_bodies(snapshot, definition, charges=None, masses=None):
 
 
 @skip_rowan
+@pytest.mark.parametrize(
+    "create_bodies_args",
+    [
+        {},
+        {"charges": {"A": [1.0, 2.0, 3.0, 4.0]}},
+        {"masses": {"A": [5.0, 6.0, 7.0, 8.0]}},
+        {"charges": {"A": [1.0, 2.0, 3.0, 4.0]}, "masses": {"A": [5.0, 6.0, 7.0, 8.0]}},
+    ],
+    ids=["Default", "optional-change", "optional-mass", "optional-charge-mass"],
+)
 def test_create_bodies(
     simulation_factory,
     two_particle_snapshot_factory,
     lattice_snapshot_factory,
     valid_body_definition,
+    create_bodies_args,
 ):
     rigid = md.constrain.Rigid()
     rigid.body["A"] = valid_body_definition
@@ -151,11 +162,19 @@ def test_create_bodies(
         initial_snapshot.particles.types = ["A", "B"]
     sim = simulation_factory(initial_snapshot)
 
-    charges = [1.0, 2.0, 3.0, 4.0]
-    masses = [5.0, 6.0, 7.0, 8.0]
-    rigid.create_bodies(sim.state, charges={"A": charges}, masses={"A": masses})
+    rigid.create_bodies(sim.state, **create_bodies_args)
     snapshot = sim.state.get_snapshot()
     if snapshot.communicator.rank == 0:
+        charges = (
+            create_bodies_args["charges"]["A"]
+            if "charges" in create_bodies_args.keys()
+            else None
+        )
+        masses = (
+            create_bodies_args["masses"]["A"]
+            if "masses" in create_bodies_args.keys()
+            else None
+        )
         check_bodies(snapshot, valid_body_definition, charges, masses)
 
     sim.operations.integrator = hoomd.md.Integrator(dt=0.005, rigid=rigid)
