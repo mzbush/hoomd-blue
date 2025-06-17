@@ -138,13 +138,8 @@ def check_bodies(snapshot, definition, charges=None, masses=None):
 
 @skip_rowan
 @pytest.mark.parametrize(
-    "create_bodies_args",
-    [
-        {},
-        {"charges": {"A": [1.0, 2.0, 3.0, 4.0]}},
-        {"masses": {"A": [5.0, 6.0, 7.0, 8.0]}},
-        {"charges": {"A": [1.0, 2.0, 3.0, 4.0]}, "masses": {"A": [5.0, 6.0, 7.0, 8.0]}},
-    ],
+    "include_charge,include_mass",
+    [(False, False), (True, False), (False, True), (True, True)],
     ids=["Default", "optional-change", "optional-mass", "optional-charge-mass"],
 )
 def test_create_bodies(
@@ -152,7 +147,8 @@ def test_create_bodies(
     two_particle_snapshot_factory,
     lattice_snapshot_factory,
     valid_body_definition,
-    create_bodies_args,
+    include_charge,
+    include_mass,
 ):
     rigid = md.constrain.Rigid()
     rigid.body["A"] = valid_body_definition
@@ -162,20 +158,24 @@ def test_create_bodies(
         initial_snapshot.particles.types = ["A", "B"]
     sim = simulation_factory(initial_snapshot)
 
-    rigid.create_bodies(sim.state, **create_bodies_args)
+    charges = [1.0, 2.0, 3.0, 4.0]
+    masses = [5.0, 6.0, 7.0, 8.0]
+    if include_charge and include_mass:
+        rigid.create_bodies(sim.state, charges={"A": charges}, masses={"A": masses})
+    elif include_charge:
+        rigid.create_bodies(sim.state, charges={"A": charges})
+    elif include_mass:
+        rigid.create_bodies(sim.state, masses={"A": masses})
+    else:
+        rigid.create_bodies(sim.state)
     snapshot = sim.state.get_snapshot()
     if snapshot.communicator.rank == 0:
-        charges = (
-            create_bodies_args["charges"]["A"]
-            if "charges" in create_bodies_args.keys()
-            else None
+        check_bodies(
+            snapshot,
+            valid_body_definition,
+            charges if include_charge else None,
+            masses if include_mass else None,
         )
-        masses = (
-            create_bodies_args["masses"]["A"]
-            if "masses" in create_bodies_args.keys()
-            else None
-        )
-        check_bodies(snapshot, valid_body_definition, charges, masses)
 
     sim.operations.integrator = hoomd.md.Integrator(dt=0.005, rigid=rigid)
     # Ensure validate bodies passes
