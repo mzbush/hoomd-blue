@@ -177,11 +177,14 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
         ArrayHandle<unsigned int> h_rtag_embed(m_pdata->getRTags(),
                                                access_location::host,
                                                access_mode::read);
-
+        ArrayHandle<Scalar4> h_postype(m_pdata->getPositions(),
+                                       access_location::host,
+                                       access_mode::read);
         // check if some of the masses are less or equal to 0
         bool invalid_mass = false;
         bool central_interacting = false;
-        for (unsigned int idx = 0; idx < num_group && !(invalid_mass && central_interacting); ++idx)
+        std::set<unsigned int> rigid_types;
+        for (unsigned int idx = 0; idx < num_group; ++idx)
             {
             // get the index from the embedded group
             const unsigned int particle_index = h_embed_group.data[idx];
@@ -203,6 +206,8 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
                     {
                     central_interacting = true;
                     }
+                const unsigned int central_type = __scalar_as_int(h_postype.data[central_idx].w);
+                rigid_types.insert(central_type);
                 }
             }
 
