@@ -140,7 +140,7 @@ def check_bodies(snapshot, definition, charges=None, masses=None):
 @pytest.mark.parametrize(
     "include_charge,include_mass",
     [(False, False), (True, False), (False, True), (True, True)],
-    ids=["Default", "optional-change", "optional-mass", "optional-charge-mass"],
+    ids=["default", "optional-change", "optional-mass", "optional-charge-mass"],
 )
 def test_create_bodies(
     simulation_factory,
