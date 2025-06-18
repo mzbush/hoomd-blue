@@ -158,7 +158,9 @@ def test_create_bodies(
         initial_snapshot.particles.types = ["A", "B"]
     sim = simulation_factory(initial_snapshot)
 
-    charges = [1.0, 2.0, 3.0, 4.0]
+    optional_kwargs = {}
+    if include_charge:
+        optional_kwargs["charges"] = {"A": [1.0, 2.0, 3.0, 4.0]}
     masses = [5.0, 6.0, 7.0, 8.0]
     if include_charge and include_mass:
         rigid.create_bodies(sim.state, charges={"A": charges}, masses={"A": masses})
