@@ -266,7 +266,7 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
             // loop over all molecules
             unsigned int n_particles_local = m_pdata->getN() + m_pdata->getNGhosts();
             for (unsigned int ibody = 0;
-                 ibody < nmol || !(invalid_center_of_mass) || !(rigid_types.empty());
+                 ibody < nmol && !(invalid_center_of_mass || rigid_types.empty());
                  ibody++)
                 {
                 // get central particle tag from first particle in molecule
@@ -287,7 +287,6 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
                     }
                 else
                     {
-                    // Problem: this line of code causes a segmentation fault
                     rigid_types.erase(rigid_types.find(type));
                     }
 
@@ -312,7 +311,6 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
                     center_of_mass.y += local_pos.y * mass;
                     center_of_mass.z += local_pos.z * mass;
                     }
-                // PROBLEM: Writing anything to invalid_center_of_mass causes a segmentation fault
                 // check if center of mass in body frame is (0, 0, 0)
                 bool in_tol = (center_of_mass.x >= -1.0 * tol && center_of_mass.x <= tol)
                               || (center_of_mass.y >= -1.0 * tol && center_of_mass.y <= tol)
