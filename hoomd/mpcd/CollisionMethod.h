@@ -23,6 +23,7 @@
 #include "hoomd/Autotuned.h"
 #include "hoomd/ParticleGroup.h"
 #include "hoomd/SystemDefinition.h"
+#include "hoomd/Variant.h"
 #include <pybind11/pybind11.h>
 
 namespace hoomd
@@ -112,6 +113,18 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
         m_rigid_bodies = new_rigid;
         }
 
+    //! Get the temperature
+    std::shared_ptr<Variant> getTemperature() const
+        {
+        return m_T;
+        }
+
+    //! Set the temperature
+    void setTemperature(std::shared_ptr<Variant> T)
+        {
+        m_T = T;
+        }
+
     protected:
     std::shared_ptr<SystemDefinition> m_sysdef;                //!< HOOMD system definition
     std::shared_ptr<hoomd::ParticleData> m_pdata;              //!< HOOMD particle data
@@ -121,6 +134,7 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
     std::shared_ptr<mpcd::CellList> m_cl;                      //!< MPCD cell list
     std::shared_ptr<ParticleGroup> m_embed_group;              //!< Embedded particles
     std::shared_ptr<hoomd::md::ForceComposite> m_rigid_bodies; //!< definition for rigid bodies
+    std::shared_ptr<Variant> m_T;                              //!< Temperature for thermostat
 
     uint64_t m_period;        //!< Number of timesteps between collisions
     uint64_t m_next_timestep; //!< Timestep next collision should be performed

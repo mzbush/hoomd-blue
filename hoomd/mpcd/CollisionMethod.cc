@@ -118,18 +118,18 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
 #ifdef ENABLE_HIP
         if (m_exec_conf->isCUDAEnabled())
             {
-            storeInitialEmbeddedGroupVelocitiesGPU(timestep);
             // thermalize constituent particles to add energy to the rigid body
             drawVelocitiesConstituentParticlesGPU(timestep);
             getNetVelocityRigidBodyGPU(timestep);
             applyThermalizedVelocityVectorsGPU(timestep);
+            storeInitialEmbeddedGroupVelocitiesGPU(timestep);
             }
         else
 #endif
             {
-            storeInitialEmbeddedGroupVelocities(timestep);
             // thermalize constituent particles to add energy to the rigid body
             thermalizeConstituentParticles(timestep);
+            storeInitialEmbeddedGroupVelocities(timestep);
             }
         }
 
@@ -155,6 +155,11 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
         }
     }
 
+/*! Check for warnings and errors related to collision step and rigid bodies
+ * \warning If any embedded particles have zero mass and no momentum to transfer
+ * \warning If the central particle of a rigid body participates in collision
+ * \throws If rigid body particles participate in collision but cannot be thermostatted
+ */
 void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
     {
     if (m_checked_collision_warnings)
@@ -180,8 +185,10 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
         ArrayHandle<Scalar4> h_postype(m_pdata->getPositions(),
                                        access_location::host,
                                        access_mode::read);
+        const bool has_no_thermostat = (m_T) ? false : true;
         // check if some of the masses are less or equal to 0
         bool invalid_mass = false;
+        bool needs_thermostat = false;
         bool central_interacting = false;
         std::set<unsigned int> rigid_types;
         for (unsigned int idx = 0; idx < num_group; ++idx)
@@ -201,6 +208,7 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
             const unsigned int central_tag = h_body_embed.data[particle_index];
             if (central_tag < MIN_FLOPPY)
                 {
+                needs_thermostat = true;
                 const unsigned int central_idx = h_rtag_embed.data[central_tag];
                 if (particle_index == central_idx)
                     {
@@ -221,6 +229,12 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
                           MPI_LOR,
                           m_exec_conf->getMPICommunicator());
             MPI_Allreduce(MPI_IN_PLACE,
+                          &needs_thermostat,
+                          1,
+                          MPI_CXX_BOOL,
+                          MPI_LOR,
+                          m_exec_conf->getMPICommunicator());
+            MPI_Allreduce(MPI_IN_PLACE,
                           &central_interacting,
                           1,
                           MPI_CXX_BOOL,
@@ -235,7 +249,12 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
                                            "invalid results during MPCD collision."
                                         << std::endl;
             }
-
+        if (needs_thermostat && has_no_thermostat)
+            {
+            m_exec_conf->msg->error() << "Thermostat required when colliding with rigid "
+                                         "bodies."
+                                      << std::endl;
+            }
         if (central_interacting)
             {
             m_exec_conf->msg->warning() << "Central particle of rigid body included in "
@@ -272,7 +291,7 @@ void mpcd::CollisionMethod::thermalizeConstituentParticles(uint64_t timestep)
     m_linmom_accum.zeroFill();
     m_angmom_accum.zeroFill();
 
-    Scalar T_set(1.0); // for debugging purposes
+    Scalar T_set = (*m_T)(timestep);
 
     ArrayHandle<Scalar4> h_velocity(m_pdata->getVelocities(),
                                     access_location::host,
@@ -707,7 +726,7 @@ void mpcd::CollisionMethod::drawVelocitiesConstituentParticlesGPU(uint64_t times
                                                      m_pdata->getGlobalBox(),
                                                      timestep,
                                                      m_sysdef->getSeed(),
-                                                     Scalar(1.0), // for debugging purposes
+                                                     (*m_T)(timestep),
                                                      m_pdata->getN(),
                                                      m_drawrandvec_tuner->getParam()[0]);
     if (m_exec_conf->isCUDAErrorCheckingEnabled())
