@@ -199,6 +199,36 @@ class PYBIND11_EXPORT ForceComposite : public MolecularForceCompute
         return m_n_free_particles_global;
         }
 
+    /// Get constituent particle types per type id
+    const GPUArray<unsigned int>& getBodyTypes() const
+        {
+        return m_body_types;
+        }
+
+    /// Get constituent particle offsets per type id
+    const GPUArray<Scalar3>& getBodyOffsets() const
+        {
+        return m_body_pos;
+        }
+
+    /// Get constituent particle orientations per type id
+    const GPUArray<Scalar4>& getBodyOrientations() const
+        {
+        return m_body_orientation;
+        }
+
+    /// Get length of body per type id
+    const GPUArray<unsigned int>& getBodyLengths() const
+        {
+        return m_body_len;
+        }
+
+    /// Get body parameter indexer
+    const Index2D& getBodyIndexer()
+        {
+        return m_body_idx;
+        }
+
     protected:
     bool m_bodies_changed;          //!< True if constituent particles have changed
     bool m_particles_added_removed; //!< True if particles have been added or removed

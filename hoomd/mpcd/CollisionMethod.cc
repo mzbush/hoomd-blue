@@ -169,53 +169,153 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
 
     if (m_embed_group)
         {
-        const unsigned int num_group = m_embed_group->getNumMembers();
-        ArrayHandle<unsigned int> h_embed_group(m_embed_group->getIndexArray(),
-                                                access_location::host,
-                                                access_mode::read);
-        ArrayHandle<Scalar4> h_velocity(m_pdata->getVelocities(),
-                                        access_location::host,
-                                        access_mode::read);
-        ArrayHandle<unsigned int> h_body_embed(m_pdata->getBodies(),
-                                               access_location::host,
-                                               access_mode::read);
-        ArrayHandle<unsigned int> h_rtag_embed(m_pdata->getRTags(),
-                                               access_location::host,
-                                               access_mode::read);
-        ArrayHandle<Scalar4> h_postype(m_pdata->getPositions(),
-                                       access_location::host,
-                                       access_mode::read);
+        // initialize variables for if warnings or errors exist
         const bool has_no_thermostat = (m_T) ? false : true;
-        // check if some of the masses are less or equal to 0
         bool invalid_mass = false;
         bool needs_thermostat = false;
         bool central_interacting = false;
+        bool invalid_center_of_mass = false;
         std::set<unsigned int> rigid_types;
-        for (unsigned int idx = 0; idx < num_group; ++idx)
+
+            // check embedded particles for warnings
             {
-            // get the index from the embedded group
-            const unsigned int particle_index = h_embed_group.data[idx];
+            const unsigned int num_group = m_embed_group->getNumMembers();
+            ArrayHandle<unsigned int> h_embed_group(m_embed_group->getIndexArray(),
+                                                    access_location::host,
+                                                    access_mode::read);
+            ArrayHandle<Scalar4> h_velocity(m_pdata->getVelocities(),
+                                            access_location::host,
+                                            access_mode::read);
+            ArrayHandle<unsigned int> h_body_embed(m_pdata->getBodies(),
+                                                   access_location::host,
+                                                   access_mode::read);
+            ArrayHandle<unsigned int> h_rtag_embed(m_pdata->getRTags(),
+                                                   access_location::host,
+                                                   access_mode::read);
+            ArrayHandle<Scalar4> h_postype(m_pdata->getPositions(),
+                                           access_location::host,
+                                           access_mode::read);
 
-            // check mass
-            const Scalar4 vel_mass = h_velocity.data[particle_index];
-            const Scalar mass = vel_mass.w;
-            if (mass <= Scalar(0))
+            for (unsigned int idx = 0; idx < num_group; ++idx)
                 {
-                invalid_mass = true;
-                }
+                // get the index from the embedded group
+                const unsigned int particle_index = h_embed_group.data[idx];
 
-            // check if particle is central particle in rigid body
-            const unsigned int central_tag = h_body_embed.data[particle_index];
-            if (central_tag < MIN_FLOPPY)
-                {
-                needs_thermostat = true;
-                const unsigned int central_idx = h_rtag_embed.data[central_tag];
-                if (particle_index == central_idx)
+                // check particle has mass
+                const Scalar4 vel_mass = h_velocity.data[particle_index];
+                const Scalar mass = vel_mass.w;
+                if (mass <= Scalar(0))
                     {
-                    central_interacting = true;
+                    invalid_mass = true;
                     }
-                const unsigned int central_type = __scalar_as_int(h_postype.data[central_idx].w);
-                rigid_types.insert(central_type);
+
+                // check if particle is central particle in rigid body
+                const unsigned int central_tag = h_body_embed.data[particle_index];
+                if (central_tag < MIN_FLOPPY)
+                    {
+                    needs_thermostat = true;
+                    const unsigned int central_idx = h_rtag_embed.data[central_tag];
+                    if (particle_index == central_idx)
+                        {
+                        central_interacting = true;
+                        }
+                    const unsigned int central_type
+                        = __scalar_as_int(h_postype.data[central_idx].w);
+                    rigid_types.insert(central_type);
+                    }
+                }
+            }
+
+        // go through each molecule and check if the center of mass is in right location
+        if (m_rigid_bodies && !rigid_types.empty())
+            {
+            const Scalar tol(0.000001);
+            // access molecule order
+            ArrayHandle<unsigned int> h_molecule_order(m_rigid_bodies->getMoleculeOrder(),
+                                                       access_location::host,
+                                                       access_mode::read);
+            ArrayHandle<unsigned int> h_molecule_len(m_rigid_bodies->getMoleculeLengths(),
+                                                     access_location::host,
+                                                     access_mode::read);
+            ArrayHandle<unsigned int> h_molecule_idx(m_rigid_bodies->getMoleculeIndex(),
+                                                     access_location::host,
+                                                     access_mode::read);
+            ArrayHandle<unsigned int> h_molecule_list(m_rigid_bodies->getMoleculeList(),
+                                                      access_location::host,
+                                                      access_mode::read);
+            Index2D molecule_indexer = m_rigid_bodies->getMoleculeIndexer();
+            unsigned int nmol = molecule_indexer.getH();
+            // access body definitions
+            ArrayHandle<Scalar3> h_body_pos(m_rigid_bodies->getBodyOffsets(),
+                                            access_location::host,
+                                            access_mode::read);
+            Index2D h_body_idx = m_rigid_bodies->getBodyIndexer();
+            // accesss particle data
+            ArrayHandle<Scalar4> h_postype(m_pdata->getPositions(),
+                                           access_location::host,
+                                           access_mode::read);
+            ArrayHandle<Scalar4> h_velocity(m_pdata->getVelocities(),
+                                            access_location::host,
+                                            access_mode::read);
+            ArrayHandle<unsigned int> h_body(m_pdata->getBodies(),
+                                             access_location::host,
+                                             access_mode::read);
+            ArrayHandle<unsigned int> h_rtag(m_pdata->getRTags(),
+                                             access_location::host,
+                                             access_mode::read);
+            // loop over all molecules
+            unsigned int n_particles_local = m_pdata->getN() + m_pdata->getNGhosts();
+            for (unsigned int ibody = 0;
+                 ibody < nmol || !(invalid_center_of_mass) || !(rigid_types.empty());
+                 ibody++)
+                {
+                // get central particle tag from first particle in molecule
+                assert(h_molecule_len.data[ibody] > 0);
+                unsigned int first_idx = h_molecule_list.data[molecule_indexer(0, ibody)];
+                if (first_idx > n_particles_local)
+                    continue;
+                unsigned int central_tag = h_body.data[first_idx];
+                unsigned int central_idx = h_rtag.data[central_tag];
+                if (central_idx >= n_particles_local)
+                    continue;
+
+                // only do molecules whose type hasn't been checked before
+                unsigned int type = __scalar_as_int(h_postype.data[central_idx].w);
+                if (rigid_types.find(type) != rigid_types.end())
+                    continue;
+
+                // find center of mass position of particle
+                Scalar3 center_of_mass = make_scalar3(0.0, 0.0, 0.0);
+                for (unsigned int constituent_index = 0;
+                     constituent_index < h_molecule_len.data[ibody];
+                     ++constituent_index)
+                    {
+                    unsigned int idxj
+                        = h_molecule_list.data[molecule_indexer(constituent_index, ibody)];
+                    assert(idxj < m_pdata->getN() + m_pdata->getNGhosts());
+                    if (idxj == central_idx)
+                        continue;
+
+                    // get relative position and mass of constituent
+                    unsigned int idx_in_body = h_molecule_order.data[idxj] - 1;
+                    Scalar3 local_pos(h_body_pos.data[h_body_idx(type, idx_in_body)]);
+                    Scalar mass = h_velocity.data[idxj].w;
+                    // add to accumulating center of mass
+                    center_of_mass.x += local_pos.x * mass;
+                    center_of_mass.y += local_pos.y * mass;
+                    center_of_mass.z += local_pos.z * mass;
+                    }
+                // PROBLEM: This area causes a segmentation fault
+                // running certain lines of code such as std::cout<<std::endl; cause segmentation
+                // faults
+
+                // check if center of mass in body frame is (0, 0, 0)
+                invalid_center_of_mass
+                    = (center_of_mass.x >= -1.0 * tol && center_of_mass.x <= tol)
+                      || (center_of_mass.y >= -1.0 * tol && center_of_mass.y <= tol)
+                      || (center_of_mass.z >= -1.0 * tol && center_of_mass.z <= tol);
+                // remove the checked rigid body type
+                rigid_types.erase(rigid_types.find(type));
                 }
             }
 
@@ -240,6 +340,12 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
                           MPI_CXX_BOOL,
                           MPI_LOR,
                           m_exec_conf->getMPICommunicator());
+            MPI_Allreduce(MPI_IN_PLACE,
+                          &invalid_center_of_mass,
+                          1,
+                          MPI_CXX_BOOL,
+                          MPI_LOR,
+                          m_exec_conf->getMPICommunicator());
             }
 #endif // ENABLE_MPI
 
@@ -260,6 +366,11 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
             m_exec_conf->msg->warning() << "Central particle of rigid body included in "
                                            "MPCD collision. Check if this is intentional."
                                         << std::endl;
+            }
+        if (invalid_center_of_mass)
+            {
+            m_exec_conf->msg->error()
+                << "Some rigid bodies do not have center of mass at central particle." << std::endl;
             }
         }
     m_checked_collision_warnings = true;
