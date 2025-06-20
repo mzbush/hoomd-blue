@@ -167,14 +167,8 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
     //! Begin process of applying collisions to rigid bodies (GPU version)
     void storeInitialEmbeddedGroupVelocitiesGPU(uint64_t timestep);
 
-    //! create random vector velocities for constituent particles
-    void drawVelocitiesConstituentParticlesGPU(uint64_t timestep);
-
-    //! find net velocity and net angular momentum of random vectors
-    void getNetVelocityRigidBodyGPU(uint64_t timestep);
-
     //! thermalize constituent particles of rigid bodies
-    void applyThermalizedVelocityVectorsGPU(uint64_t timestep);
+    void thermalizeConstituentParticlesGPU(uint64_t timestep);
 
     //! Accumulate momenta changes of constituent particles of rigid bodies (GPU version)
     void accumulateRigidBodyMomentaGPU(uint64_t timestep);
