@@ -910,7 +910,8 @@ class DPDConservative(Pair):
         nl = nlist.Cell()
         dpdc = pair.DPDConservative(nlist=nl, default_r_cut=3.0)
         dpdc.params[("A", "A")] = dict(A=1.0)
-        dpdc.params[("A", "B")] = dict(A=2.0, r_cut=1.0)
+        dpdc.params[("A", "B")] = dict(A=2.0)
+        dpdc.r_cut[("A", "B")] = 1.0
         dpdc.params[(["A", "B"], ["C", "D"])] = dict(A=3.0)
 
     {inherited}
