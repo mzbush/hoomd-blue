@@ -255,13 +255,13 @@ class GSD(Writer):
                 gsd.write_diameter = True
 
         maximum_write_buffer_size (int): Size (in bytes) to buffer in memory
-           before writing to the file.
+           before writing to the file. Defaults to 1 MiB.
 
             .. rubric:: Example:
 
             .. code-block:: python
 
-                gsd.maximum_write_buffer_size = 128 * 1024**2
+                gsd.maximum_write_buffer_size = 16 * 1024**2
     """
 
     __doc__ = inspect.cleandoc(__doc__).replace(
@@ -313,7 +313,7 @@ class GSD(Writer):
                 truncate=bool(truncate),
                 dynamic=[dynamic_validation],
                 write_diameter=False,
-                maximum_write_buffer_size=64 * 1024 * 1024,
+                maximum_write_buffer_size=1024 * 1024,
                 _defaults=dict(filter=filter, dynamic=dynamic),
             )
         )
@@ -487,7 +487,7 @@ class _GSDLogWriter:
                     # This places logged quantities that are
                     # per-{particle,bond,...} into the correct GSD namespace
                     # log/particles/{remaining namespace}. This preserves OVITO
-                    # intergration.
+                    # integration.
                     if type_category in self._per_categories:
                         log[
                             "/".join(

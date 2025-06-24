@@ -234,10 +234,6 @@ void GSDDumpWriter::setMaximumWriteBufferSize(uint64_t size)
         {
         int retval = gsd_set_maximum_write_buffer_size(&m_handle, size);
         GSDUtils::checkError(retval, m_fname);
-
-        // Scale the index buffer entires to write with the write buffer.
-        retval = gsd_set_index_entries_to_buffer(&m_handle, size / 256);
-        GSDUtils::checkError(retval, m_fname);
         }
     }
 
