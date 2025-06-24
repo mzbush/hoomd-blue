@@ -111,6 +111,7 @@ The following people have contributed to HOOMD-blue:
 * Sam Nola, University of Michigan
 * Simone Ciarella, Eindhoven University of Technology
 * Shannon Moran, University of Michigan
+* Shawn Douglas, University of California, San Francisco
 * Sophie YouJung Lee, University of Michigan
 * Stephen Thomas, Boise State University
 * Steve Barr, Princeton University
