@@ -175,6 +175,7 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
         bool needs_thermostat = false;
         bool central_interacting = false;
         bool invalid_center_of_mass = false;
+        bool invalid_mass_sum = false;
         std::set<unsigned int> rigid_types;
 
             // check embedded particles for warnings
@@ -281,7 +282,7 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
 
                 // only do molecules whose type hasn't been checked before
                 unsigned int type = __scalar_as_int(h_postype.data[central_idx].w);
-                if (rigid_types.find(type) != rigid_types.end())
+                if (rigid_types.find(type) == rigid_types.end())
                     {
                     continue;
                     }
@@ -292,6 +293,8 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
 
                 // find center of mass position of particle
                 Scalar3 center_of_mass = make_scalar3(0.0, 0.0, 0.0);
+                Scalar mass_sum = Scalar(0.0);
+                Scalar center_mass = h_velocity.data[central_idx].w;
                 for (unsigned int constituent_index = 0;
                      constituent_index < h_molecule_len.data[ibody];
                      ++constituent_index)
@@ -310,12 +313,18 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
                     center_of_mass.x += local_pos.x * mass;
                     center_of_mass.y += local_pos.y * mass;
                     center_of_mass.z += local_pos.z * mass;
+                    mass_sum += mass;
                     }
                 // check if center of mass in body frame is (0, 0, 0)
                 bool in_tol = (center_of_mass.x >= -1.0 * tol && center_of_mass.x <= tol)
-                              || (center_of_mass.y >= -1.0 * tol && center_of_mass.y <= tol)
-                              || (center_of_mass.z >= -1.0 * tol && center_of_mass.z <= tol);
+                              && (center_of_mass.y >= -1.0 * tol && center_of_mass.y <= tol)
+                              && (center_of_mass.z >= -1.0 * tol && center_of_mass.z <= tol);
+
                 invalid_center_of_mass = invalid_center_of_mass || !in_tol;
+                // check if center of mass is the same as the sum of masses
+                Scalar mass_diff = center_mass - mass_sum;
+                bool sum_in_tol = mass_diff >= -1.0 * tol && mass_diff <= tol;
+                invalid_mass_sum = invalid_mass_sum || !sum_in_tol;
                 }
             }
 
@@ -346,6 +355,12 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
                           MPI_CXX_BOOL,
                           MPI_LOR,
                           m_exec_conf->getMPICommunicator());
+            MPI_Allreduce(MPI_IN_PLACE,
+                          &invalid_mass_sum,
+                          1,
+                          MPI_CXX_BOOL,
+                          MPI_LOR,
+                          m_exec_conf->getMPICommunicator());
             }
 #endif // ENABLE_MPI
 
@@ -371,6 +386,12 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
             {
             m_exec_conf->msg->error()
                 << "Some rigid bodies do not have center of mass at central particle." << std::endl;
+            }
+        if (invalid_mass_sum)
+            {
+            m_exec_conf->msg->error()
+                << "Some rigid bodies have mass != sum of constituent particle masses."
+                << std::endl;
             }
         }
     m_checked_collision_warnings = true;
