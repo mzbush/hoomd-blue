@@ -18,6 +18,8 @@ Change Log
   (`#2060 <https://github.com/glotzerlab/hoomd-blue/pull/2060>`__).
 * Do not increment z image in 2D simulation boxes
   (`#2071 <https://github.com/glotzerlab/hoomd-blue/pull/2071>`__).
+* Code block example in `hoomd.md.pair.DPDConservative`
+  (`#2084 <https://github.com/glotzerlab/hoomd-blue/pull/2084>`__).
 
 5.2.0 (2025-05-06)
 ^^^^^^^^^^^^^^^^^^
