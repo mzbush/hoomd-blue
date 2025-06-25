@@ -151,7 +151,7 @@ class EvaluatorPairZetterling
                 -params.A * screening
                 * ((params.alpha * r - Scalar(3.0)) * eval_cos - 2 * params.kf * r * eval_sin)
                 * inv_r_5);
-            Scalar deriv_term2(B * params.n * power_sigma_over_r * inv_r_2);
+            Scalar deriv_term2(params.B * params.n * power_sigma_over_r * inv_r_2);
             force_divr = deriv_term1 + deriv_term2;
 
             if (energy_shift)
