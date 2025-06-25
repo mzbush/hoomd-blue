@@ -11,6 +11,22 @@ Change Log
 
 * The Zetterling pair potential: ``hoomd.hpmc.pair.Zetterling``
   (`#2057 <https://github.com/glotzerlab/hoomd-blue/pull/2057>`__).
+* ``hoomd.write.GSD`` now automatically flushes on frame writes 10 seconds
+  or longer since the previous flush. Configure this time with
+  ``auto_flush_period``. The flush does not occur on a timer -- it is only
+  called after a normally scheduled frame write
+  (`#2085 <https://github.com/glotzerlab/hoomd-blue/pull/2085>`__).
+
+*Changed*
+
+* The ``GSD`` write buffer size now defaults to 1 MiB. Files will thus
+  grow in size more continuiously (the previous default was 64 MiB).
+  File size changes are subject to additional buffering by the OS
+  and may or may not be predictable.
+  At the same time, new frames will no longer be available for reading
+  until after the file is flushed (which occurs on write after 10 seconds
+  by default) or closed
+  (`#2085 <https://github.com/glotzerlab/hoomd-blue/pull/2085>`__).
 
 *Fixed*
 
