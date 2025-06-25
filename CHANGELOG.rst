@@ -4,15 +4,27 @@ Change Log
 5.x
 ---
 
-5.2.1 (not yet released)
+5.3.0 (not yet released)
 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+*Added*
+
+* The Zetterling pair potential: ``hoomd.hpmc.pair.Zetterling``
+  (`#2057 <https://github.com/glotzerlab/hoomd-blue/pull/2057>`__).
 
 *Fixed*
 
-* The formulas in the docs for `variant.box.Interpolate` are now consistent
+* The formulas in the docs for ``variant.box.Interpolate`` are now consistent
   (`#2060 <https://github.com/glotzerlab/hoomd-blue/pull/2060>`__).
 * Do not increment z image in 2D simulation boxes
   (`#2071 <https://github.com/glotzerlab/hoomd-blue/pull/2071>`__).
+* Code block example in ``hoomd.md.pair.DPDConservative``
+  (`#2084 <https://github.com/glotzerlab/hoomd-blue/pull/2084>`__).
+* Equations displayed in ``hoomd.md.methods.thermostats.Bussi`` documentation
+  (`#2081 <https://github.com/glotzerlab/hoomd-blue/pull/2081>`__).
+* Do not issue "Cannot acquire access to array in use" error when using FIRE on the GPU with
+  ``integrate_rotational_dof=True``
+  (`#2082 <https://github.com/glotzerlab/hoomd-blue/pull/2082>`__).
 
 5.2.0 (2025-05-06)
 ^^^^^^^^^^^^^^^^^^
