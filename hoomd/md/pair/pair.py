@@ -2181,6 +2181,7 @@ class WangFrenkel(Pair):
 
         self._add_typeparam(params)
 
+
 class Zetterling(Pair):
     r"""Zetterling pair potential.
 
@@ -2201,7 +2202,7 @@ class Zetterling(Pair):
     2001`_.
     .. _F. H. M. Zetterling, M. Dzugutov, and S. Lidin 2001:
        https://doi.org/10.1557/PROC-643-K9.5
-        
+
     Example::
         nl = nlist.Cell()
         zetterling = pair.Zetterling(nl, default_r_cut=2.649, mode="shift")
@@ -2220,9 +2221,9 @@ class Zetterling(Pair):
     ----------
 
     **Members defined in** `Zetterling`:
-    
+
     .. py:attribute:: params
-    
+
         The Zetterling potential parameters. The dictionary has the following keys:
         * ``A`` (`float`, **required**) -
           Energy scale of the first term :math:`A`
@@ -2267,4 +2268,3 @@ class Zetterling(Pair):
             ),
         )
         self._add_typeparam(params)
-        

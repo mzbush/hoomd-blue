@@ -36,7 +36,7 @@ namespace md
 
     EvaluatorPairZetterling evaluates the function:
     \f{equation*}
-    V_{\mathrm{Zetterling}}(r) = 
+    V_{\mathrm{Zetterling}}(r) =
     A \frac{\exp{(\alpha r)\cos{(2 k_F r)}}}{r^3}
     + B \left( \frac{\sigma}{r} \right)^n)
     \f}
@@ -147,7 +147,8 @@ class EvaluatorPairZetterling
             pair_eng = term1 + term2;
 
             // Compute force
-            Scalar deriv_term1(-params.A * screening 
+            Scalar deriv_term1(
+                -params.A * screening
                 * ((params.alpha * r - Scalar(3.0)) * eval_cos - 2 * params.kf * r * eval_sin)
                 * inv_r_5);
             Scalar deriv_term2(B * params.n * power_sigma_over_r * inv_r_2);
@@ -159,8 +160,8 @@ class EvaluatorPairZetterling
                 Scalar screening_r_cut(fast::exp(params.alpha * r_cut));
                 Scalar inv_rcut(Scalar(1.0) / r_cut);
                 Scalar inv_rcut_3(inv_rcut * inv_rcut * inv_rcut);
-                Scalar term1_rcut(params.A * screening_r_cut 
-                    * fast::cos(Scalar(2.0) * params.kf * r_cut) * inv_rcut_3);
+                Scalar term1_rcut(params.A * screening_r_cut
+                                  * fast::cos(Scalar(2.0) * params.kf * r_cut) * inv_rcut_3);
                 Scalar term2_rcut(params.B * fast::pow(params.sigma * inv_rcut, params.n));
                 pair_eng -= term1_rcut + term2_rcut;
                 }

@@ -346,20 +346,20 @@ def _invalid_params():
     invalid_params_list.extend(
         _make_invalid_params(wangfrenkel_invalid_dicts, hoomd.md.pair.WangFrenkel, {})
     )
-    
+
     zetterling_valid_dict = {
-        "A": 1.58, 
-        "alpha": -0.22, 
-        "kf": 4.12, 
-        "B": 0.95533, 
-        "sigma": 1.0, 
-        "n": 18.0
+        "A": 1.58,
+        "alpha": -0.22,
+        "kf": 4.12,
+        "B": 0.95533,
+        "sigma": 1.0,
+        "n": 18.0,
     }
     zetterling_invalid_dicts = _make_invalid_param_dict(zetterling_valid_dict)
     invalid_params_list.extend(
         _make_invalid_params(zetterling_invalid_dicts, hoomd.md.pair.Zetterling, {})
     )
-    
+
     tersoff_valid_dict = {
         "cutoff_thickness": 1.0,
         "magnitudes": (5.0, 2.0),
@@ -676,18 +676,22 @@ def _valid_params(particle_types=["A", "B"]):
     valid_params_list.append(
         paramtuple(hoomd.md.pair.OPP, dict(zip(combos, opp_valid_param_dicts)), {})
     )
-    
+
     zetterling_arg_dict = {
         "A": [1.58, 1.58, 1.04],
         "alpha": [-0.22, -0.22, 0.33],
         "kf": [4.12, 4.12, 4.139],
-        "B": [0.95533, 4.2e+8, 4.2e+7],
+        "B": [0.95533, 4.2e8, 4.2e7],
         "sigma": [1.0, 0.331, 0.348],
         "n": [18.0, 18.0, 14.5],
     }
     zetterling_valid_param_dicts = _make_valid_param_dicts(zetterling_arg_dict)
     valid_params_list.append(
-        paramtuple(hoomd.md.pair.Zetterling, dict(zip(combos, zetterling_valid_param_dicts)), {})
+        paramtuple(
+            hoomd.md.pair.Zetterling,
+            dict(zip(combos, zetterling_valid_param_dicts)),
+            {},
+        )
     )
 
     expanded_mie_arg_dict = {
