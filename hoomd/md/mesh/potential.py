@@ -48,6 +48,7 @@ class MeshPotential(Force):
 
     def __init__(self, mesh):
         self._mesh = validate_mesh(mesh)
+        self._two_attach = True
 
     def _attach_hook(self):
         """Create the c++ mirror class."""
