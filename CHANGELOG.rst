@@ -9,8 +9,10 @@ Change Log
 
 *Added*
 
-* The Zetterling pair potential: ``hoomd.hpmc.pair.Zetterling``
+* The Zetterling pair potential for HPMC: ``hoomd.hpmc.pair.Zetterling``
   (`#2057 <https://github.com/glotzerlab/hoomd-blue/pull/2057>`__).
+* The Zetterling pair potential for MD: ``hoomd.md.pair.Zetterling``
+  (`#2086 <https://github.com/glotzerlab/hoomd-blue/pull/2086>`__).
 
 *Fixed*
 
