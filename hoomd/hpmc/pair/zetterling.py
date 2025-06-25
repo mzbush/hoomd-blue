@@ -31,15 +31,10 @@ class Zetterling(Pair):
     particles in the simulation state. The functional behavior of the potential
     under the various shifting modes is the same as in `hoomd.md.pair`.
 
-    .. math::
-        U(r) = A \\frac{\\exp{(\\alpha r)\\cos{(2 k_F r)}}}{r^3}
-              + B \\left( \\frac{\\sigma}{r} \\right)^n
+    See Also:
+    `hoomd.md.pair.Zetterling`
 
-    The potential was introduced in `F. H. M. Zetterling, M. Dzugutov, and S. Lidin
-    2001`_.
-
-    .. _F. H. M. Zetterling, M. Dzugutov, and S. Lidin 2001:
-       https://doi.org/10.1557/PROC-643-K9.5
+    `hoomd.md.pair`
 
     .. rubric:: Example
 
@@ -55,6 +50,7 @@ class Zetterling(Pair):
             "n": 18.0,
             "r_cut": 2.649,
         }
+        simulation.operations.integrator.pair_potentials = [zetterling]
 
     {inherited}
 

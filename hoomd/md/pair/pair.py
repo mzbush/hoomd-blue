@@ -2186,8 +2186,8 @@ class Zetterling(Pair):
 
     Args:
         nlist (hoomd.md.nlist.NeighborList): Neighbor list.
-        default_r_cut (float): Default cutoff radius :math:`[\mathrm{length}]`.
-        default_r_on (float): Default turn-on radius :math:`[\mathrm{length}]`.
+        default_r_cut (float): Default cutoff radius :math:`[\\mathrm{length}]`.
+        default_r_on (float): Default turn-on radius :math:`[\\mathrm{length}]`.
         mode (str): Energy shifting/smoothing mode.
 
     `Zetterling` computes the oscillating pair force on all particles in the simulation
@@ -2228,7 +2228,7 @@ class Zetterling(Pair):
           Energy scale of the first term :math:`A`
           :math:`[\\mathrm{energy}]`
         * ``alpha`` (`float`, **required**) -
-          Screening factor :math:`\alpha`
+          Screening factor :math:`\\alpha`
           :math:`[\\mathrm{length}^{-1}]`
         * ``kf`` (`float`, **required**) -
           Wave number to mimic the Friedel oscillations effect :math:`k_F`
