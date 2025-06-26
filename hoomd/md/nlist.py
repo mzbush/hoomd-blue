@@ -239,7 +239,7 @@ class NeighborList(Compute):
             if self._mesh._attached and self._simulation != self._mesh._simulation:
                 warnings.warn(
                     f"{self} object is creating a new equivalent mesh structure."
-                    f" This is happending since the neighbor list is moving to" 
+                    f" This is happending since the neighbor list is moving to"
                     f" a new simulation. To suppress the warning explicitly set"
                     f" a new mesh.",
                     RuntimeWarning,
