@@ -82,6 +82,7 @@ from hoomd.data.typeconverter import OnlyFrom, OnlyTypes, nonnegative_real
 from hoomd.logging import log
 from hoomd.mesh import Mesh
 from hoomd.operation import Compute
+import warnings
 import inspect
 
 
@@ -238,8 +239,9 @@ class NeighborList(Compute):
             if self._mesh._attached and self._simulation != self._mesh._simulation:
                 warnings.warn(
                     f"{self} object is creating a new equivalent mesh structure."
-                    f" This is happending since the force is moving to a new "
-                    f"simulation. To suppress the warning explicitly set new mesh.",
+                    f" This is happending since the neighbor list is moving to" 
+                    f" a new simulation. To suppress the warning explicitly set"
+                    f" a new mesh.",
                     RuntimeWarning,
                 )
             self._mesh._attach(self._simulation)
