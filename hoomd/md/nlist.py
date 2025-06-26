@@ -226,7 +226,7 @@ class NeighborList(Compute):
             buffer=float(buffer),
             rebuild_check_delay=int(rebuild_check_delay),
             check_dist=bool(check_dist),
-            mesh=validate_mesh
+            mesh=validate_mesh,
         )
         params["exclusions"] = exclusions
         params["mesh"] = mesh
