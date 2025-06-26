@@ -235,6 +235,14 @@ class NeighborList(Compute):
 
     def _attach_hook(self):
         if self._mesh is not None:
+            if self._mesh._attached and self._simulation != self._mesh._simulation:
+                warnings.warn(
+                    f"{self} object is creating a new equivalent mesh structure."
+                    f" This is happending since the force is moving to a new "
+                    f"simulation. To suppress the warning explicitly set new mesh.",
+                    RuntimeWarning,
+                )
+            self._mesh._attach(self._simulation)
             self._cpp_obj.addMesh(self._mesh._cpp_obj)
 
     def _detach_hook(self):
