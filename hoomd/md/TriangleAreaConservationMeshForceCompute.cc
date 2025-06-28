@@ -331,6 +331,23 @@ Scalar TriangleAreaConservationMeshForceCompute::energyDiff(unsigned int idx_a,
     dbd.y = h_pos.data[idx_b].y - h_pos.data[idx_d].y;
     dbd.z = h_pos.data[idx_b].z - h_pos.data[idx_d].z;
 
+    Scalar3 dcd;
+    dcd.x = h_pos.data[idx_c].x - h_pos.data[idx_d].x;
+    dcd.y = h_pos.data[idx_c].y - h_pos.data[idx_d].y;
+    dcd.z = h_pos.data[idx_c].z - h_pos.data[idx_d].z;
+
+    int3 acImage = box.getImage(dac);
+    int3 adImage = box.getImage(dad);
+    int3 bcImage = box.getImage(dbc);
+    int3 bdImage = box.getImage(dbd);
+    int3 cdImage = box.getImage(dcd);
+
+    int3 Image1 = acImage+adImage+cdImage;
+    int3 Image2 = bcImage+bdImage+cdImage;
+	
+    if( Image1.x % 2 != 0 || Image1.y % 2 != 0 || Image1.z % 2 != 0 || Image2.x % 2 != 0 || Image2.y % 2 != 0 || Image2.z % 2 != 0)
+	    return DBL_MAX;
+
     // apply minimum image conventions to all 3 vectors
     dac = box.minImage(dac);
     dad = box.minImage(dad);

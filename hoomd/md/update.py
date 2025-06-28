@@ -11,7 +11,9 @@ from hoomd.data import syncedlist
 from hoomd.data.parameterdicts import ParameterDict
 from hoomd.data.typeconverter import OnlyTypes
 from hoomd.logging import log
+from hoomd.mesh import Mesh
 from hoomd.md.mesh.potential import MeshPotential
+import inspect
 
 
 class ZeroMomentum(Updater):
@@ -48,7 +50,9 @@ class ZeroMomentum(Updater):
         )
     """
 
-    __doc__ += Updater._doc_inherited
+    __doc__ = (
+        inspect.cleandoc(__doc__) + "\n\n" + inspect.cleandoc(Updater._doc_inherited)
+    )
 
     def __init__(self, trigger):
         # initialize base class
@@ -156,7 +160,9 @@ class ReversePerturbationFlow(Updater):
             searched for.
     """
 
-    __doc__ = __doc__.replace("{inherited}", Updater._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(Updater._doc_inherited)
+    )
 
     def __init__(
         self,
@@ -306,7 +312,9 @@ class ActiveRotationalDiffusion(Updater):
             as a function of time.
     """
 
-    __doc__ = __doc__.replace("{inherited}", Updater._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(Updater._doc_inherited)
+    )
 
     def __init__(self, trigger, active_force, rotational_diffusion):
         super().__init__(trigger)
@@ -382,19 +390,32 @@ class MeshDynamicalBonding(Updater):
             MeshPotential, syncedlist._PartialGetAttr("_cpp_obj"), iterable=forces
         )
 
-        param_dict = ParameterDict(kT=float(kT))
+        validate_mesh = OnlyTypes(Mesh, allow_none=True)
 
+        param_dict = ParameterDict(
+                kT=float(kT),
+                mesh=validate_mesh,
+                )
+
+        param_dict["mesh"] = mesh
         self._param_dict.update(param_dict)
-
-        self._mesh = mesh
 
     def _attach_hook(self):
         # create the c++ mirror class
 
+        if self.mesh._attached and self._simulation != self.mesh._simulation:
+            warnings.warn(
+                f"{self} object is creating a new equivalent mesh structure."
+                f" This is happending since the force is moving to a new "
+                f"simulation. To suppress the warning explicitly set new mesh.",
+                RuntimeWarning,
+            )
+        self.mesh._attach(self._simulation)
+
         self._cpp_obj = _md.MeshDynamicBondUpdater(
             self._simulation.state._cpp_sys_def, self.trigger,
             self._simulation.operations.integrator._cpp_obj,
-            self._mesh._cpp_obj, self.kT)
+            self.mesh._cpp_obj, self.kT)
 
         self._forces._sync(self._simulation, self._cpp_obj.forces)
 
@@ -402,6 +423,7 @@ class MeshDynamicalBonding(Updater):
 
     def _detach_hook(self):
         self._forces._unsync()
+        self.mesh._detach()
 
     @property
     def forces(self):

@@ -15,6 +15,7 @@ from hoomd.data.parameterdicts import ParameterDict
 from hoomd.logging import log
 import hoomd
 import numpy
+import inspect
 
 
 class FreeVolume(Compute):
@@ -101,7 +102,9 @@ class FreeVolume(Compute):
 
     """
 
-    __doc__ = __doc__.replace("{inherited}", Compute._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(Compute._doc_inherited)
+    )
 
     def __init__(self, test_particle_type, num_samples):
         # store metadata
@@ -189,6 +192,7 @@ class SDF(Compute):
 
     .. math::
 
+        \begin{split}
         x_{ij}(\vec{A}) = \min \{ & x \in \mathbb{R}_{> 0} : \\
            & \mathrm{overlap}\left(
                 S_i(\mathbf{q}_i),
@@ -204,6 +208,7 @@ class SDF(Compute):
                                  \mathbf{q}_i,
                                  \mathbf{q}_j) \\
             \} &
+        \end{split}
 
     where :math:`\mathrm{overlap}` is the shape overlap function defined in
     `hoomd.hpmc.integrate`, :math:`S_i` is the shape of particle :math:`i`, and
@@ -212,6 +217,7 @@ class SDF(Compute):
 
     .. math::
 
+        \begin{split}
         x_{ij}(\vec{A}) = \max \{ & x \in \mathbb{R}_{< 0} : \\
            & \mathrm{overlap}\left(
                 S_i(\mathbf{q}_i),
@@ -227,6 +233,7 @@ class SDF(Compute):
                                  \mathbf{q}_i,
                                  \mathbf{q}_j) \\
             \} &
+        \end{split}
 
 
     For particle :math:`i`, `SDF` finds the the minimum (maximum for expansive
@@ -333,7 +340,9 @@ class SDF(Compute):
         dx (float): Bin width :math:`[\mathrm{length}]`.
     """
 
-    __doc__ = __doc__.replace("{inherited}", Compute._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(Compute._doc_inherited)
+    )
 
     def __init__(self, xmax, dx):
         # store metadata
