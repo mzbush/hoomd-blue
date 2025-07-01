@@ -28,7 +28,6 @@ Change Log
   by default) or closed
   (`#2085 <https://github.com/glotzerlab/hoomd-blue/pull/2085>`__).
 
-
 *Fixed*
 
 * The formulas in the docs for ``variant.box.Interpolate`` are now consistent
