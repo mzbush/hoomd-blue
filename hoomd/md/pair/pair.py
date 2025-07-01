@@ -2200,7 +2200,7 @@ class Zetterling(Pair):
 
     The potential was introduced in `F. H. M. Zetterling, M. Dzugutov, and S. Lidin
     2001`_.
-    
+
     .. _F. H. M. Zetterling, M. Dzugutov, and S. Lidin 2001:
        https://doi.org/10.1557/PROC-643-K9.5
 
