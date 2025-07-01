@@ -123,8 +123,6 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
 
     std::vector<uint2> changed;
 
-    unsigned int zahl = 0;
-
     for (unsigned int cur_bond = 0; cur_bond < size; cur_bond++)
         {
 	unsigned int i = m_update_order[cur_bond];

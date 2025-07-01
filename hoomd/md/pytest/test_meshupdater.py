@@ -266,6 +266,8 @@ def test_reduce_energy(local_snapshot_factory, simulation_factory,mesh_potential
 
     sim.run(0)
 
+    print(sim.seed)
+
     energy = mesh_potential.energy
 
     mdb = hoomd.md.update.MeshDynamicalBonding(hoomd.trigger.Periodic(1),mesh, kT = 0.001, forces=[mesh_potential])
