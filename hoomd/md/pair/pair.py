@@ -2205,6 +2205,7 @@ class Zetterling(Pair):
        https://doi.org/10.1557/PROC-643-K9.5
 
     Example::
+
         nl = nlist.Cell()
         zetterling = pair.Zetterling(nl, default_r_cut=2.649, mode="shift")
         zetterling.params[("A", "A")] = {
@@ -2226,6 +2227,7 @@ class Zetterling(Pair):
     .. py:attribute:: params
 
         The Zetterling potential parameters. The dictionary has the following keys:
+
         * ``A`` (`float`, **required**) -
           Energy scale of the first term :math:`A`
           :math:`[\\mathrm{energy}]`
