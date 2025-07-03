@@ -336,17 +336,17 @@ Scalar BendingRigidityMeshForceCompute::calcEnergy(unsigned int idx_a,
     z2.x = dad.y * dab.z - dad.z * dab.y;
     z2.y = dad.z * dab.x - dad.x * dab.z;
     z2.z = dad.x * dab.y - dad.y * dab.x;
-    
+
     Scalar n1 = z1.x * z1.x + z1.y * z1.y + z1.z * z1.z;
     Scalar n2 = z2.x * z2.x + z2.y * z2.y + z2.z * z2.z;
 
-    if( n1 == 0 || n2 == 0)
-	    return DBL_MAX;
+    if (n1 == 0 || n2 == 0)
+        return DBL_MAX;
 
     Scalar z1z2 = z1.x * z2.x + z1.y * z2.y + z1.z * z2.z;
-    Scalar cosinus = z1z2 * fast::rsqrt( n1 * n2);
+    Scalar cosinus = z1z2 * fast::rsqrt(n1 * n2);
 
-    return  h_params.data[type_id] * 0.5 * (1-cosinus);
+    return h_params.data[type_id] * 0.5 * (1 - cosinus);
     }
 
 Scalar BendingRigidityMeshForceCompute::energyDiff(unsigned int idx_a,
@@ -355,10 +355,10 @@ Scalar BendingRigidityMeshForceCompute::energyDiff(unsigned int idx_a,
                                                    unsigned int idx_d,
                                                    unsigned int type_id)
     {
-    Scalar energy_old = calcEnergy(idx_a,idx_b,idx_c,idx_d,type_id);
-    Scalar energy_new = calcEnergy(idx_c,idx_d,idx_b,idx_a,type_id);
+    Scalar energy_old = calcEnergy(idx_a, idx_b, idx_c, idx_d, type_id);
+    Scalar energy_new = calcEnergy(idx_c, idx_d, idx_b, idx_a, type_id);
 
-    return  energy_new-energy_old;
+    return energy_new - energy_old;
     }
 
 Scalar BendingRigidityMeshForceCompute::energyDiffSurrounding(unsigned int idx_a,
@@ -371,20 +371,18 @@ Scalar BendingRigidityMeshForceCompute::energyDiffSurrounding(unsigned int idx_a
                                                               unsigned int idx_h,
                                                               unsigned int type_id)
     {
-	    Scalar energy_new = calcEnergy(idx_a,idx_c,idx_e,idx_d,type_id);
-	    energy_new += calcEnergy(idx_c,idx_b,idx_f,idx_d,type_id);
-	    energy_new += calcEnergy(idx_a,idx_d,idx_c,idx_g,type_id);
-	    energy_new += calcEnergy(idx_d,idx_b,idx_c,idx_h,type_id);
+    Scalar energy_new = calcEnergy(idx_a, idx_c, idx_e, idx_d, type_id);
+    energy_new += calcEnergy(idx_c, idx_b, idx_f, idx_d, type_id);
+    energy_new += calcEnergy(idx_a, idx_d, idx_c, idx_g, type_id);
+    energy_new += calcEnergy(idx_d, idx_b, idx_c, idx_h, type_id);
 
-	    Scalar energy_old = calcEnergy(idx_a,idx_c,idx_e,idx_b,type_id);
-	    energy_old += calcEnergy(idx_c,idx_b,idx_f,idx_a,type_id);
-	    energy_old += calcEnergy(idx_a,idx_d,idx_b,idx_g,type_id);
-	    energy_old += calcEnergy(idx_d,idx_b,idx_a,idx_h,type_id);
+    Scalar energy_old = calcEnergy(idx_a, idx_c, idx_e, idx_b, type_id);
+    energy_old += calcEnergy(idx_c, idx_b, idx_f, idx_a, type_id);
+    energy_old += calcEnergy(idx_a, idx_d, idx_b, idx_g, type_id);
+    energy_old += calcEnergy(idx_d, idx_b, idx_a, idx_h, type_id);
 
-	    return energy_new - energy_old;
+    return energy_new - energy_old;
     }
-
-
 
 namespace detail
     {

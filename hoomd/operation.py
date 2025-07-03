@@ -550,6 +550,7 @@ class Operation(AutotunedObject):
     def __init__(self):
         self._two_attach = False
 
+
 class TriggeredOperation(Operation):
     """Operations that execute on timesteps determined by a trigger.
 

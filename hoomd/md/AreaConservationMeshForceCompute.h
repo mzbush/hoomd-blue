@@ -74,8 +74,8 @@ class PYBIND11_EXPORT AreaConservationMeshForceCompute : public ForceCompute
     GPUArray<area_conservation_param_t> m_params; //!< Parameters
     GPUArray<Scalar> m_area;                      //!< memory space for area
     Scalar m_area_diff;
-    std::shared_ptr<MeshDefinition> m_mesh_data;  //!< Mesh data to use in computing energy
-    bool m_ignore_type;                           //! ignore type to calculate global area if true
+    std::shared_ptr<MeshDefinition> m_mesh_data; //!< Mesh data to use in computing energy
+    bool m_ignore_type;                          //! ignore type to calculate global area if true
 
     //! Actually compute the forces
     virtual void computeForces(uint64_t timestep);
@@ -88,17 +88,16 @@ class PYBIND11_EXPORT AreaConservationMeshForceCompute : public ForceCompute
                                       unsigned int idx_c,
                                       unsigned int idx_d,
                                       unsigned int type_id)
-    	{
- 	ArrayHandle<Scalar> h_area(m_area, access_location::host, access_mode::readwrite);
-	h_area.data[type_id] += m_area_diff;
-	};
+        {
+        ArrayHandle<Scalar> h_area(m_area, access_location::host, access_mode::readwrite);
+        h_area.data[type_id] += m_area_diff;
+        };
 
     virtual Scalar energyDiff(unsigned int idx_a,
                               unsigned int idx_b,
                               unsigned int idx_c,
                               unsigned int idx_d,
                               unsigned int type_id);
-
     };
 
 namespace detail

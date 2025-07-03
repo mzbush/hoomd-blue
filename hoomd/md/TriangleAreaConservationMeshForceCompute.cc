@@ -361,8 +361,8 @@ Scalar TriangleAreaConservationMeshForceCompute::energyDiff(unsigned int idx_a,
         c_cbbd = -1.0;
     Scalar s_cbbd = sqrt(1.0 - c_cbbd * c_cbbd);
 
-    if( s_caad == 0 || s_cbbd == 0)
-	    return DBL_MAX;
+    if (s_caad == 0 || s_cbbd == 0)
+        return DBL_MAX;
 
     Scalar c_accb = nac.x * nbc.x + nac.y * nbc.y + nac.z * nbc.z;
     if (c_accb > 1.0)

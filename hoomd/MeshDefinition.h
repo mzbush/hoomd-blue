@@ -117,9 +117,9 @@ class PYBIND11_EXPORT MeshDefinition
     std::shared_ptr<SystemDefinition> m_sysdef;        //!< System definition
     std::shared_ptr<MeshBondData> m_meshbond_data;     //!< Bond data for the mesh
     std::shared_ptr<TriangleData> m_meshtriangle_data; //!< Triangle data for the mesh
-						       //
-    GPUArray<uint2> m_neigh_to_bond;                    //!< triangle ids corresponding to bond
-    GPUArray<uint3> m_neigh_to_triag;                   //!< bond ids corresponding to triangle
+                                                       //
+    GPUArray<uint2> m_neigh_to_bond;                   //!< triangle ids corresponding to bond
+    GPUArray<uint3> m_neigh_to_triag;                  //!< bond ids corresponding to triangle
     };
 
 namespace detail

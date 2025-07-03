@@ -14,6 +14,7 @@ from hoomd.logging import log
 from hoomd.mesh import Mesh
 from hoomd.md.mesh.potential import MeshPotential
 import inspect
+import warnings
 
 
 class ZeroMomentum(Updater):
@@ -359,27 +360,25 @@ class ActiveRotationalDiffusion(Updater):
             raise ValueError("active_force is not settable after construction.")
         super()._setattr_param(attr, value)
 
+
 class MeshDynamicalBonding(Updater):
-    r"""Dynamical bonding of the applied mesh that allows edge flips according to 
+    r"""Dynamical bonding of the applied mesh that allows edge flips according to
     a Metropolic Monte Carlo algorithm.
 
     Args:
         trigger (hoomd.trigger.trigger_like): Select the timesteps to triger bond
             flip attempt.
-        
         mesh (hoomd.mesh.Mesh): Mesh data structure.
-
         kT (float): Temperature of the simulation :math:`[\mathrm{energy}]`.
-
-        forces (Sequence[hoomd.md.mesh.MeshPotential]): Sequence of mesh 
-          potentials applied to the updater. The default value of ``None`` 
-          initializes an empty list. 
+        forces (Sequence[hoomd.md.mesh.MeshPotential]): Sequence of mesh
+          potentials applied to the updater. The default value of ``None``
+          initializes an empty list.
 
     `MeshDynamicalBonding` works directly with `hoomd.mesh.Mesh` to apply edge
     flips between neighboring triangles in the mesh. At each step, the updater
-    attempts to flip each edge within the mesh in random order. The probability 
-    of fliping an edge :math:`ij` between the common vertices :math:`i` and 
-    :math:`j` of triangles :math:`ijk` and :math:`jil` to an edge :math:`kl` 
+    attempts to flip each edge within the mesh in random order. The probability
+    of fliping an edge :math:`ij` between the common vertices :math:`i` and
+    :math:`j` of triangles :math:`ijk` and :math:`jil` to an edge :math:`kl`
     between :math:`k` and :math:`l` is:
 
     .. math::
@@ -389,13 +388,13 @@ class MeshDynamicalBonding(Updater):
           \exp(-\beta (U(kl)-U(ij))) & U(kl) > U(ij) \\
           1 & \Delta U(kl) \le U(ij).\\
         \end{cases}
-   
+
     To obtain energies :math:`U(ij)` and :math:`U(kl)` for the corresponding edge
-    configurations, only the mesh potentials attached to the updater are 
+    configurations, only the mesh potentials attached to the updater are
     considered.
 
     Tip:
-        Use `hoomd.mesh.Mesh.create_dynamical_bonding_updater` to construct a 
+        Use `hoomd.mesh.Mesh.create_dynamical_bonding_updater` to construct a
         `MeshDynamicalBonding` instance.
 
     {inherited}
@@ -418,9 +417,9 @@ class MeshDynamicalBonding(Updater):
         validate_mesh = OnlyTypes(Mesh, allow_none=True)
 
         param_dict = ParameterDict(
-                kT=float(kT),
-                mesh=validate_mesh,
-                )
+            kT=float(kT),
+            mesh=validate_mesh,
+        )
 
         param_dict["mesh"] = mesh
         self._param_dict.update(param_dict)
@@ -438,8 +437,11 @@ class MeshDynamicalBonding(Updater):
         self.mesh._attach(self._simulation)
 
         self._cpp_obj = _md.MeshDynamicBondUpdater(
-            self._simulation.state._cpp_sys_def, self.trigger,
-            self.mesh._cpp_obj, self.kT)
+            self._simulation.state._cpp_sys_def,
+            self.trigger,
+            self.mesh._cpp_obj,
+            self.kT,
+        )
 
         self._forces._sync(self._simulation, self._cpp_obj.forces)
 
@@ -451,15 +453,18 @@ class MeshDynamicalBonding(Updater):
 
     @property
     def forces(self):
+        """Returns the applied mesh potentials."""
         return self._forces
 
     @forces.setter
     def forces(self, value):
-        _set_synced_list(self._forces, value)
+        self._forces.clear()
+        self._forces.extend(value)
+
 
 __all__ = [
     "ActiveRotationalDiffusion",
+    "MeshDynamicalBonding",
     "ReversePerturbationFlow",
     "ZeroMomentum",
-    "MeshDynamicalBonding",
 ]

@@ -93,18 +93,16 @@ class PYBIND11_EXPORT VolumeConservationMeshForceCompute : public ForceCompute
                                       unsigned int idx_c,
                                       unsigned int idx_d,
                                       unsigned int type_id)
-    	{
- 	ArrayHandle<Scalar> h_volume(m_volume, access_location::host, access_mode::readwrite);
-	h_volume.data[type_id] += m_volume_diff;
-	};
+        {
+        ArrayHandle<Scalar> h_volume(m_volume, access_location::host, access_mode::readwrite);
+        h_volume.data[type_id] += m_volume_diff;
+        };
 
     virtual Scalar energyDiff(unsigned int idx_a,
                               unsigned int idx_b,
                               unsigned int idx_c,
                               unsigned int idx_d,
                               unsigned int type_id);
-
-
     };
 
 namespace detail

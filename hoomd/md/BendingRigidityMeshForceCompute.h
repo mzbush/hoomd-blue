@@ -112,8 +112,10 @@ class PYBIND11_EXPORT BendingRigidityMeshForceCompute : public ForceCompute
                                          unsigned int idx_h,
                                          unsigned int type_id);
 
-    virtual bool checkSurrounding(){return true;}
-
+    virtual bool checkSurrounding()
+        {
+        return true;
+        }
     };
 
 namespace detail

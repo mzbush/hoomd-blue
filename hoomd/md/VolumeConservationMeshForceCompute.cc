@@ -384,7 +384,7 @@ Scalar VolumeConservationMeshForceCompute::energyDiff(unsigned int idx_a,
     Scalar volume_old = dot(cross(pos_c, pos_b), pos_a) + dot(cross(pos_d, pos_a), pos_b);
     Scalar volume_new = dot(cross(pos_a, pos_c), pos_d) + dot(cross(pos_b, pos_d), pos_c);
 
-    m_volume_diff = (volume_new-volume_old)/6.0;
+    m_volume_diff = (volume_new - volume_old) / 6.0;
 
     Scalar energy_old = h_volume.data[type_id] - h_params.data[type_id].V0;
     Scalar energy_new = energy_old + m_volume_diff;

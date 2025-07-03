@@ -631,7 +631,7 @@ class BondedGroupData
         {
         m_group_num_change_signal.emit();
         notifyGroupReorder();
-	}
+        }
 
 #ifdef ENABLE_MPI
     //! Helper function to transfer bonded groups connected to a single particle

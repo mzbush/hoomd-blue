@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2022 The Regents of the University of Michigan.
+// Copyright (c) 2009-2025 The Regents of the University of Michigan.
 // Part of HOOMD-blue, released under the BSD 3-Clause License.
 
 /*! \file ActiveRotationalDiffusionUpdater.h
@@ -69,7 +69,7 @@ class PYBIND11_EXPORT MeshDynamicBondUpdater : public Updater
     private:
     /// List of all the force computes
     std::vector<std::shared_ptr<ForceCompute>> m_forces;
-    std::shared_ptr<MeshDefinition> m_mesh;   //!< Active force to call rotationalDiffusion on
+    std::shared_ptr<MeshDefinition> m_mesh; //!< Active force to call rotationalDiffusion on
     std::vector<unsigned int> m_update_order;
     Scalar m_inv_T;
     };

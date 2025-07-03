@@ -76,32 +76,40 @@ class PYBIND11_EXPORT ForceCompute : public Compute
     virtual void compute(uint64_t timestep);
 
     //! Computes the parameters for meshes
-    virtual void precomputeParameter(){};
+    virtual void precomputeParameter() { };
 
     virtual Scalar energyDiff(unsigned int idx_a,
-		              unsigned int idx_b,
-			      unsigned int idx_c,
-			      unsigned int idx_d,
-			      unsigned int type_id){return 0;};
+                              unsigned int idx_b,
+                              unsigned int idx_c,
+                              unsigned int idx_d,
+                              unsigned int type_id)
+        {
+        return 0;
+        };
 
     virtual Scalar energyDiffSurrounding(unsigned int idx_a,
-		                         unsigned int idx_b,
-			                 unsigned int idx_c,
-			                 unsigned int idx_d,
-			                 unsigned int idx_e,
-			                 unsigned int idx_f,
-			                 unsigned int idx_g,
-			                 unsigned int idx_h,
-					 unsigned int type_id){ return 0;};
+                                         unsigned int idx_b,
+                                         unsigned int idx_c,
+                                         unsigned int idx_d,
+                                         unsigned int idx_e,
+                                         unsigned int idx_f,
+                                         unsigned int idx_g,
+                                         unsigned int idx_h,
+                                         unsigned int type_id)
+        {
+        return 0;
+        };
 
     virtual void postcomputeParameter(unsigned int idx_a,
-			    	      unsigned int idx_b,
-				      unsigned int idx_c,
-				      unsigned int idx_d,
-			      	      unsigned int type_id){};
+                                      unsigned int idx_b,
+                                      unsigned int idx_c,
+                                      unsigned int idx_d,
+                                      unsigned int type_id) { };
 
-
-    virtual bool checkSurrounding(){ return false;}
+    virtual bool checkSurrounding()
+        {
+        return false;
+        }
 
     //! Total the potential energy
     Scalar calcEnergySum();

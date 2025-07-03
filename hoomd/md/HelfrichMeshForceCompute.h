@@ -84,19 +84,19 @@ class PYBIND11_EXPORT HelfrichMeshForceCompute : public ForceCompute
     virtual void computeForces(uint64_t timestep);
 
     virtual Scalar energyDiff(unsigned int idx_a,
-		              unsigned int idx_b,
-			      unsigned int idx_c,
-			      unsigned int idx_d,
-			      unsigned int type_id);
+                              unsigned int idx_b,
+                              unsigned int idx_c,
+                              unsigned int idx_d,
+                              unsigned int type_id);
 
     //! compute sigmas
     virtual void precomputeParameter();
 
     virtual void postcomputeParameter(unsigned int idx_a,
-			    	      unsigned int idx_b,
-				      unsigned int idx_c,
-				      unsigned int idx_d,
-			              unsigned int type_id);
+                                      unsigned int idx_b,
+                                      unsigned int idx_c,
+                                      unsigned int idx_d,
+                                      unsigned int type_id);
     };
 
 namespace detail

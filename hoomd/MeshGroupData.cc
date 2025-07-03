@@ -123,61 +123,60 @@ void MeshGroupData<group_size, Group, name, snap>::initializeFromTriangleSnapsho
     std::vector<unsigned int> all_types;
 
     for (unsigned group_idx = 0; group_idx < snapshot.groups.size(); group_idx++)
-         {
-         std::vector<unsigned int> triag_tag(3);
-         std::vector<typename BondedGroupData<group_size, Group, name, true>::members_t> bonds(
-             3);
-         triag_tag[0] = snapshot.groups[group_idx].tag[0];
-         triag_tag[1] = snapshot.groups[group_idx].tag[1];
-         triag_tag[2] = snapshot.groups[group_idx].tag[2];
+        {
+        std::vector<unsigned int> triag_tag(3);
+        std::vector<typename BondedGroupData<group_size, Group, name, true>::members_t> bonds(3);
+        triag_tag[0] = snapshot.groups[group_idx].tag[0];
+        triag_tag[1] = snapshot.groups[group_idx].tag[1];
+        triag_tag[2] = snapshot.groups[group_idx].tag[2];
 
-         bonds[0].tag[0] = triag_tag[0];
-         bonds[0].tag[1] = triag_tag[1];
-         bonds[0].tag[2] = triag_tag[2];
-         bonds[0].tag[3] = triag_tag[2];
+        bonds[0].tag[0] = triag_tag[0];
+        bonds[0].tag[1] = triag_tag[1];
+        bonds[0].tag[2] = triag_tag[2];
+        bonds[0].tag[3] = triag_tag[2];
 
-         bonds[1].tag[0] = triag_tag[1];
-         bonds[1].tag[1] = triag_tag[2];
-         bonds[1].tag[2] = triag_tag[0];
-         bonds[1].tag[3] = triag_tag[0];
+        bonds[1].tag[0] = triag_tag[1];
+        bonds[1].tag[1] = triag_tag[2];
+        bonds[1].tag[2] = triag_tag[0];
+        bonds[1].tag[3] = triag_tag[0];
 
-         bonds[2].tag[0] = triag_tag[2];
-         bonds[2].tag[1] = triag_tag[0];
-         bonds[2].tag[2] = triag_tag[1];
-         bonds[2].tag[3] = triag_tag[1];
+        bonds[2].tag[0] = triag_tag[2];
+        bonds[2].tag[1] = triag_tag[0];
+        bonds[2].tag[2] = triag_tag[1];
+        bonds[2].tag[3] = triag_tag[1];
 
-         for (unsigned int j = 0; j < bonds.size(); ++j)
-             {
-             if (bonds[j].tag[0] > bonds[j].tag[1])
-                 {
-                 unsigned int bonds0 = bonds[j].tag[0];
-                 unsigned int bonds1 = bonds[j].tag[1];
+        for (unsigned int j = 0; j < bonds.size(); ++j)
+            {
+            if (bonds[j].tag[0] > bonds[j].tag[1])
+                {
+                unsigned int bonds0 = bonds[j].tag[0];
+                unsigned int bonds1 = bonds[j].tag[1];
 
-                 bonds[j].tag[0] = bonds1;
-                 bonds[j].tag[1] = bonds0;
-                 }
-             }
+                bonds[j].tag[0] = bonds1;
+                bonds[j].tag[1] = bonds0;
+                }
+            }
 
-         // Remove any duplicate bonds.
-         for (unsigned int i = 0; i < all_helper.size(); ++i)
-             {
-             for (unsigned int j = 0; j < bonds.size(); ++j)
-                 {
-                 if (bonds[j].tag[0] == all_helper[i].tag[0]
-                     && bonds[j].tag[1] == all_helper[i].tag[1])
-                     {
-                     all_helper[i].tag[3] = bonds[j].tag[2];
-                     bonds.erase(bonds.begin() + j);
-                     break;
-                     }
-                 }
-             }
-         for (unsigned int i = 0; i < bonds.size(); ++i)
-             {
-             all_helper.push_back(bonds[i]);
-             all_types.push_back(snapshot.type_id[group_idx]);
-             }
-         }
+        // Remove any duplicate bonds.
+        for (unsigned int i = 0; i < all_helper.size(); ++i)
+            {
+            for (unsigned int j = 0; j < bonds.size(); ++j)
+                {
+                if (bonds[j].tag[0] == all_helper[i].tag[0]
+                    && bonds[j].tag[1] == all_helper[i].tag[1])
+                    {
+                    all_helper[i].tag[3] = bonds[j].tag[2];
+                    bonds.erase(bonds.begin() + j);
+                    break;
+                    }
+                }
+            }
+        for (unsigned int i = 0; i < bonds.size(); ++i)
+            {
+            all_helper.push_back(bonds[i]);
+            all_types.push_back(snapshot.type_id[group_idx]);
+            }
+        }
     all_groups = all_helper;
 
 #ifdef ENABLE_MPI
@@ -500,9 +499,6 @@ MeshGroupData<group_size, Group, name, snap>::takeSnapshot(snap& snapshot) const
 
     return index;
     }
-
-
-
 
 namespace detail
     {
