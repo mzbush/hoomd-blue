@@ -312,9 +312,9 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
                     mass_sum += mass;
                     }
                 // check if center of mass in body frame is (0, 0, 0)
-                bool in_tol = (center_of_mass.x >= -1.0 * tol && center_of_mass.x <= tol)
-                              && (center_of_mass.y >= -1.0 * tol && center_of_mass.y <= tol)
-                              && (center_of_mass.z >= -1.0 * tol && center_of_mass.z <= tol);
+                bool in_tol = (center_of_mass.x >= -tol && center_of_mass.x <= tol)
+                              && (center_of_mass.y >= -tol && center_of_mass.y <= tol)
+                              && (center_of_mass.z >= -tol && center_of_mass.z <= tol);
 
                 invalid_center_of_mass = invalid_center_of_mass || !in_tol;
                 // check if center of mass is the same as the sum of masses
