@@ -1128,7 +1128,10 @@ void export_CollisionMethod(pybind11::module& m)
                                                   : std::shared_ptr<hoomd::ParticleFilter>();
                                })
         .def("setEmbeddedGroup", &mpcd::CollisionMethod::setEmbeddedGroup)
-        .def_property_readonly("period", &mpcd::CollisionMethod::getPeriod);
+        .def_property_readonly("period", &mpcd::CollisionMethod::getPeriod)
+        .def_property("kT",
+                      &mpcd::CollisionMethod::getTemperature,
+                      &mpcd::CollisionMethod::setTemperature);
     }
     } // namespace detail
     } // namespace mpcd

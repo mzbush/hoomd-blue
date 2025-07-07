@@ -99,12 +99,14 @@ class CellList(Compute):
 
 
 class CollisionMethod(Operation):
-    """Base collision method.
+    r"""Base collision method.
 
     Args:
         period (int): Number of integration steps between collisions.
         embedded_particles (hoomd.filter.filter_like): HOOMD particles to
             include in collision.
+        kT (hoomd.variant.variant_like): Temperature of the thermostat
+            :math:`[\mathrm{energy}]`.
 
     {inherited}
 
@@ -162,17 +164,26 @@ class CollisionMethod(Operation):
 
         Number of integration steps between collisions.
         `Read more... <hoomd.mpcd.collide.CollisionMethod.period>`
+
+    .. py:attribute:: kT
+
+        Temperature of the thermostat.
+        `Read more... <hoomd.mpcd.collide.CollisionMethod.kT>`
     """
     )
 
-    def __init__(self, period, embedded_particles=None):
+    def __init__(self, period, kT=None, embedded_particles=None):
         super().__init__()
 
         param_dict = ParameterDict(
             period=int(period),
             embedded_particles=OnlyTypes(hoomd.filter.ParticleFilter, allow_none=True),
+            kT=OnlyTypes(
+                hoomd.variant.Variant, allow_none=True, preprocess=variant_preprocessing
+            ),
         )
         param_dict["embedded_particles"] = embedded_particles
+        param_dict["kT"] = kT
         self._param_dict.update(param_dict)
 
 
@@ -253,11 +264,7 @@ class AndersenThermostat(CollisionMethod):
     )
 
     def __init__(self, period, kT, embedded_particles=None):
-        super().__init__(period, embedded_particles)
-
-        param_dict = ParameterDict(kT=hoomd.variant.Variant)
-        param_dict["kT"] = kT
-        self._param_dict.update(param_dict)
+        super().__init__(period, kT, embedded_particles)
 
     def _attach_hook(self):
         sim = self._simulation
@@ -380,15 +387,11 @@ class StochasticRotationDynamics(CollisionMethod):
     )
 
     def __init__(self, period, angle, kT=None, embedded_particles=None):
-        super().__init__(period, embedded_particles)
+        super().__init__(period, kT, embedded_particles)
 
         param_dict = ParameterDict(
             angle=float(angle),
-            kT=OnlyTypes(
-                hoomd.variant.Variant, allow_none=True, preprocess=variant_preprocessing
-            ),
         )
-        param_dict["kT"] = kT
         self._param_dict.update(param_dict)
 
     def _attach_hook(self):
