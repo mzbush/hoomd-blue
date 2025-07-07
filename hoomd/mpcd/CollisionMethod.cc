@@ -85,8 +85,12 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
     // sync the embedded group
     m_cl->setEmbeddedGroup(m_embed_group);
 
-    // check for collision warnings
-    checkCollisionWarnings(timestep);
+    // check for collision warnings the first time collide is run
+    if (!m_checked_collision_warnings)
+        {
+        checkCollisionWarnings(timestep);
+        m_checked_collision_warnings = true;
+        }
 
     // set random grid shift
     m_cl->drawGridShift(timestep);
@@ -162,11 +166,6 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
  */
 void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
     {
-    if (m_checked_collision_warnings)
-        {
-        return;
-        }
-
     if (m_embed_group)
         {
         // initialize variables for if warnings or errors exist
@@ -387,7 +386,6 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
                 "Mass of some rigid bodies not equal to sum of constituent particle masses.");
             }
         }
-    m_checked_collision_warnings = true;
     }
 
 void mpcd::CollisionMethod::storeInitialEmbeddedGroupVelocities(uint64_t timestep)
