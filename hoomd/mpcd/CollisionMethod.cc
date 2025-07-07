@@ -513,30 +513,26 @@ void mpcd::CollisionMethod::thermalizeConstituentParticles(uint64_t timestep)
     ArrayHandle<Scalar3> h_inertia(m_pdata->getMomentsOfInertiaArray(),
                                    access_location::host,
                                    access_mode::read);
+    ArrayHandle<unsigned int> h_rigid_center(m_rigid_bodies->getRigidCenters(),
+                                             access_location::host,
+                                             access_mode::read);
+
     // get net linear velocity and net angular velocity of central particles
-    for (unsigned int idx = 0; idx < num_total; ++idx)
+    unsigned int num_centers = m_rigid_bodies->getNLocal();
+    for (unsigned int idx = 0; idx < num_centers; ++idx)
         {
-        // check that the particle is in a rigid body and a central particle
-        const unsigned int central_tag = h_body.data[idx];
-        if (central_tag >= MIN_FLOPPY)
-            {
-            continue;
-            }
-        const unsigned int central_idx = h_rtag.data[central_tag];
-        if (central_idx != idx)
-            {
-            continue;
-            }
+        // get index of central particle
+        const unsigned int central_idx = h_rigid_center.data[idx];
 
         // store the net linear velocity in AltVelocities
-        Scalar mass = h_velocity.data[idx].w;
+        Scalar mass = h_velocity.data[central_idx].w;
         Scalar3 net_velocity = h_linmom_accum.data[central_idx] / mass;
         h_alt_vel.data[central_idx]
             = make_scalar4(net_velocity.x, net_velocity.y, net_velocity.z, mass);
 
         // get net angular momentum
         vec3<Scalar> net_angmom(h_angmom_accum.data[central_idx]);
-        const quat<Scalar> orientation(h_orientation.data[idx]);
+        const quat<Scalar> orientation(h_orientation.data[central_idx]);
         const vec3<Scalar> inertia(h_inertia.data[central_idx]);
 
         // rotate to body frame
@@ -727,44 +723,34 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
     ArrayHandle<Scalar3> h_inertia(m_pdata->getMomentsOfInertiaArray(),
                                    access_location::host,
                                    access_mode::read);
-    ArrayHandle<unsigned int> h_body(m_pdata->getBodies(),
-                                     access_location::host,
-                                     access_mode::read);
-    ArrayHandle<unsigned int> h_rtag(m_pdata->getRTags(), access_location::host, access_mode::read);
+    ArrayHandle<unsigned int> h_rigid_center(m_rigid_bodies->getRigidCenters(),
+                                             access_location::host,
+                                             access_mode::read);
     // add accumulated momentum to the central particle
-    unsigned int num_total = m_pdata->getN();
-    for (unsigned int idx = 0; idx < num_total; ++idx)
+    unsigned int num_centers = m_rigid_bodies->getNLocal();
+    for (unsigned int idx = 0; idx < num_centers; ++idx)
         {
-        // check that the particle is in a rigid body and a central particle
-        const unsigned int central_tag = h_body.data[idx];
-        if (central_tag >= MIN_FLOPPY)
-            {
-            continue;
-            }
-        const unsigned int central_idx = h_rtag.data[central_tag];
-        if (central_idx != idx)
-            {
-            continue;
-            }
+        // get index of central particle
+        const unsigned int central_idx = h_rigid_center.data[idx];
 
         // get accumulated momentum for particle
-        const Scalar3 linmom_accum(h_linmom_accum.data[idx]);
-        const vec3<Scalar> angmom_accum(h_angmom_accum.data[idx]);
+        const Scalar3 linmom_accum(h_linmom_accum.data[central_idx]);
+        const vec3<Scalar> angmom_accum(h_angmom_accum.data[central_idx]);
 
         // compute and store new velocity
-        Scalar4 vel_mass = h_velocity.data[idx];
+        Scalar4 vel_mass = h_velocity.data[central_idx];
         const Scalar mass = vel_mass.w;
         if (mass > 0)
             {
             vel_mass.x += linmom_accum.x / mass;
             vel_mass.y += linmom_accum.y / mass;
             vel_mass.z += linmom_accum.z / mass;
-            h_velocity.data[idx] = vel_mass;
+            h_velocity.data[central_idx] = vel_mass;
             }
 
         // compute new angular momentum
-        quat<Scalar> angmom(h_angmom.data[idx]);
-        const quat<Scalar> orientation(h_orientation.data[idx]);
+        quat<Scalar> angmom(h_angmom.data[central_idx]);
+        const quat<Scalar> orientation(h_orientation.data[central_idx]);
 
         // convert angular momentum to quaternion and update
         const vec3<Scalar> inertia(h_inertia.data[central_idx]);
@@ -786,7 +772,7 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
         angmom += Scalar(2.0) * orientation * quat(0.0, angmom_change_body);
 
         // save update
-        h_angmom.data[idx] = quat_to_scalar4(angmom);
+        h_angmom.data[central_idx] = quat_to_scalar4(angmom);
         }
     }
 
@@ -922,12 +908,9 @@ void mpcd::CollisionMethod::thermalizeConstituentParticlesGPU(uint64_t timestep)
         ArrayHandle<Scalar3> d_inertia(m_pdata->getMomentsOfInertiaArray(),
                                        access_location::device,
                                        access_mode::read);
-        ArrayHandle<unsigned int> d_body(m_pdata->getBodies(),
-                                         access_location::device,
-                                         access_mode::read);
-        ArrayHandle<unsigned int> d_rtag(m_pdata->getRTags(),
-                                         access_location::device,
-                                         access_mode::read);
+        ArrayHandle<unsigned int> d_rigid_center(m_rigid_bodies->getRigidCenters(),
+                                                 access_location::device,
+                                                 access_mode::read);
 
         m_netvelo_tuner->begin();
         mpcd::gpu::get_net_velocity_rigid_body(d_linmom_accum.data,
@@ -936,9 +919,8 @@ void mpcd::CollisionMethod::thermalizeConstituentParticlesGPU(uint64_t timestep)
                                                d_velocity.data,
                                                d_orientation.data,
                                                d_inertia.data,
-                                               d_body.data,
-                                               d_rtag.data,
-                                               m_pdata->getN(),
+                                               d_rigid_center.data,
+                                               m_rigid_bodies->getNLocal(),
                                                m_netvelo_tuner->getParam()[0]);
         if (m_exec_conf->isCUDAErrorCheckingEnabled())
             CHECK_CUDA_ERROR();
@@ -1056,12 +1038,9 @@ void mpcd::CollisionMethod::transferRigidBodyMomentaGPU(uint64_t timestep)
     ArrayHandle<Scalar3> d_inertia(m_pdata->getMomentsOfInertiaArray(),
                                    access_location::device,
                                    access_mode::read);
-    ArrayHandle<unsigned int> d_body(m_pdata->getBodies(),
-                                     access_location::device,
-                                     access_mode::read);
-    ArrayHandle<unsigned int> d_rtag(m_pdata->getRTags(),
-                                     access_location::device,
-                                     access_mode::read);
+    ArrayHandle<unsigned int> d_rigid_center(m_rigid_bodies->getRigidCenters(),
+                                             access_location::device,
+                                             access_mode::read);
 
     m_transfer_tuner->begin();
     mpcd::gpu::transfer_rigid_body_momenta(d_linmom_accum.data,
@@ -1070,9 +1049,8 @@ void mpcd::CollisionMethod::transferRigidBodyMomentaGPU(uint64_t timestep)
                                            d_orientation.data,
                                            d_angmom.data,
                                            d_inertia.data,
-                                           d_body.data,
-                                           d_rtag.data,
-                                           m_pdata->getN(),
+                                           d_rigid_center.data,
+                                           m_rigid_bodies->getNLocal(),
                                            m_transfer_tuner->getParam()[0]);
     if (m_exec_conf->isCUDAErrorCheckingEnabled())
         CHECK_CUDA_ERROR();

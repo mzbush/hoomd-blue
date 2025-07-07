@@ -117,39 +117,24 @@ __global__ void get_net_velocity_rigid_body(const Scalar3* d_linmom_accum,
                                             const Scalar4* d_velocity,
                                             const Scalar4* d_orientation,
                                             const Scalar3* d_inertia,
-                                            const unsigned int* d_body,
-                                            const unsigned int* d_rtag,
-                                            const unsigned int num_total)
+                                            const unsigned int* d_rigid_center,
+                                            const unsigned int num_centers)
     {
     // one thread per particle
     const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= num_total)
+    if (idx >= num_centers)
         return;
 
-    // check if in a rigid body
-    const unsigned int central_tag = d_body[idx];
-    if (central_tag >= MIN_FLOPPY)
-        {
-        return;
-        }
-    const unsigned int central_idx = d_rtag[central_tag];
-    // if the central particle is not local, cannot read or write to it.
-    assert(central_idx != NOT_LOCAL);
-
-    // must be central particle
-    if (idx != central_idx)
-        {
-        return;
-        }
+    const unsigned int central_idx = d_rigid_center[idx];
 
     // store the net linear velocity in AltVelocities
-    Scalar mass = d_velocity[idx].w;
+    Scalar mass = d_velocity[central_idx].w;
     Scalar3 net_velocity = d_linmom_accum[central_idx] / mass;
     d_alt_vel[central_idx] = make_scalar4(net_velocity.x, net_velocity.y, net_velocity.z, mass);
 
     // get net angular momentum
     vec3<Scalar> net_angmom(d_angmom_accum[central_idx]);
-    const quat<Scalar> orientation(d_orientation[idx]);
+    const quat<Scalar> orientation(d_orientation[central_idx]);
     const vec3<Scalar> inertia(d_inertia[central_idx]);
 
     // rotate to body frame
@@ -323,47 +308,36 @@ __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
                                             const Scalar4* d_orientation,
                                             Scalar4* d_angmom,
                                             const Scalar3* d_inertia,
-                                            const unsigned int* d_body,
-                                            const unsigned int* d_rtag,
-                                            const unsigned int num_total)
+                                            const unsigned int* d_rigid_center,
+                                            const unsigned int num_centers)
     {
     // one thread per particle
     const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= num_total)
+    if (idx >= num_centers)
         {
         return;
         }
 
-    // check that the particle is in a rigid body and a central particle
-    const unsigned int central_tag = d_body[idx];
-    if (central_tag >= MIN_FLOPPY)
-        {
-        return;
-        }
-    const unsigned int central_idx = d_rtag[central_tag];
-    if (central_idx != idx)
-        {
-        return;
-        }
+    const unsigned int central_idx = d_rigid_center[idx];
 
     // get accumulated momentum for particle
-    const Scalar3 linmom_accum(d_linmom_accum[idx]);
-    const vec3<Scalar> angmom_accum(d_angmom_accum[idx]);
+    const Scalar3 linmom_accum(d_linmom_accum[central_idx]);
+    const vec3<Scalar> angmom_accum(d_angmom_accum[central_idx]);
 
     // compute and store new velocity
-    Scalar4 vel_mass = d_velocity[idx];
+    Scalar4 vel_mass = d_velocity[central_idx];
     const Scalar mass = vel_mass.w;
     if (mass > 0)
         {
         vel_mass.x += linmom_accum.x / mass;
         vel_mass.y += linmom_accum.y / mass;
         vel_mass.z += linmom_accum.z / mass;
-        d_velocity[idx] = vel_mass;
+        d_velocity[central_idx] = vel_mass;
         }
 
     // compute new angular momentum
-    quat<Scalar> angmom(d_angmom[idx]);
-    const quat<Scalar> orientation(d_orientation[idx]);
+    quat<Scalar> angmom(d_angmom[central_idx]);
+    const quat<Scalar> orientation(d_orientation[central_idx]);
 
     // convert angular momentum to quaternion and update
     const vec3<Scalar> inertia(d_inertia[central_idx]);
@@ -385,7 +359,7 @@ __global__ void transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
     angmom += Scalar(2.0) * orientation * quat(0.0, angmom_change_body);
 
     // save update
-    d_angmom[idx] = quat_to_scalar4(angmom);
+    d_angmom[central_idx] = quat_to_scalar4(angmom);
     }
     } // end namespace kernel
 
@@ -462,9 +436,8 @@ cudaError_t get_net_velocity_rigid_body(const Scalar3* d_linmom_accum,
                                         const Scalar4* d_velocity,
                                         const Scalar4* d_orientation,
                                         const Scalar3* d_inertia,
-                                        const unsigned int* d_body,
-                                        const unsigned int* d_rtag,
-                                        const unsigned int num_total,
+                                        const unsigned int* d_rigid_center,
+                                        const unsigned int num_centers,
                                         const unsigned int block_size)
     {
     unsigned int max_block_size;
@@ -474,16 +447,15 @@ cudaError_t get_net_velocity_rigid_body(const Scalar3* d_linmom_accum,
 
     unsigned int run_block_size = min(block_size, max_block_size);
 
-    dim3 grid(num_total / run_block_size + 1);
+    dim3 grid(num_centers / run_block_size + 1);
     mpcd::gpu::kernel::get_net_velocity_rigid_body<<<grid, run_block_size>>>(d_linmom_accum,
                                                                              d_angmom_accum,
                                                                              d_alt_vel,
                                                                              d_velocity,
                                                                              d_orientation,
                                                                              d_inertia,
-                                                                             d_body,
-                                                                             d_rtag,
-                                                                             num_total);
+                                                                             d_rigid_center,
+                                                                             num_centers);
     return cudaSuccess;
     }
 
@@ -561,9 +533,8 @@ cudaError_t transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
                                         const Scalar4* d_orientation,
                                         Scalar4* d_angmom,
                                         const Scalar3* d_inertia,
-                                        const unsigned int* d_body,
-                                        const unsigned int* d_rtag,
-                                        const unsigned int num_total,
+                                        const unsigned int* d_rigid_center,
+                                        const unsigned int num_centers,
                                         const unsigned int block_size)
     {
     unsigned int max_block_size;
@@ -573,16 +544,15 @@ cudaError_t transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
 
     unsigned int run_block_size = min(block_size, max_block_size);
 
-    dim3 grid(num_total / run_block_size + 1);
+    dim3 grid(num_centers / run_block_size + 1);
     mpcd::gpu::kernel::transfer_rigid_body_momenta<<<grid, run_block_size>>>(d_linmom_accum,
                                                                              d_angmom_accum,
                                                                              d_velocity,
                                                                              d_orientation,
                                                                              d_angmom,
                                                                              d_inertia,
-                                                                             d_body,
-                                                                             d_rtag,
-                                                                             num_total);
+                                                                             d_rigid_center,
+                                                                             num_centers);
 
     return cudaSuccess;
     }

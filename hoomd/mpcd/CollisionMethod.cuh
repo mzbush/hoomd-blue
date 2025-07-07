@@ -45,9 +45,8 @@ cudaError_t get_net_velocity_rigid_body(const Scalar3* d_linmom_accum,
                                         const Scalar4* d_velocity,
                                         const Scalar4* d_orientation,
                                         const Scalar3* d_inertia,
-                                        const unsigned int* d_body,
-                                        const unsigned int* d_rtag,
-                                        const unsigned int num_total,
+                                        const unsigned int* d_rigid_center,
+                                        const unsigned int num_centers,
                                         const unsigned int block_size);
 
 cudaError_t apply_thermalized_velocity_vectors(const Scalar3* d_angmom_accum,
@@ -80,9 +79,8 @@ cudaError_t transfer_rigid_body_momenta(Scalar3* d_linmom_accum,
                                         const Scalar4* d_orientation,
                                         Scalar4* d_angmom,
                                         const Scalar3* d_inertia,
-                                        const unsigned int* d_body,
-                                        const unsigned int* d_rtag,
-                                        const unsigned int num_total,
+                                        const unsigned int* d_rigid_center,
+                                        const unsigned int num_centers,
                                         const unsigned int block_size);
 
     } // end namespace gpu
