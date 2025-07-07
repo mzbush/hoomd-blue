@@ -38,6 +38,8 @@ MeshDynamicBondUpdater::MeshDynamicBondUpdater(std::shared_ptr<SystemDefinition>
 
     m_update_order.resize(m_mesh->getMeshBondData()->getN());
 
+    m_already_updated.resize(m_mesh->getMeshBondData()->getN());
+
     m_exec_conf->msg->notice(5) << "Constructing MeshDynamicBondUpdater" << endl;
     }
 
@@ -103,7 +105,10 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
 
     // maybe too slow
     for (unsigned int i = 0; i < size; i++)
+        {
         m_update_order[i] = i;
+        m_already_updated[i] = false;
+        }
 
     for (unsigned int i = size - 1; i > 0; i--)
         {
@@ -111,11 +116,12 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
         std::swap(m_update_order[i], m_update_order[j]);
         }
 
-    std::vector<uint2> changed;
-
     for (unsigned int cur_bond = 0; cur_bond < size; cur_bond++)
         {
         unsigned int i = m_update_order[cur_bond];
+        if (m_already_updated[i])
+            continue;
+
         typename MeshBond::members_t& bond = h_bonds.data[i];
         assert(bond.tag[0] < m_pdata->getMaximumTag() + 1);
         assert(bond.tag[1] < m_pdata->getMaximumTag() + 1);
@@ -124,19 +130,6 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
         unsigned int tag_d = bond.tag[3];
 
         if (tag_c == tag_d)
-            continue;
-
-        bool already_changed = false;
-        for (unsigned int ii = 0; ii < changed.size(); ii++)
-            {
-            if ((changed[ii].x == tag_c && changed[ii].y == tag_d)
-                || (changed[ii].x == tag_d && changed[ii].y == tag_c))
-                {
-                already_changed = true;
-                break;
-                }
-            }
-        if (already_changed)
             continue;
 
         unsigned int idx_c = h_rtag.data[tag_c];
@@ -309,11 +302,6 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
                     }
                 }
 
-            uint2 bb;
-            bb.x = v_idx[2];
-            bb.y = v_idx[3];
-            changed.push_back(bb);
-
             if (have_to_check_surrounding)
                 {
                 for (auto& force : m_forces)
@@ -388,6 +376,9 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
             h_neigh_triags.data[tr_idx[1]].x = i;
             h_neigh_triags.data[tr_idx[1]].y = b_idx[1];
             h_neigh_triags.data[tr_idx[1]].z = b_idx[3];
+
+            for (unsigned int j = 0; j < 4; j++)
+                m_already_updated[b_idx[j]] = true;
 
             for (auto& force : m_forces)
                 {

@@ -71,6 +71,7 @@ class PYBIND11_EXPORT MeshDynamicBondUpdater : public Updater
     std::vector<std::shared_ptr<ForceCompute>> m_forces;
     std::shared_ptr<MeshDefinition> m_mesh; //!< Active force to call rotationalDiffusion on
     std::vector<unsigned int> m_update_order;
+    std::vector<bool> m_already_updated;
     Scalar m_inv_T;
     };
 
