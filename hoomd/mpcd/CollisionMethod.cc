@@ -423,7 +423,7 @@ void mpcd::CollisionMethod::thermalizeConstituentParticles(uint64_t timestep)
                                     access_mode::readwrite);
     ArrayHandle<Scalar4> h_alt_vel(m_pdata->getAltVelocities(),
                                    access_location::host,
-                                   access_mode::readwrite);
+                                   access_mode::overwrite);
     ArrayHandle<unsigned int> h_body(m_pdata->getBodies(),
                                      access_location::host,
                                      access_mode::read);
