@@ -448,7 +448,7 @@ void mpcd::CollisionMethod::thermalizeConstituentParticles(uint64_t timestep)
     // get random velocities and accumulate the resulting change in momentum
     for (unsigned int idx = 0; idx < num_total; ++idx)
         {
-        // get the index from the embedded group and check if in a rigid body
+        // get the index from the particle and check if in a rigid body
         const unsigned int central_tag = h_body.data[idx];
         if (central_tag >= MIN_FLOPPY)
             {
