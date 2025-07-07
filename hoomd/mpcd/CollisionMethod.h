@@ -126,6 +126,11 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
         }
 
     protected:
+    void requireTemperature()
+        {
+        m_needs_temperature = true;
+        }
+
     std::shared_ptr<SystemDefinition> m_sysdef;                //!< HOOMD system definition
     std::shared_ptr<hoomd::ParticleData> m_pdata;              //!< HOOMD particle data
     std::shared_ptr<mpcd::ParticleData> m_mpcd_pdata;          //!< MPCD particle data
@@ -140,6 +145,7 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
     uint64_t m_next_timestep; //!< Timestep next collision should be performed
 
     bool m_checked_collision_warnings; //!< True if collision related warnings have been checked
+    bool m_needs_temperature;          //!< True if temperature is a required parameter
 
     GPUArray<Scalar4> m_initial_velocity; //!< Initial velocities of the embedded particles
     GPUArray<Scalar3> m_linmom_accum;     //!< Accumulated change in linear momentum of rigid bodies
