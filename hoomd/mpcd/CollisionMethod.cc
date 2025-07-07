@@ -496,8 +496,7 @@ void mpcd::CollisionMethod::thermalizeConstituentParticles(uint64_t timestep)
         displacement = global_box.shift(displacement, displacement_img);
 
         // add to net momentum
-        const vec3<Scalar> rand_vel(vel);
-        const vec3<Scalar> angmom_change = mass_const * cross(displacement, rand_vel);
+        const vec3<Scalar> angmom_change = cross(displacement, vec3<Scalar>(linmom_change));
         h_angmom_accum.data[central_idx] += vec_to_scalar3(angmom_change);
         }
 
