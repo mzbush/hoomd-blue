@@ -92,6 +92,14 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
         m_checked_collision_warnings = true;
         }
 
+    // check the GPU autotuners
+#ifdef ENABLE_HIP
+    if (m_check_rigid_tuners)
+        {
+        checkRigidAutotuners();
+        m_check_rigid_tuners = false;
+        }
+#endif // ENABLE_HIP
     // set random grid shift
     m_cl->drawGridShift(timestep);
 
@@ -783,6 +791,42 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
     }
 
 #ifdef ENABLE_HIP
+//! Create autotuners
+void mpcd::CollisionMethod::checkRigidAutotuners()
+    {
+    const bool rigid_body_collision = m_embed_group && m_rigid_bodies;
+    if (m_exec_conf->isCUDAEnabled() && rigid_body_collision)
+        {
+        m_store_tuner.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                             m_exec_conf,
+                                             "mpcd_rigid_store"));
+        m_drawrandvec_tuner.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                                   m_exec_conf,
+                                                   "mpcd_rigid_rand"));
+        m_netvelo_tuner.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                               m_exec_conf,
+                                               "mpcd_rigid_netvelo"));
+        m_applyrandvec_tuner.reset(
+            new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                             m_exec_conf,
+                             "mpcd_rigid_applyrand"));
+        m_accumulate_tuner.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                                  m_exec_conf,
+                                                  "mpcd_rigid_accum"));
+        m_transfer_tuner.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                                m_exec_conf,
+                                                "mpcd_rigid_transfer"));
+        std::vector<std::shared_ptr<AutotunerBase>> new_autotuners;
+        new_autotuners.insert(new_autotuners.end(),
+                              {m_store_tuner,
+                               m_drawrandvec_tuner,
+                               m_netvelo_tuner,
+                               m_applyrandvec_tuner,
+                               m_accumulate_tuner,
+                               m_transfer_tuner});
+        m_autotuners.swap(new_autotuners);
+        }
+    }
 //! Begin process of applying collisions to rigid bodies (GPU version)
 void mpcd::CollisionMethod::storeInitialEmbeddedGroupVelocitiesGPU(uint64_t timestep)
     {

@@ -68,6 +68,12 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
         if (embed_group != m_embed_group)
             {
             m_checked_collision_warnings = false;
+#ifdef ENABLE_HIP
+            if (m_exec_conf->isCUDAEnabled())
+                {
+                m_check_rigid_tuners = true;
+                }
+#endif // ENABLE_HIP
             }
         m_embed_group = embed_group;
         if (m_cl)
@@ -110,6 +116,12 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
     //! Set the rigid body definitions
     void setRigid(std::shared_ptr<hoomd::md::ForceComposite> new_rigid)
         {
+#ifdef ENABLE_HIP
+        if (m_exec_conf->isCUDAEnabled() && new_rigid != m_rigid_bodies)
+            {
+            m_check_rigid_tuners = true;
+            }
+#endif // ENABLE_HIP
         m_rigid_bodies = new_rigid;
         }
 
@@ -170,6 +182,10 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
     void transferRigidBodyMomenta(uint64_t timestep);
 
 #ifdef ENABLE_HIP
+
+    //! Adds autotuners
+    void checkRigidAutotuners();
+
     //! Begin process of applying collisions to rigid bodies (GPU version)
     void storeInitialEmbeddedGroupVelocitiesGPU(uint64_t timestep);
 
@@ -188,7 +204,9 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
     std::shared_ptr<Autotuner<1>> m_applyrandvec_tuner; //!< Tuner for applying random vectors
     std::shared_ptr<Autotuner<1>> m_accumulate_tuner;   //!< Tuner for accumulating momenta
     std::shared_ptr<Autotuner<1>> m_transfer_tuner;     //!< Tuner for transfering momenta
-#endif                                                  // ENABLE_HIP
+
+    bool m_check_rigid_tuners; //!< True if rigid autotuners need to be tuned
+#endif                         // ENABLE_HIP
 
     //! Call the collision rule
     virtual void rule(uint64_t timestep) { }
