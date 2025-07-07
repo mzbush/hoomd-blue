@@ -230,7 +230,7 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
         // go through each molecule and check if the center of mass is in right location
         if (m_rigid_bodies && !rigid_types.empty())
             {
-            const Scalar tol(0.000001);
+            const Scalar tol(1e-6);
             // access molecule order
             ArrayHandle<unsigned int> h_molecule_order(m_rigid_bodies->getMoleculeOrder(),
                                                        access_location::host,
