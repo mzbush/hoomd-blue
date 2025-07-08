@@ -431,11 +431,7 @@ void mpcd::CollisionMethod::thermalizeConstituentParticles(uint64_t timestep)
     ArrayHandle<Scalar4> h_alt_vel(m_pdata->getAltVelocities(),
                                    access_location::host,
                                    access_mode::overwrite);
-    ArrayHandle<unsigned int> h_body(m_pdata->getBodies(),
-                                     access_location::host,
-                                     access_mode::read);
     ArrayHandle<unsigned int> h_tag(m_pdata->getTags(), access_location::host, access_mode::read);
-    ArrayHandle<unsigned int> h_rtag(m_pdata->getRTags(), access_location::host, access_mode::read);
     ArrayHandle<Scalar4> h_postype(m_pdata->getPositions(),
                                    access_location::host,
                                    access_mode::read);
@@ -448,23 +444,21 @@ void mpcd::CollisionMethod::thermalizeConstituentParticles(uint64_t timestep)
     ArrayHandle<Scalar3> h_angmom_accum(m_angmom_accum,
                                         access_location::host,
                                         access_mode::readwrite);
-
+    ArrayHandle<unsigned int> h_lookup_center(m_rigid_bodies->getLookupCenters(),
+                                              access_location::host,
+                                              access_mode::readwrite);
     unsigned int num_total = m_pdata->getN();
     uint16_t seed = m_sysdef->getSeed();
 
     // get random velocities and accumulate the resulting change in momentum
     for (unsigned int idx = 0; idx < num_total; ++idx)
         {
-        // get the index from the particle and check if in a rigid body
-        const unsigned int central_tag = h_body.data[idx];
-        if (central_tag >= MIN_FLOPPY)
+        // get the index from the particle and check if it is a constituent
+        const unsigned int central_idx = h_lookup_center.data[idx];
+        if (central_idx >= MIN_FLOPPY)
             {
             continue;
             }
-        const unsigned int central_idx = h_rtag.data[central_tag];
-        // if the central particle is not local, cannot read or write to it.
-        assert(central_idx != NOT_LOCAL);
-
         // do not need to thermalize central particle
         if (idx == central_idx)
             {
@@ -570,16 +564,12 @@ void mpcd::CollisionMethod::thermalizeConstituentParticles(uint64_t timestep)
     // Subtract off net linear and angular velocity and apply to constituents
     for (unsigned int idx = 0; idx < num_total; ++idx)
         {
-        // get the index from the embedded group and check if in a rigid body
-        const unsigned int central_tag = h_body.data[idx];
-        if (central_tag >= MIN_FLOPPY)
+        // get the index from the particle and check if it is a constituent
+        const unsigned int central_idx = h_lookup_center.data[idx];
+        if (central_idx >= MIN_FLOPPY)
             {
             continue;
             }
-        const unsigned int central_idx = h_rtag.data[central_tag];
-        // if the central particle is not local, cannot read or write to it.
-        assert(central_idx != NOT_LOCAL);
-
         // do not need to thermalize central particle
         if (idx == central_idx)
             {
@@ -642,12 +632,12 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
     ArrayHandle<Scalar4> h_velocity(m_pdata->getVelocities(),
                                     access_location::host,
                                     access_mode::read);
-    ArrayHandle<unsigned int> h_body(m_pdata->getBodies(),
-                                     access_location::host,
-                                     access_mode::read);
-    ArrayHandle<unsigned int> h_rtag(m_pdata->getRTags(), access_location::host, access_mode::read);
     ArrayHandle<int3> h_image(m_pdata->getImages(), access_location::host, access_mode::read);
     const BoxDim& global_box = m_pdata->getGlobalBox();
+
+    ArrayHandle<unsigned int> h_lookup_center(m_rigid_bodies->getLookupCenters(),
+                                              access_location::host,
+                                              access_mode::readwrite);
 
     ArrayHandle<Scalar3> h_linmom_accum(m_linmom_accum,
                                         access_location::host,
@@ -660,15 +650,13 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
         {
         // get the index from the embedded group and check if in a rigid body
         const unsigned int particle_index = h_embed_group.data[idx];
-        const unsigned int central_tag = h_body.data[particle_index];
-        if (central_tag >= MIN_FLOPPY)
+
+        // get the index from the particle and check if it is a constituent
+        const unsigned int central_idx = h_lookup_center.data[particle_index];
+        if (central_idx >= MIN_FLOPPY)
             {
             continue;
             }
-        const unsigned int central_idx = h_rtag.data[central_tag];
-        // if the central particle is not local, cannot read or write to it.
-        assert(central_idx != NOT_LOCAL);
-
         // collision on central particle itself already taken care of by collision rule
         if (particle_index == central_idx)
             {
