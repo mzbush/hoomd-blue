@@ -38,19 +38,6 @@ class PYBIND11_EXPORT ForceCompositeGPU : public ForceComposite
      */
     virtual void updateCompositeParticles(uint64_t timestep);
 
-    //! Get rigid centers
-    GPUVector<unsigned int>& getRigidCenters()
-        {
-        checkParticlesSorted();
-        return m_rigid_center;
-        }
-
-    //! Get number of rigid body
-    const unsigned int getNLocal() const
-        {
-        return m_n_rigid;
-        }
-
     protected:
     //! Compute the forces and torques on the central particle
     virtual void computeForces(uint64_t timestep);
@@ -81,7 +68,7 @@ class PYBIND11_EXPORT ForceCompositeGPU : public ForceComposite
 
     GPUArray<uint2> m_flag; //!< Flag to read out error condition
 
-    GPUVector<unsigned int> m_lookup_center; //!< Lookup particle index -> central particle index
+    // GPUVector<unsigned int> m_lookup_center; //!< Lookup particle index -> central particle index
     };
 
     } // end namespace md
