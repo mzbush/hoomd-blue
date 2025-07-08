@@ -928,12 +928,9 @@ void mpcd::CollisionMethod::thermalizeConstituentParticlesGPU(uint64_t timestep)
                                         access_mode::readwrite);
         ArrayHandle<int3> d_image(m_pdata->getImages(), access_location::device, access_mode::read);
 
-        ArrayHandle<unsigned int> d_body(m_pdata->getBodies(),
-                                         access_location::device,
-                                         access_mode::read);
-        ArrayHandle<unsigned int> d_rtag(m_pdata->getRTags(),
-                                         access_location::device,
-                                         access_mode::read);
+        ArrayHandle<unsigned int> d_lookup_center(m_rigid_bodies->getLookupCenters(),
+                                                  access_location::device,
+                                                  access_mode::read);
 
         m_applyrandvec_tuner->begin();
         mpcd::gpu::apply_thermalized_velocity_vectors(d_angmom_accum.data,
@@ -941,8 +938,7 @@ void mpcd::CollisionMethod::thermalizeConstituentParticlesGPU(uint64_t timestep)
                                                       d_postype.data,
                                                       d_velocity.data,
                                                       d_image.data,
-                                                      d_body.data,
-                                                      d_rtag.data,
+                                                      d_lookup_center.data,
                                                       m_pdata->getGlobalBox(),
                                                       m_pdata->getN(),
                                                       m_applyrandvec_tuner->getParam()[0]);
@@ -972,13 +968,10 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomentaGPU(uint64_t timestep)
     ArrayHandle<Scalar4> d_velocity(m_pdata->getVelocities(),
                                     access_location::device,
                                     access_mode::read);
-    ArrayHandle<unsigned int> d_body(m_pdata->getBodies(),
-                                     access_location::device,
-                                     access_mode::read);
-    ArrayHandle<unsigned int> d_rtag(m_pdata->getRTags(),
-                                     access_location::device,
-                                     access_mode::read);
     ArrayHandle<int3> d_image(m_pdata->getImages(), access_location::device, access_mode::read);
+    ArrayHandle<unsigned int> d_lookup_center(m_rigid_bodies->getLookupCenters(),
+                                              access_location::device,
+                                              access_mode::read);
     const BoxDim& global_box = m_pdata->getGlobalBox();
 
     ArrayHandle<Scalar3> d_linmom_accum(m_linmom_accum,
@@ -995,8 +988,7 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomentaGPU(uint64_t timestep)
                                              d_postype.data,
                                              d_velocity.data,
                                              d_image.data,
-                                             d_body.data,
-                                             d_rtag.data,
+                                             d_lookup_center.data,
                                              global_box,
                                              m_embed_group->getNumMembers(),
                                              m_accumulate_tuner->getParam()[0]);

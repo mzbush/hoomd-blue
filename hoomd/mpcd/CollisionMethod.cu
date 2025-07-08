@@ -75,7 +75,7 @@ __global__ void draw_velocities_constituent_particles(Scalar3* d_linmom_accum,
     Scalar3 vel;
     gen(vel.x, vel.y, rng);
     vel.z = gen(rng);
-    d_alt_vel[idx] = make_scalar4(vel.x, vel.y, vel.z, mass_const); // Cuda error
+    d_alt_vel[idx] = make_scalar4(vel.x, vel.y, vel.z, mass_const);
 
     // get displacement
     const Scalar4 postype_const = d_postype[idx];
@@ -98,12 +98,12 @@ __global__ void draw_velocities_constituent_particles(Scalar3* d_linmom_accum,
     const vec3<Scalar> angmom_change = mass_const * cross(displacement, rand_vel);
 
     // accumulate onto central particle
-    atomicAdd(&d_linmom_accum[central_idx].x, linmom_change.x); // Cuda error
-    atomicAdd(&d_linmom_accum[central_idx].y, linmom_change.y); // Cuda error
-    atomicAdd(&d_linmom_accum[central_idx].z, linmom_change.z); // Cuda error
-    atomicAdd(&d_angmom_accum[central_idx].x, angmom_change.x); // Cuda error
-    atomicAdd(&d_angmom_accum[central_idx].y, angmom_change.y); // Cuda error
-    atomicAdd(&d_angmom_accum[central_idx].z, angmom_change.z); // Cuda error
+    atomicAdd(&d_linmom_accum[central_idx].x, linmom_change.x);
+    atomicAdd(&d_linmom_accum[central_idx].y, linmom_change.y);
+    atomicAdd(&d_linmom_accum[central_idx].z, linmom_change.z);
+    atomicAdd(&d_angmom_accum[central_idx].x, angmom_change.x);
+    atomicAdd(&d_angmom_accum[central_idx].y, angmom_change.y);
+    atomicAdd(&d_angmom_accum[central_idx].z, angmom_change.z);
     }
 
 __global__ void get_net_velocity_rigid_body(const Scalar3* d_linmom_accum,
@@ -169,8 +169,7 @@ __global__ void apply_thermalized_velocity_vectors(const Scalar3* d_angmom_accum
                                                    const Scalar4* d_postype,
                                                    Scalar4* d_velocity,
                                                    const int3* d_image,
-                                                   const unsigned int* d_body,
-                                                   const unsigned int* d_rtag,
+                                                   const unsigned int* d_lookup_center,
                                                    const BoxDim global_box,
                                                    const unsigned int num_total)
     {
@@ -179,17 +178,13 @@ __global__ void apply_thermalized_velocity_vectors(const Scalar3* d_angmom_accum
     if (idx >= num_total)
         return;
 
-    // check if in a rigid body
-    const unsigned int central_tag = d_body[idx];
-    if (central_tag >= MIN_FLOPPY)
+    // check if it is a constituent and get central index of rigid body
+    const unsigned int central_idx = d_lookup_center[idx];
+    if (central_idx >= MIN_FLOPPY)
         {
         return;
         }
-    const unsigned int central_idx = d_rtag[central_tag];
-    // if the central particle is not local, cannot read or write to it.
-    assert(central_idx != NOT_LOCAL);
-
-    // do not thermalize central particle
+    // do not need to thermalize central particle
     if (idx == central_idx)
         {
         return;
@@ -237,8 +232,7 @@ __global__ void accumulate_rigid_body_momenta(Scalar3* d_linmom_accum,
                                               const Scalar4* d_postype,
                                               const Scalar4* d_velocity,
                                               const int3* d_image,
-                                              const unsigned int* d_body,
-                                              const unsigned int* d_rtag,
+                                              const unsigned int* d_lookup_center,
                                               const BoxDim global_box,
                                               const unsigned int num_group)
     {
@@ -249,20 +243,17 @@ __global__ void accumulate_rigid_body_momenta(Scalar3* d_linmom_accum,
 
     // get the index from the embedded group and check if in a rigid body
     unsigned int particle_idx = d_embed_group[idx];
-    const unsigned int central_tag = d_body[particle_idx];
-    if (central_tag >= MIN_FLOPPY)
+    const unsigned int central_idx = d_lookup_center[particle_idx];
+    if (central_idx >= MIN_FLOPPY)
         {
         return;
         }
-    const unsigned int central_idx = d_rtag[central_tag];
-    // if the central particle is not local, cannot read or write to it.
-    assert(central_idx != NOT_LOCAL);
-
     // collision on central particle itself already taken care of by collision rule
     if (particle_idx == central_idx)
         {
         return;
         }
+
     // get velocities and masses
     const Scalar4 vel_mass_const = d_velocity[particle_idx];
     const vec3<Scalar> vel_const(vel_mass_const);
@@ -457,8 +448,7 @@ cudaError_t apply_thermalized_velocity_vectors(const Scalar3* d_angmom_accum,
                                                const Scalar4* d_postype,
                                                Scalar4* d_velocity,
                                                const int3* d_image,
-                                               const unsigned int* d_body,
-                                               const unsigned int* d_rtag,
+                                               const unsigned int* d_lookup_center,
                                                const BoxDim& global_box,
                                                const unsigned int num_total,
                                                const unsigned int block_size)
@@ -477,8 +467,7 @@ cudaError_t apply_thermalized_velocity_vectors(const Scalar3* d_angmom_accum,
                                                                                     d_postype,
                                                                                     d_velocity,
                                                                                     d_image,
-                                                                                    d_body,
-                                                                                    d_rtag,
+                                                                                    d_lookup_center,
                                                                                     global_box,
                                                                                     num_total);
     return cudaSuccess;
@@ -491,8 +480,7 @@ cudaError_t accumulate_rigid_body_momenta(Scalar3* d_linmom_accum,
                                           const Scalar4* d_postype,
                                           const Scalar4* d_velocity,
                                           const int3* d_image,
-                                          const unsigned int* d_body,
-                                          const unsigned int* d_rtag,
+                                          const unsigned int* d_lookup_center,
                                           const BoxDim& global_box,
                                           const unsigned int num_group,
                                           const unsigned int block_size)
@@ -512,8 +500,7 @@ cudaError_t accumulate_rigid_body_momenta(Scalar3* d_linmom_accum,
                                                                                d_postype,
                                                                                d_velocity,
                                                                                d_image,
-                                                                               d_body,
-                                                                               d_rtag,
+                                                                               d_lookup_center,
                                                                                global_box,
                                                                                num_group);
 
