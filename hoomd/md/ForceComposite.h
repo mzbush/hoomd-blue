@@ -236,6 +236,13 @@ class PYBIND11_EXPORT ForceComposite : public MolecularForceCompute
         return m_rigid_center;
         }
 
+    //! Get lookup centers
+    GPUVector<unsigned int>& getLookupCenters()
+        {
+        checkParticlesSorted();
+        return m_lookup_center;
+        }
+
     //! Get number of local rigid bodies
     const unsigned int getNLocal() const
         {

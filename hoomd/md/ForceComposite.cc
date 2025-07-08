@@ -1077,18 +1077,19 @@ void ForceComposite::findRigidCenters()
     for (unsigned int idx = 0; idx < n_particles_local; idx++)
         {
         // check that the particle is in a rigid body and a central particle
+        h_lookup_center.data[idx] = -1;
         const unsigned int central_tag = h_body.data[idx];
         if (central_tag >= MIN_FLOPPY)
             {
             continue;
             }
         const unsigned int central_idx = h_rtag.data[central_tag];
+        h_lookup_center.data[idx] = central_idx;
         if (central_idx != idx)
             {
             continue;
             }
         h_rigid_center.data[num_centers] = central_idx;
-        h_lookup_center.data[idx] = central_idx;
         num_centers += 1;
         }
     m_n_rigid = num_centers;
