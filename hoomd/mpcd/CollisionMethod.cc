@@ -446,7 +446,7 @@ void mpcd::CollisionMethod::thermalizeConstituentParticles(uint64_t timestep)
                                         access_mode::readwrite);
     ArrayHandle<unsigned int> h_lookup_center(m_rigid_bodies->getLookupCenters(),
                                               access_location::host,
-                                              access_mode::readwrite);
+                                              access_mode::read);
     unsigned int num_total = m_pdata->getN();
     uint16_t seed = m_sysdef->getSeed();
 
@@ -637,7 +637,7 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
 
     ArrayHandle<unsigned int> h_lookup_center(m_rigid_bodies->getLookupCenters(),
                                               access_location::host,
-                                              access_mode::readwrite);
+                                              access_mode::read);
 
     ArrayHandle<Scalar3> h_linmom_accum(m_linmom_accum,
                                         access_location::host,
@@ -847,15 +847,13 @@ void mpcd::CollisionMethod::thermalizeConstituentParticlesGPU(uint64_t timestep)
                                         access_location::device,
                                         access_mode::read);
         ArrayHandle<int3> d_image(m_pdata->getImages(), access_location::device, access_mode::read);
-        ArrayHandle<unsigned int> d_body(m_pdata->getBodies(),
-                                         access_location::device,
-                                         access_mode::read);
         ArrayHandle<unsigned int> d_tag(m_pdata->getTags(),
                                         access_location::device,
                                         access_mode::read);
-        ArrayHandle<unsigned int> d_rtag(m_pdata->getRTags(),
-                                         access_location::device,
-                                         access_mode::read);
+
+        ArrayHandle<unsigned int> d_lookup_center(m_rigid_bodies->getLookupCenters(),
+                                                  access_location::device,
+                                                  access_mode::read);
 
         m_drawrandvec_tuner->begin();
         mpcd::gpu::draw_velocities_constituent_particles(d_linmom_accum.data,
@@ -864,9 +862,8 @@ void mpcd::CollisionMethod::thermalizeConstituentParticlesGPU(uint64_t timestep)
                                                          d_postype.data,
                                                          d_velocity.data,
                                                          d_image.data,
-                                                         d_body.data,
                                                          d_tag.data,
-                                                         d_rtag.data,
+                                                         d_lookup_center.data,
                                                          m_pdata->getGlobalBox(),
                                                          timestep,
                                                          m_sysdef->getSeed(),
