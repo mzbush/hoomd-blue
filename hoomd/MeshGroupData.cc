@@ -128,7 +128,6 @@ void MeshGroupData<group_size, Group, name, snap>::initializeFromTriangleSnapsho
 	unsigned int bond_idx = 0;
         for (unsigned group_idx = 0; group_idx < snapshot.groups.size(); group_idx++)
             {
-            std::cout << group_idx << " " << snapshot.groups.size() << std::endl;
             std::vector<unsigned int> triag_tag(3);
             std::vector<typename BondedGroupData<group_size, Group, name, true>::members_t> bonds(
                 3);
