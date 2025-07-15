@@ -14,6 +14,8 @@ Change Log
 
 * Ensure that GPU devices have full unified memory capabilities
   (`#2099 <https://github.com/glotzerlab/hoomd-blue/pull/2099>`__).
+* Fix segfault when attaching nlists with meshes
+  (`#2089 <https://github.com/glotzerlab/hoomd-blue/pull/2089>`__).
 
 *Added*
 
