@@ -125,7 +125,7 @@ void MeshGroupData<group_size, Group, name, snap>::initializeFromTriangleSnapsho
 
     if (group_size == 4)
         {
-	unsigned int bond_idx = 0;
+        unsigned int bond_idx = 0;
         for (unsigned group_idx = 0; group_idx < snapshot.groups.size(); group_idx++)
             {
             std::vector<unsigned int> triag_tag(3);
@@ -150,7 +150,7 @@ void MeshGroupData<group_size, Group, name, snap>::initializeFromTriangleSnapsho
             bonds[2].tag[2] = triag_tag[1];
             bonds[2].tag[3] = triag_tag[1];
 
-	for (unsigned int j = 0; j < bonds.size(); ++j)
+            for (unsigned int j = 0; j < bonds.size(); ++j)
                 {
                 if (bonds[j].tag[0] > bonds[j].tag[1])
                     {
@@ -170,11 +170,11 @@ void MeshGroupData<group_size, Group, name, snap>::initializeFromTriangleSnapsho
                     if (bonds[j].tag[0] == all_helper[i].tag[0]
                         && bonds[j].tag[1] == all_helper[i].tag[1])
                         {
-			unsigned int find_idx = all_helper[i].tag[2];
-			all_groups[find_idx].tag[3] = bonds[j].tag[2];
+                        unsigned int find_idx = all_helper[i].tag[2];
+                        all_groups[find_idx].tag[3] = bonds[j].tag[2];
 
-			all_helper.erase(all_helper.begin() + i);
-			i -= 1;
+                        all_helper.erase(all_helper.begin() + i);
+                        i -= 1;
                         bonds.erase(bonds.begin() + j);
                         break;
                         }
@@ -184,9 +184,9 @@ void MeshGroupData<group_size, Group, name, snap>::initializeFromTriangleSnapsho
                 {
                 all_groups.push_back(bonds[i]);
                 all_helper.push_back(bonds[i]);
-		long unsigned int all_helper_size = all_helper.size()-1;
-		all_helper[all_helper_size].tag[2] = bond_idx;
-		bond_idx++;
+                long unsigned int all_helper_size = all_helper.size() - 1;
+                all_helper[all_helper_size].tag[2] = bond_idx;
+                bond_idx++;
 
                 all_types.push_back(snapshot.type_id[group_idx]);
                 }
