@@ -368,10 +368,6 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
             {
             throw std::runtime_error("Some particles have a mass <= 0.");
             }
-        if (m_needs_temperature && !m_T)
-            {
-            throw std::runtime_error("Thermostat required by collision method.");
-            }
         if (central_interacting)
             {
             m_exec_conf->msg->warning() << "Central particle of rigid body included in "
