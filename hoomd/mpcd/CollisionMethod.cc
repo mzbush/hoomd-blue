@@ -559,12 +559,7 @@ void mpcd::CollisionMethod::thermalizeConstituentParticles(uint64_t timestep)
         {
         // get the index from the particle and check if it is a constituent
         const unsigned int central_idx = h_lookup_center.data[idx];
-        if (central_idx >= MIN_FLOPPY)
-            {
-            continue;
-            }
-        // do not need to thermalize central particle
-        if (idx == central_idx)
+        if (central_idx == NO_BODY || central_idx == idx)
             {
             continue;
             }
