@@ -70,7 +70,7 @@ __global__ void draw_velocities_constituent_particles(Scalar3* d_linmom_accum,
     unsigned int tag = d_tag[idx];
     // draw random velocities from normal distribution
     hoomd::RandomGenerator rng(hoomd::Seed(hoomd::RNGIdentifier::CollisionMethod, timestep, seed),
-                               hoomd::Counter(tag));
+                               hoomd::Counter(tag, 1));
     hoomd::NormalDistribution<Scalar> gen(fast::sqrt(T / mass_const), 0.0);
     Scalar3 vel;
     gen(vel.x, vel.y, rng);

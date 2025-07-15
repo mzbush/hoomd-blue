@@ -459,7 +459,7 @@ void mpcd::CollisionMethod::thermalizeConstituentParticles(uint64_t timestep)
         // draw random velocities from normal distribution
         hoomd::RandomGenerator rng(
             hoomd::Seed(hoomd::RNGIdentifier::CollisionMethod, timestep, seed),
-            hoomd::Counter(tag));
+            hoomd::Counter(tag, 1));
         hoomd::NormalDistribution<Scalar> gen(fast::sqrt(T_set / mass_const), 0.0);
         Scalar3 vel;
         gen(vel.x, vel.y, rng);
