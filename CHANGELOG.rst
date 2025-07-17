@@ -19,6 +19,8 @@ Change Log
   (`#2097 <https://github.com/glotzerlab/hoomd-blue/pull/2097>`__).
 * Equations displayed in ``hoomd.hpmc.compute.SDF`` documentation
   (`#2096 <https://github.com/glotzerlab/hoomd-blue/discussions/2096>`__).
+* Support CUDA 12.9
+  (`#2102 <https://github.com/glotzerlab/hoomd-blue/discussions/2102>`__).
 
 5.3.0 (2025-06-26)
 ^^^^^^^^^^^^^^^^^^
