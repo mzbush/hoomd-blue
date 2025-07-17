@@ -7,6 +7,7 @@
  */
 
 #include <hipcub/hipcub.hpp>
+#include <thrust/iterator/counting_iterator.h>
 
 #include "RejectionVirtualParticleFillerGPU.cuh"
 
