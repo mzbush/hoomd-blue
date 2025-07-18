@@ -389,7 +389,7 @@ void ExecutionConfiguration::scanGPUs()
 #ifdef __HIP_PLATFORM_NVCC__
         int supports_managed_memory = 0;
         cudaError_t cuda_error = cudaDeviceGetAttribute(&supports_managed_memory,
-                                                        cudaDevAttrPageableMemoryAccess,
+                                                        cudaDevAttrConcurrentManagedAccess,
                                                         dev);
         if (cuda_error != cudaSuccess)
             {
