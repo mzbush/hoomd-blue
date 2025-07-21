@@ -90,8 +90,10 @@ set(_md_headers ActiveForceComputeGPU.h
                 ComputeThermoTypes.h
                 ComputeThermoHMATypes.h
                 ConstantForceComputeGPU.h
+                ConstantForceComputeGPU.cuh
                 ConstantForceCompute.h
                 CosineSqAngleForceComputeGPU.h
+                CosineSqAngleForceGPU.cuh
                 CosineSqAngleForceCompute.h
                 CustomForceCompute.h
                 EvaluatorBondFENE.h
@@ -100,7 +102,7 @@ set(_md_headers ActiveForceComputeGPU.h
                 EvaluatorSpecialPairLJ.h
                 EvaluatorSpecialPairCoulomb.h
                 EvaluatorExternalElectricField.h
-            	EvaluatorExternalMagneticField.h
+                EvaluatorExternalMagneticField.h
                 EvaluatorExternalPeriodic.h
                 EvaluatorPairALJ.h
                 EvaluatorPairBuckingham.h
@@ -132,20 +134,27 @@ set(_md_headers ActiveForceComputeGPU.h
                 EvaluatorTersoff.h
                 EvaluatorWalls.h
                 FIREEnergyMinimizerGPU.h
+                FIREEnergyMinimizerGPU.cuh
                 FIREEnergyMinimizer.h
                 ForceCompositeGPU.h
+                ForceCompositeGPU.cuh
                 ForceComposite.h
                 ForceDistanceConstraintGPU.h
+                ForceDistanceConstraintGPU.cuh
                 ForceDistanceConstraint.h
                 PatchEnvelope.h
                 HarmonicAngleForceComputeGPU.h
                 HarmonicAngleForceCompute.h
+                HarmonicAngleForceGPU.cuh
                 HarmonicDihedralForceComputeGPU.h
                 HarmonicDihedralForceCompute.h
+                HarmonicDihedralForceGPU.cuh
                 HarmonicImproperForceComputeGPU.h
                 HarmonicImproperForceCompute.h
-		HelfrichMeshForceComputeGPU.h
-            	HelfrichMeshForceCompute.h
+                HarmonicImproperForceGPU.cuh
+                HelfrichMeshForceComputeGPU.h
+                HelfrichMeshForceComputeGPU.cuh
+                HelfrichMeshForceCompute.h
                 IntegrationMethodTwoStep.h
                 IntegratorTwoStep.h
                 ManifoldZCylinder.h
@@ -161,15 +170,20 @@ set(_md_headers ActiveForceComputeGPU.h
                 MuellerPlatheFlowEnum.h
                 MuellerPlatheFlow.h
                 MuellerPlatheFlowGPU.h
+                MuellerPlatheFlowGPU.cuh
                 NeighborListBinned.h
                 NeighborListGPUBinned.h
                 NeighborListGPU.h
+                NeighborListGPU.cuh
                 NeighborListGPUStencil.h
+                NeighborListGPUStencil.cuh
                 NeighborListGPUTree.h
+                NeighborListGPUTree.cuh
                 NeighborList.h
                 NeighborListStencil.h
                 NeighborListTree.h
                 OPLSDihedralForceComputeGPU.h
+                OPLSDihedralForceGPU.cuh
                 OPLSDihedralForceCompute.h
                 PairModulator.h
                 PotentialBondGPU.h
@@ -193,10 +207,13 @@ set(_md_headers ActiveForceComputeGPU.h
                 PeriodicImproper.h
                 PeriodicImproperForceCompute.h
                 PeriodicImproperForceComputeGPU.h
+                PeriodicImproperForceGPU.cuh
                 PPPMForceComputeGPU.h
+                PPPMForceComputeGPU.cuh
                 PPPMForceCompute.h
                 TableAngleForceComputeGPU.h
                 TableAngleForceCompute.h
+                TableAngleForceGPU.cuh
                 TableDihedralForceComputeGPU.h
                 TableDihedralForceCompute.h
                 TriangleAreaConservationMeshParameters.h
@@ -210,6 +227,7 @@ set(_md_headers ActiveForceComputeGPU.h
                 TwoStepRATTLEBD.h
                 TwoStepLangevinBase.h
                 TwoStepLangevinGPU.h
+                TwoStepLangevinGPU.cuh
                 TwoStepRATTLELangevinGPU.h
                 TwoStepRATTLELangevinGPU.cuh
                 TwoStepLangevin.h
@@ -219,12 +237,16 @@ set(_md_headers ActiveForceComputeGPU.h
                 TwoStepRATTLENVE.h
                 TwoStepConstantVolume.h
                 TwoStepConstantVolumeGPU.h
+                TwoStepConstantVolumeGPU.cuh
                 TwoStepConstantPressure.h
+                TwoStepConstantPressureGPU.h
+                TwoStepConstantPressureGPU.cuh
                 AlchemostatTwoStep.h
                 TwoStepNVTAlchemy.h
-		VolumeConservationMeshParameters.h
-		VolumeConservationMeshForceCompute.h
-            	VolumeConservationMeshForceComputeGPU.h
+                VolumeConservationMeshParameters.h
+                VolumeConservationMeshForceCompute.h
+                VolumeConservationMeshForceComputeGPU.h
+                VolumeConservationMeshForceComputeGPU.cuh
                 AlchemostatTwoStep.h
                 WallData.h
                 ZeroMomentumUpdater.h
