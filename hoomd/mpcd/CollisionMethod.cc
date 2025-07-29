@@ -84,6 +84,7 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
         checkCollisionWarnings(timestep);
         m_checked_collision_warnings = true;
         }
+
     if (m_needs_temperature && !m_T)
         {
         throw std::runtime_error("Temperature required by collision method");
