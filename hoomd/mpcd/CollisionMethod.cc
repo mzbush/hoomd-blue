@@ -308,9 +308,7 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
                     Scalar3 local_pos(h_body_pos.data[h_body_idx(type, idx_in_body)]);
                     Scalar mass = h_velocity.data[idxj].w;
                     // add to accumulating center of mass
-                    center_of_mass.x += local_pos.x * mass;
-                    center_of_mass.y += local_pos.y * mass;
-                    center_of_mass.z += local_pos.z * mass;
+                    center_of_mass += mass * local_pos;
                     mass_sum += mass;
                     }
                 // check if center of mass in body frame is (0, 0, 0)
