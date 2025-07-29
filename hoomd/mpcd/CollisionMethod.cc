@@ -130,13 +130,15 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
         // thermalize rigid bodies and store constituent velocities
         if (m_exec_conf->isCUDAEnabled())
             {
-            thermalizeConstituentParticlesGPU(timestep);
+            beginThermalizeConstituentParticlesGPU(timestep);
+            finishThermalizeConstituentParticlesGPU(timestep);
             storeInitialEmbeddedGroupVelocitiesGPU(timestep);
             }
         else
 #endif
             {
-            thermalizeConstituentParticles(timestep);
+            beginThermalizeConstituentParticles(timestep);
+            finishThermalizeConstituentParticles(timestep);
             storeInitialEmbeddedGroupVelocities(timestep);
             }
         }
@@ -389,7 +391,7 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
         }
     }
 
-void mpcd::CollisionMethod::thermalizeConstituentParticles(uint64_t timestep)
+void mpcd::CollisionMethod::beginThermalizeConstituentParticles(uint64_t timestep)
     {
     // zero accumulators
     m_linmom_accum.zeroFill();
@@ -467,7 +469,33 @@ void mpcd::CollisionMethod::thermalizeConstituentParticles(uint64_t timestep)
         const vec3<Scalar> angmom_change = cross(displacement, vec3<Scalar>(linmom_change));
         h_angmom_accum.data[central_idx] += vec_to_scalar3(angmom_change);
         }
+    }
 
+void mpcd::CollisionMethod::finishThermalizeConstituentParticles(uint64_t timestep)
+    {
+    ArrayHandle<Scalar4> h_velocity(m_pdata->getVelocities(),
+                                    access_location::host,
+                                    access_mode::readwrite);
+    ArrayHandle<Scalar4> h_alt_vel(m_pdata->getAltVelocities(),
+                                   access_location::host,
+                                   access_mode::readwrite);
+
+    ArrayHandle<Scalar4> h_postype(m_pdata->getPositions(),
+                                   access_location::host,
+                                   access_mode::read);
+    ArrayHandle<int3> h_image(m_pdata->getImages(), access_location::host, access_mode::read);
+    const BoxDim& global_box = m_pdata->getGlobalBox();
+
+    ArrayHandle<Scalar3> h_linmom_accum(m_linmom_accum,
+                                        access_location::host,
+                                        access_mode::readwrite);
+    ArrayHandle<Scalar3> h_angmom_accum(m_angmom_accum,
+                                        access_location::host,
+                                        access_mode::readwrite);
+    ArrayHandle<unsigned int> h_lookup_center(m_rigid_bodies->getLookupCenters(),
+                                              access_location::host,
+                                              access_mode::read);
+    unsigned int num_total = m_pdata->getN();
     ArrayHandle<Scalar4> h_orientation(m_pdata->getOrientationArray(),
                                        access_location::host,
                                        access_mode::read);
@@ -778,7 +806,7 @@ void mpcd::CollisionMethod::checkRigidAutotuners()
         }
     }
 
-void mpcd::CollisionMethod::thermalizeConstituentParticlesGPU(uint64_t timestep)
+void mpcd::CollisionMethod::beginThermalizeConstituentParticlesGPU(uint64_t timestep)
     {
     // zero accumulators
     m_linmom_accum.zeroFill();
@@ -828,6 +856,10 @@ void mpcd::CollisionMethod::thermalizeConstituentParticlesGPU(uint64_t timestep)
             CHECK_CUDA_ERROR();
         m_drawrandvec_tuner->end();
         }
+    }
+
+void mpcd::CollisionMethod::finishThermalizeConstituentParticlesGPU(uint64_t timestep)
+    {
         {
         ArrayHandle<Scalar3> d_linmom_accum(m_linmom_accum,
                                             access_location::device,

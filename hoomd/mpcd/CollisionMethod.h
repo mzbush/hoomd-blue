@@ -170,7 +170,10 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
     void checkCollisionWarnings(uint64_t timestep);
 
     //! thermalize constituent particles of rigid bodies
-    void thermalizeConstituentParticles(uint64_t timestep);
+    void beginThermalizeConstituentParticles(uint64_t timestep);
+
+    //! subtract off net momentum from thermalizing constituent particles
+    void finishThermalizeConstituentParticles(uint64_t timestep);
 
     //! Begin process of applying collisions to rigid bodies
     void storeInitialEmbeddedGroupVelocities(uint64_t timestep);
@@ -187,7 +190,10 @@ class PYBIND11_EXPORT CollisionMethod : public Autotuned
     void checkRigidAutotuners();
 
     //! thermalize constituent particles of rigid bodies
-    void thermalizeConstituentParticlesGPU(uint64_t timestep);
+    void beginThermalizeConstituentParticlesGPU(uint64_t timestep);
+
+    //! subtract off net momentum from thermalizing constituent particles
+    void finishThermalizeConstituentParticlesGPU(uint64_t timestep);
 
     //! Begin process of applying collisions to rigid bodies (GPU version)
     void storeInitialEmbeddedGroupVelocitiesGPU(uint64_t timestep);
