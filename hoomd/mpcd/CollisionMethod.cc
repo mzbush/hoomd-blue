@@ -364,15 +364,15 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
             {
             requireTemperature();
             }
-        if (invalid_mass)
-            {
-            throw std::runtime_error("Some particles have a mass <= 0.");
-            }
         if (central_interacting)
             {
             m_exec_conf->msg->warning() << "Central particle of rigid body included in "
                                            "MPCD collision. Check if this is intentional."
                                         << std::endl;
+            }
+        if (invalid_mass)
+            {
+            throw std::runtime_error("Some particles have a mass <= 0.");
             }
         if (invalid_center_of_mass)
             {
