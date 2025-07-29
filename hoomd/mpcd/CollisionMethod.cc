@@ -767,12 +767,12 @@ void mpcd::CollisionMethod::checkRigidAutotuners()
     else
         {
         // remove rigid tuners if present
-        for (unsigned int t = 0; t < m_autotuners.size(); ++t)
+        for (auto& rigid_tuner : new_autotuners)
             {
-            if (std::find(new_autotuners.begin(), new_autotuners.end(), m_autotuners[t])
-                != new_autotuners.end())
+            auto it = std::find(m_autotuners.begin(), m_autotuners.end(), rigid_tuner);
+            if (it != m_autotuners.end())
                 {
-                m_autotuners.erase(m_autotuners.begin() + t);
+                m_autotuners.erase(it);
                 }
             }
         }
