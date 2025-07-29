@@ -7,6 +7,7 @@ set(files __init__.py
     test_alj.py
     test_angle.py
     test_aniso_pair.py
+    test_ylz.py
     test_array_view.py
     test_bond.py
     test_constrain_distance.py
