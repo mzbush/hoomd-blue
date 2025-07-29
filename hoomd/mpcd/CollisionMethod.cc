@@ -755,7 +755,7 @@ void mpcd::CollisionMethod::checkRigidAutotuners()
     if (m_exec_conf->isCUDAEnabled() && rigid_body_collision)
         {
         // add tuners if they aren't already there
-        for (std::shared_ptr<AutotunerBase> rigid_tuner : new_autotuners)
+        for (auto& rigid_tuner : new_autotuners)
             {
             if (std::find(m_autotuners.begin(), m_autotuners.end(), rigid_tuner)
                 == m_autotuners.end())
