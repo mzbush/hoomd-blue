@@ -319,8 +319,8 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
                 invalid_center_of_mass |= !in_tol;
                 // check if center of mass is the same as the sum of masses
                 Scalar mass_diff = center_mass - mass_sum;
-                bool sum_in_tol = mass_diff >= -1.0 * tol && mass_diff <= tol;
-                invalid_mass_sum = invalid_mass_sum || !sum_in_tol;
+                bool sum_in_tol = mass_diff >= -tol && mass_diff <= tol;
+                invalid_mass_sum |= !sum_in_tol;
                 }
             }
 
