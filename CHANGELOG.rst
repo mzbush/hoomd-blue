@@ -4,6 +4,15 @@ Change Log
 5.x
 ---
 
+5.4.0 (not yet released)
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+*Added*
+
+* The Zetterling MD pair potential: ``hoomd.md.pair.Zetterling``
+  (`#2086 <https://github.com/glotzerlab/hoomd-blue/pull/2086>`__).
+
+
 5.3.1 (2025-07-18)
 ^^^^^^^^^^^^^^^^^^
 

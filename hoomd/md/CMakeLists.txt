@@ -130,6 +130,7 @@ set(_md_headers ActiveForceComputeGPU.h
                 EvaluatorPairYukawa.h
                 EvaluatorPairWangFrenkel.h
                 EvaluatorPairZBL.h
+                EvaluatorPairZetterling.h
                 EvaluatorTersoff.h
                 EvaluatorWalls.h
                 FIREEnergyMinimizerGPU.h
@@ -580,7 +581,8 @@ set(_pair_evaluators Buckingham
                      ForceShiftedLJ
                      Table
                      ExpandedGaussian
-                     WangFrenkel)
+                     WangFrenkel
+                     Zetterling)
 
 
 foreach(_evaluator ${_pair_evaluators})
