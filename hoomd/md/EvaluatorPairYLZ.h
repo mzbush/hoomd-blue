@@ -41,10 +41,10 @@ class EvaluatorPairYLZ
     public:
     struct param_type
         {
-        Scalar eps;  //! the energy scale of the Mie potential.
-        Scalar phi;  //! Sets the local curvature of the particles: phi = sin(theta_0)
-        Scalar beta; //! sets the scale of the orietnational coupling = 1 - beta(a-1).
-        Scalar rmin; //! cutoff of the first minimum where the Mie potential kicks in.
+        Scalar eps;  //! the energy scale of the potential.
+        Scalar phi;  //! Sets the local curvature of the particles: phi = sin(theta_0).
+        Scalar beta; //! sets the scale of the orietnational coupling.
+        Scalar rmin; //! cutoff of the first minimum where the Lennard-Jones begins.
 
 #ifdef ENABLE_HIP
         //! Set CUDA memory hints
@@ -134,7 +134,7 @@ class EvaluatorPairYLZ
         \param _rcutsq Squared distance at which the potential goes to 0
         \param _quat_i Quaternion of i^{th} particle
         \param _quat_j Quaternion of j^{th} particle
-        \param _eps Electrostatic energy scale
+        \param _eps YLZ energy scale
         \param _phi
         \param _beta
         \param _rmin
@@ -223,8 +223,7 @@ class EvaluatorPairYLZ
         Scalar r4inv = r2inv * r2inv;
         Scalar rminsq = rmin * rmin;
 
-        // convert dipole vector in the body frame of each particle to space
-        // frame
+        // convert symmetry axis vector in the body frame
         vec3<Scalar> p_i = rotate(quat<Scalar>(quat_i), mu_i);
         vec3<Scalar> p_j = rotate(quat<Scalar>(quat_j), mu_j);
 
@@ -237,6 +236,7 @@ class EvaluatorPairYLZ
         bool dipole_i_interactions = (mu_i != vec3<Scalar>(0, 0, 0));
         bool dipole_j_interactions = (mu_j != vec3<Scalar>(0, 0, 0));
         bool dipole_interactions = dipole_i_interactions && dipole_j_interactions;
+
         // dipole-dipole
         if (dipole_interactions)
             {
@@ -249,10 +249,10 @@ class EvaluatorPairYLZ
 
             if (rsq < rminsq)
                 {
-                // Scalar dUdr = eps * 4 * rinv *(rminsq * r2inv - rminsq * rminsq * r4inv);
                 Scalar dUdr = eps * Scalar(4.0) * rinv * (rminsq * r2inv - rminsq * rminsq * r4inv);
                 vec3<Scalar> dU_drhat = -beta * da_drhat;
 
+		// forces
                 f += -dUdr * rhat - (dU_drhat - dot(dU_drhat, rhat) * rhat) * rinv;
 
                 // torques
@@ -268,7 +268,6 @@ class EvaluatorPairYLZ
                 }
             else
                 {
-                // Code assumes zeta equals 4
                 Scalar rcut = fast::sqrt(rcutsq);
                 Scalar gamma = Scalar(1.0) + beta * (a - Scalar(1.0));
                 Scalar inv_rmin_diff = Scalar(1.0) / (rcut - rmin);
@@ -333,8 +332,8 @@ class EvaluatorPairYLZ
     Scalar3 dr;             //!< Stored vector pointing between particle centers of mass
     Scalar rcutsq;          //!< Stored rcutsq from the constructor
     Scalar4 quat_i, quat_j; //!< Stored quaternion of ith and jth particle from constructor
-    vec3<Scalar> mu_i;      /// Magnetic moment for ith particle
-    vec3<Scalar> mu_j;      /// Magnetic moment for jth particle
+    vec3<Scalar> mu_i;      /// Symmetry axis for the ith particle
+    vec3<Scalar> mu_j;      /// Symmetry axis for jth particle
     Scalar eps;
     Scalar phi;
     Scalar beta;
