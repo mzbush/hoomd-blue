@@ -172,7 +172,7 @@ class YLZ(AnisotropicPair):
         \begin{cases}
         \epsilon\lbrack(\frac{r_{min}}{r})^{4}-2(\frac{r_{min}}{r})^{2}\rbrack
         & \text{if }r<r_{min}\\
-        -\epsilon\ cos^{8}(\frac{\pi}{2}\frac{r-r_{min}}{r_{c}-r_{min}})
+        -\epsilon\ cos^{8}(\frac{\pi}{2}\frac{r-r_{min}}{r_{cut}-r_{min}})
         & \text{if }r_{min}<r<r_{cut}
         \end{cases}
 
@@ -197,6 +197,8 @@ class YLZ(AnisotropicPair):
         ylz.mu.default = (0,0,1)
         simulation.operations.integrator.forces = [ylz]
 
+    {inherited}
+
     .. py:attribute:: params
 
         The YLZ potential parameters unique to each pair of particle types. The
@@ -207,9 +209,8 @@ class YLZ(AnisotropicPair):
           * ``eps`` (`float`) - :math:`\epsilon` sets the energy well depth
           * ``phi`` (`float`) - :math:`\phi` is the parameter related to local curvature
           * ``beta`` (`float`) - :math:`\beta` sets weight of energy
-          penalty for misoriented particles
+            penalty for misoriented particles
           * ``rmin`` (`float`) - :math:`r_{min}` cutoff where the 4,2 LJ begins
-
 
         .. rubric:: Example:
 
@@ -231,6 +232,7 @@ class YLZ(AnisotropicPair):
         .. code-block:: python
 
             ylz.mu['A'] = (1.0,0.0,0.0)
+
     """
 
     _cpp_class_name = "AnisoPotentialPairYLZ"
