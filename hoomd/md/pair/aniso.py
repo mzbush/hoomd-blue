@@ -191,7 +191,8 @@ class YLZ(AnisotropicPair):
                                               default_r_cut = 2.6)
 
 
-        ylz_params = {'eps': 1.0, 'phi': 0.0, 'beta': 1.774532, 'rmin':1.122, 'twozeta': int(4)}
+        ylz_params = {'eps': 1.0, 'phi': 0.0, 'beta': 1.774532,
+                        'rmin':1.122, 'twozeta': int(4)}
 
         ylz.params.default = ylz_params
         ylz.mu.default = (0,0,1)
@@ -211,13 +212,14 @@ class YLZ(AnisotropicPair):
           * ``beta`` (`float`) - :math:`\beta` sets weight of energy
             penalty for misoriented particles
           * ``rmin`` (`float`) - :math:`r_{min}` cutoff where the 4,2 LJ begins
-          * ``twozeta`` (`float`) - :math:`2\zeta` exponent of the cosine potential 
+          * ``twozeta`` (`float`) - :math:`2\zeta` exponent of the cosine potential
 
         .. rubric:: Example:
 
         .. code-block:: python
 
-            ylz_params = {'eps': 1.0, 'phi': 0.0, 'beta': 1.774532, 'rmin':1.12, 'twozeta':int(2)}
+            ylz_params = {'eps': 1.0, 'phi': 0.0, 'beta': 1.774532,
+                            'rmin':1.12, 'twozeta':int(2)}
             ylz.params[('A', 'A')] = ylz_params
 
     .. py:attribute:: mu
@@ -244,7 +246,9 @@ class YLZ(AnisotropicPair):
         params = TypeParameter(
             "params",
             "particle_types",
-            TypeParameterDict(eps=float, phi=float, beta=float, rmin=float, twozeta=int, len_keys=2),
+            TypeParameterDict(
+                eps=float, phi=float, beta=float, rmin=float, twozeta=int, len_keys=2
+            ),
         )
         mu = TypeParameter(
             "mu", "particle_types", TypeParameterDict((float, float, float), len_keys=1)

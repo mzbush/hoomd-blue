@@ -45,7 +45,7 @@ class EvaluatorPairYLZ
         Scalar phi;  //! Sets the local curvature of the particles: phi = sin(theta_0).
         Scalar beta; //! sets the scale of the orietnational coupling.
         Scalar rmin; //! cutoff of the first minimum where the Lennard-Jones begins.
-        int twozeta;    //! exponential of the cosine potential.
+        int twozeta; //! exponential of the cosine potential.
 
 #ifdef ENABLE_HIP
         //! Set CUDA memory hints
@@ -149,8 +149,8 @@ class EvaluatorPairYLZ
                                 Scalar _rcutsq,
                                 const param_type& _params)
         : dr(_dr), rcutsq(_rcutsq), quat_i(_quat_i), quat_j(_quat_j), mu_i {0, 0, 0},
-          mu_j {0, 0, 0}, eps(_params.eps), phi(_params.phi), beta(_params.beta), rmin(_params.rmin),
-	  twozeta(_params.twozeta)
+          mu_j {0, 0, 0}, eps(_params.eps), phi(_params.phi), beta(_params.beta),
+          rmin(_params.rmin), twozeta(_params.twozeta)
         {
         }
 
@@ -273,14 +273,14 @@ class EvaluatorPairYLZ
             else
                 {
                 Scalar rcut = fast::sqrt(rcutsq);
-		Scalar zeta = Scalar(twozeta)/Scalar(2.0); 
+                Scalar zeta = Scalar(twozeta) / Scalar(2.0);
                 Scalar gamma = Scalar(1.0) + beta * (a - Scalar(1.0));
                 Scalar inv_rmin_diff = Scalar(1.0) / (rcut - rmin);
                 Scalar rdiff = r - rmin;
                 Scalar pi = Scalar(M_PI);
                 Scalar cos_val = fast::cos(pi / Scalar(2.0) * rdiff * inv_rmin_diff);
                 Scalar sin_val = fast::sin(pi / Scalar(2.0) * rdiff * inv_rmin_diff);
-		Scalar cos_pow_minus = fast::pow(cos_val,twozeta-1);
+                Scalar cos_pow_minus = fast::pow(cos_val, twozeta - 1);
                 Scalar dUdr = gamma * eps * zeta * pi * inv_rmin_diff * cos_pow_minus * sin_val;
                 Scalar U_a = -eps * cos_pow_minus * cos_val;
                 vec3<Scalar> dU_drhat = beta * U_a * da_drhat;
