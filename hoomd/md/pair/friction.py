@@ -5,7 +5,8 @@ r"""Frictional pair force classes apply a force, and torque on every
 particle in the simulation state.
 
 `FrictionPair` applies cuttoffs, exclusions, and assigns per particle
-energies and virials in the same manner as `hoomd.md.pair.Pair` (Energies and virials not adapted!)
+energies and virials in the same manner as `hoomd.md.pair.Pair` 
+(Energies and virials not adapted!)
 
 `FrictionPair` does not support the ``'xplor'`` shifting mode or the ``r_on``
 parameter.
@@ -105,7 +106,7 @@ class FrictionLJCoulombNewton(FrictionalPair):
         self._add_typeparam(params)
         
 __all__ = [
-    "FrictionPair",
+    "FrictionalPair",
     "FrictionLJLinear",
     "FrictionLJConstant",
     "FrictionLJCoulombNewton",
