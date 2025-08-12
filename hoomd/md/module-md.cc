@@ -82,6 +82,10 @@ void export_AnisoPotentialPairPatchyMie(pybind11::module& m);
 void export_AnisoPotentialPairPatchyYukawa(pybind11::module& m);
 void export_AnisoPotentialPairPatchyTable(pybind11::module& m);
 
+void export_FrictionPairFrictionLJLinear(pybind11::module& m);
+void export_FrictionPairFrictionLJConstant(pybind11::module& m);
+void export_FrictionPairFrictionLJCoulombNewton(pybind11::module& m);
+
 void export_PotentialBondHarmonic(pybind11::module& m);
 void export_PotentialBondFENE(pybind11::module& m);
 void export_PotentialBondTether(pybind11::module& m);
@@ -242,6 +246,10 @@ void export_AnisoPotentialPairPatchyMieGPU(pybind11::module& m);
 void export_AnisoPotentialPairPatchyYukawaGPU(pybind11::module& m);
 void export_AnisoPotentialPairPatchyTableGPU(pybind11::module& m);
 
+void export_FrictionPairFrictionLJLinearGPU(pybind11::module& m);
+void export_FrictionPairFrictionLJConstantGPU(pybind11::module& m);
+void export_FrictionPairFrictionLJCoulombNewtonGPU(pybind11::module& m);
+
 void export_PotentialBondHarmonicGPU(pybind11::module& m);
 void export_PotentialBondFENEGPU(pybind11::module& m);
 void export_PotentialBondTetherGPU(pybind11::module& m);
@@ -388,6 +396,10 @@ PYBIND11_MODULE(_md, m)
     export_AnisoPotentialPairPatchyMie(m);
     export_AnisoPotentialPairPatchyYukawa(m);
     export_AnisoPotentialPairPatchyTable(m);
+    
+    export_FrictionPairFrictionLJLinear(m);
+    export_FrictionPairFrictionLJConstant(m);
+    export_FrictionPairFrictionLJCoulombNewton(m);
 
     export_PotentialPairDPDThermoDPD(m);
     export_PotentialPairDPDThermoLJ(m);
@@ -478,7 +490,11 @@ PYBIND11_MODULE(_md, m)
     export_AnisoPotentialPairALJ3DGPU(m);
     export_AnisoPotentialPairDipoleGPU(m);
     export_AnisoPotentialPairGBGPU(m);
-
+    
+    export_FrictionPairFrictionLJLinearGPU(m);
+    export_FrictionPairFrictionLJConstantGPU(m);
+    export_FrictionPairFrictionLJCoulombNewtonGPU(m);
+    
     export_AnisoPotentialPairPatchyExpandedGaussianGPU(m);
     ;
     export_AnisoPotentialPairPatchyExpandedLJGPU(m);
