@@ -770,7 +770,6 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
 //! Create autotuners
 void mpcd::CollisionMethod::checkRigidAutotuners()
     {
-    const bool rigid_body_collision = m_embed_group && m_rigid_bodies;
     std::vector<std::shared_ptr<AutotunerBase>> rigid_autotuners {m_drawrandvec_tuner,
                                                                   m_netvelo_tuner,
                                                                   m_applyrandvec_tuner,
