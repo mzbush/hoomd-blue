@@ -45,18 +45,6 @@ class PYBIND11_EXPORT ForceCompositeGPU : public ForceComposite
     //! Helper kernel to sort rigid bodies by their center particles
     virtual void findRigidCenters();
 
-    //! Helper function to check if particles have been sorted and rebuild indices if necessary
-    virtual void checkParticlesSorted()
-        {
-        if (m_rebuild_molecules)
-            // identify center particles for use in GPU kernel
-            findRigidCenters();
-
-        // Must be called second since the method sets m_rebuild_molecules
-        // to false if it is true.
-        MolecularForceCompute::checkParticlesSorted();
-        }
-
     /// Autotuner for block size and threads per body.
     std::shared_ptr<Autotuner<2>> m_tuner_force;
 
@@ -67,7 +55,6 @@ class PYBIND11_EXPORT ForceCompositeGPU : public ForceComposite
     std::shared_ptr<Autotuner<1>> m_tuner_update;
 
     GPUArray<uint2> m_flag; //!< Flag to read out error condition
-
     };
 
     } // end namespace md

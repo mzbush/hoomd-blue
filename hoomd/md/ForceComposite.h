@@ -250,21 +250,6 @@ class PYBIND11_EXPORT ForceComposite : public MolecularForceCompute
         }
 
     protected:
-    //! Helper kernel to sort rigid bodies by their center particles
-    virtual void findRigidCenters();
-
-    //! Helper function to check if particles have been sorted and rebuild indices if necessary
-    virtual void checkParticlesSorted()
-        {
-        if (m_rebuild_molecules)
-            // identify center particles for use in GPU kernel
-            findRigidCenters();
-
-        // Must be called second since the method sets m_rebuild_molecules
-        // to false if it is true.
-        MolecularForceCompute::checkParticlesSorted();
-        }
-
     bool m_bodies_changed;          //!< True if constituent particles have changed
     bool m_particles_added_removed; //!< True if particles have been added or removed
 
@@ -295,6 +280,21 @@ class PYBIND11_EXPORT ForceComposite : public MolecularForceCompute
         {
         m_particles_added_removed = true;
         }
+
+    //! Helper function to check if particles have been sorted and rebuild indices if necessary
+    virtual void checkParticlesSorted()
+        {
+        if (m_rebuild_molecules)
+            // identify center particles for use in GPU kernel
+            findRigidCenters();
+
+        // Must be called second since the method sets m_rebuild_molecules
+        // to false if it is true.
+        MolecularForceCompute::checkParticlesSorted();
+        }
+
+    //! Helper kernel to sort rigid bodies by their center particles
+    virtual void findRigidCenters();
 
     /// Return the requested minimum ghost layer width for a body's central particle.
     virtual Scalar requestBodyGhostLayerWidth(unsigned int type, Scalar* h_r_ghost);
