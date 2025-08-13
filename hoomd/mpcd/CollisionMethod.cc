@@ -776,7 +776,7 @@ void mpcd::CollisionMethod::checkRigidAutotuners()
                                                                   m_store_tuner,
                                                                   m_accumulate_tuner,
                                                                   m_transfer_tuner};
-    if (m_exec_conf->isCUDAEnabled() && rigid_body_collision)
+    if (m_exec_conf->isCUDAEnabled() && m_embed_group && m_rigid_bodies)
         {
         // add tuners if they aren't already there
         for (auto& rigid_tuner : rigid_autotuners)
