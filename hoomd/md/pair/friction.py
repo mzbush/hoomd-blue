@@ -19,27 +19,6 @@ from hoomd.md.pair.pair import Pair
 from hoomd.data.parameterdicts import TypeParameterDict
 from hoomd.data.typeparam import TypeParameter
 
-class FrictionalPair(Pair):
-    r"""Base class friction pair force.
-
-    `FrictionPair` is the base class for all frictional pair forces.
-
-    Warning:
-        This class should not be instantiated by users. The class can be used
-        for `isinstance` or `issubclass` checks.
-    """
-
-    __doc__ += Pair._doc_inherited
-    _accepted_modes = ("none", "shift")
-
-    def __init__(self, nlist, default_r_cut=None, mode="none"):
-        super().__init__(nlist, default_r_cut, 0.0, mode)
-
-    def _return_type_shapes(self):
-        type_shapes = self._cpp_obj.getTypeShapesPy()
-        ret = [json.loads(json_string) for json_string in type_shapes]
-        return ret
-
 class FrictionLJConstant(FrictionalPair):
     r"""Constant frictional model pair force with the LJ conservative force. 
 
@@ -102,11 +81,32 @@ class FrictionLJLinear(FrictionalPair):
             'params', 'particle_types',
             TypeParameterDict(epsilon=float, sigma=float, gamma_f=float, kT=float, len_keys=2))
         self._add_typeparam(params)
-        
+
+class FrictionalPair(Pair):
+    r"""Base class friction pair force.
+
+    `FrictionPair` is the base class for all frictional pair forces.
+
+    Warning:
+        This class should not be instantiated by users. The class can be used
+        for `isinstance` or `issubclass` checks.
+    """
+
+    __doc__ += Pair._doc_inherited
+    _accepted_modes = ("none", "shift")
+
+    def __init__(self, nlist, default_r_cut=None, mode="none"):
+        super().__init__(nlist, default_r_cut, 0.0, mode)
+
+    def _return_type_shapes(self):
+        type_shapes = self._cpp_obj.getTypeShapesPy()
+        ret = [json.loads(json_string) for json_string in type_shapes]
+        return ret
+    
 __all__ = [
-    "FrictionalPair",
     "FrictionLJConstant",
     "FrictionLJCoulombNewton",
     "FrictionLJLinear",
+    "FrictionalPair",
 ]
  
