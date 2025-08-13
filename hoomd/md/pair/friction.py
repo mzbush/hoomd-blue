@@ -13,16 +13,11 @@ parameter.
 
 """
 
-from collections.abc import Sequence
 import json
-from numbers import Number
 
 from hoomd.md.pair.pair import Pair
-from hoomd.logging import log
 from hoomd.data.parameterdicts import TypeParameterDict
 from hoomd.data.typeparam import TypeParameter
-from hoomd.data.typeconverter import OnlyTypes, OnlyIf, to_type_converter
-import numpy as np
 
 class FrictionalPair(Pair):
     r"""Base class friction pair force.
@@ -52,7 +47,8 @@ class FrictionLJLinear(FrictionalPair):
         nlist (hoomd.md.nlist.NeighborList): Neighbor list
         default_r_cut (float): Default cutoff radius: math:`[\mathrm{length}]`.
     
-    `FrictionLJLinear` computes the frictional interaction between pairs of particles.   
+    `FrictionLJLinear` computes the frictional interaction 
+    between pairs of particles.   
     """
 
     _cpp_class_name = "FrictionPairFrictionLJLinear"
@@ -72,7 +68,8 @@ class FrictionLJConstant(FrictionalPair):
         nlist (hoomd.md.nlist.NeighborList): Neighbor list
         default_r_cut (float): Default cutoff radius: math:`[\mathrm{length}]`.
     
-    `FrictionLJConstant` computes the frictional interaction between pairs of particles.   
+    `FrictionLJConstant` computes the frictional interaction 
+    between pairs of particles.   
     """
 
     _cpp_class_name = "FrictionPairFrictionLJConstant"
@@ -92,7 +89,8 @@ class FrictionLJCoulombNewton(FrictionalPair):
         nlist (hoomd.md.nlist.NeighborList): Neighbor list
         default_r_cut (float): Default cutoff radius: math:`[\mathrm{length}]`.
     
-    `FrictionLJCoulombNewton` computes the frictional interaction between pairs of particles.   
+    `FrictionLJCoulombNewton` computes the frictional interaction 
+    between pairs of particles.   
     """
 
     _cpp_class_name = "FrictionPairFrictionLJCoulombNewton"
@@ -107,8 +105,8 @@ class FrictionLJCoulombNewton(FrictionalPair):
         
 __all__ = [
     "FrictionalPair",
-    "FrictionLJLinear",
-    "FrictionLJConstant",
     "FrictionLJCoulombNewton",
+    "FrictionLJConstant",
+    "FrictionLJLinear",
 ]
  
