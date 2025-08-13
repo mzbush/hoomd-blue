@@ -276,7 +276,7 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
                 {
                 // get central particle tag from first particle in molecule
                 assert(h_molecule_len.data[ibody] > 0);
-                unsigned int first_idx = h_molecule_list.data[molecule_indexer(0, ibody)];
+                const unsigned int first_idx = h_molecule_list.data[molecule_indexer(0, ibody)];
                 if (first_idx > n_particles_local)
                     continue;
                 unsigned int central_tag = h_body.data[first_idx];
