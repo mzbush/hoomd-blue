@@ -12,6 +12,10 @@ Change Log
 * The Zetterling MD pair potential: ``hoomd.md.pair.Zetterling``
   (`#2086 <https://github.com/glotzerlab/hoomd-blue/pull/2086>`__).
 
+*Fixed*
+
+* Display vector math symbol correctly in the documentation
+  (`#2109 <https://github.com/glotzerlab/hoomd-blue/pull/2109>`__).
 
 5.3.1 (2025-07-18)
 ^^^^^^^^^^^^^^^^^^
