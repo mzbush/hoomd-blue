@@ -21,6 +21,7 @@ See Also:
 from copy import copy
 import itertools
 import weakref
+import inspect
 
 import hoomd
 from hoomd.logging import Loggable
@@ -540,7 +541,11 @@ class Operation(AutotunedObject):
         for `isinstance` or `issubclass` checks.
     """
 
-    __doc__ += AutotunedObject._doc_inherited
+    __doc__ = (
+        inspect.cleandoc(__doc__)
+        + "\n"
+        + inspect.cleandoc(AutotunedObject._doc_inherited)
+    )
 
 
 class TriggeredOperation(Operation):
@@ -566,7 +571,9 @@ class TriggeredOperation(Operation):
                 operation.trigger = hoomd.trigger.Periodic(10)
     """
 
-    __doc__ = __doc__.replace("{inherited}", Operation._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(Operation._doc_inherited)
+    )
 
     _doc_inherited = (
         Operation._doc_inherited
@@ -601,7 +608,11 @@ class Updater(TriggeredOperation):
 
     _cpp_list_name = "updaters"
 
-    __doc__ += TriggeredOperation._doc_inherited
+    __doc__ = (
+        inspect.cleandoc(__doc__)
+        + "\n"
+        + inspect.cleandoc(TriggeredOperation._doc_inherited)
+    )
 
 
 class Writer(TriggeredOperation):
@@ -616,7 +627,11 @@ class Writer(TriggeredOperation):
 
     _cpp_list_name = "analyzers"
 
-    __doc__ += TriggeredOperation._doc_inherited
+    __doc__ = (
+        inspect.cleandoc(__doc__)
+        + "\n"
+        + inspect.cleandoc(TriggeredOperation._doc_inherited)
+    )
 
 
 class Compute(Operation):
@@ -630,7 +645,9 @@ class Compute(Operation):
         for `isinstance` or `issubclass` checks.
     """
 
-    __doc__ += Operation._doc_inherited
+    __doc__ = (
+        inspect.cleandoc(__doc__) + "\n" + inspect.cleandoc(Operation._doc_inherited)
+    )
 
 
 class Tuner(TriggeredOperation):
@@ -646,7 +663,11 @@ class Tuner(TriggeredOperation):
         for `isinstance` or `issubclass` checks.
     """
 
-    __doc__ += TriggeredOperation._doc_inherited
+    __doc__ = (
+        inspect.cleandoc(__doc__)
+        + "\n"
+        + inspect.cleandoc(TriggeredOperation._doc_inherited)
+    )
 
 
 class Integrator(Operation):
@@ -662,7 +683,9 @@ class Integrator(Operation):
         for `isinstance` or `issubclass` checks.
     """
 
-    __doc__ += Operation._doc_inherited
+    __doc__ = (
+        inspect.cleandoc(__doc__) + "\n" + inspect.cleandoc(Operation._doc_inherited)
+    )
 
     def _attach_hook(self):
         self._simulation._cpp_sys.setIntegrator(self._cpp_obj)
