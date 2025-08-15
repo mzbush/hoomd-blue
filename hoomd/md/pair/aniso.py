@@ -195,7 +195,7 @@ class YLZ(AnisotropicPair):
                         'rmin':1.122, 'twozeta': int(4)}
 
         ylz.params.default = ylz_params
-        ylz.mu.default = (0,0,1)
+        ylz.mu.default = (0, 0, 1)
         simulation.operations.integrator.forces = [ylz]
 
     {inherited}
