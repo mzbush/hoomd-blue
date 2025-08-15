@@ -397,6 +397,9 @@ void mpcd::CollisionMethod::beginThermalizeConstituentParticles(uint64_t timeste
 
     const Scalar T_set = (*m_T)(timestep);
 
+    ArrayHandle<unsigned int> h_lookup_center(m_rigid_bodies->getLookupCenters(),
+                                              access_location::host,
+                                              access_mode::read);
     ArrayHandle<Scalar4> h_velocity(m_pdata->getVelocities(),
                                     access_location::host,
                                     access_mode::readwrite);
@@ -416,9 +419,7 @@ void mpcd::CollisionMethod::beginThermalizeConstituentParticles(uint64_t timeste
     ArrayHandle<Scalar3> h_angmom_accum(m_angmom_accum,
                                         access_location::host,
                                         access_mode::readwrite);
-    ArrayHandle<unsigned int> h_lookup_center(m_rigid_bodies->getLookupCenters(),
-                                              access_location::host,
-                                              access_mode::read);
+
     const unsigned int num_total = m_pdata->getN();
     const uint16_t seed = m_sysdef->getSeed();
 
@@ -471,6 +472,12 @@ void mpcd::CollisionMethod::beginThermalizeConstituentParticles(uint64_t timeste
 
 void mpcd::CollisionMethod::finishThermalizeConstituentParticles(uint64_t timestep)
     {
+    ArrayHandle<unsigned int> h_lookup_center(m_rigid_bodies->getLookupCenters(),
+                                              access_location::host,
+                                              access_mode::read);
+    ArrayHandle<unsigned int> h_rigid_center(m_rigid_bodies->getRigidCenters(),
+                                             access_location::host,
+                                             access_mode::read);
     ArrayHandle<Scalar4> h_velocity(m_pdata->getVelocities(),
                                     access_location::host,
                                     access_mode::readwrite);
@@ -490,9 +497,7 @@ void mpcd::CollisionMethod::finishThermalizeConstituentParticles(uint64_t timest
     ArrayHandle<Scalar3> h_angmom_accum(m_angmom_accum,
                                         access_location::host,
                                         access_mode::readwrite);
-    ArrayHandle<unsigned int> h_lookup_center(m_rigid_bodies->getLookupCenters(),
-                                              access_location::host,
-                                              access_mode::read);
+
     const unsigned int num_total = m_pdata->getN();
     ArrayHandle<Scalar4> h_orientation(m_pdata->getOrientationArray(),
                                        access_location::host,
@@ -500,9 +505,6 @@ void mpcd::CollisionMethod::finishThermalizeConstituentParticles(uint64_t timest
     ArrayHandle<Scalar3> h_inertia(m_pdata->getMomentsOfInertiaArray(),
                                    access_location::host,
                                    access_mode::read);
-    ArrayHandle<unsigned int> h_rigid_center(m_rigid_bodies->getRigidCenters(),
-                                             access_location::host,
-                                             access_mode::read);
 
     // get net linear velocity and net angular velocity of central particles
     const unsigned int num_centers = m_rigid_bodies->getNLocal();
@@ -626,6 +628,10 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
     m_linmom_accum.zeroFill();
     m_angmom_accum.zeroFill();
 
+    ArrayHandle<unsigned int> h_lookup_center(m_rigid_bodies->getLookupCenters(),
+                                              access_location::host,
+                                              access_mode::read);
+
     const unsigned int num_group = m_embed_group->getNumMembers();
     ArrayHandle<unsigned int> h_embed_group(m_embed_group->getIndexArray(),
                                             access_location::host,
@@ -642,10 +648,6 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomenta(uint64_t timestep)
                                     access_mode::read);
     ArrayHandle<int3> h_image(m_pdata->getImages(), access_location::host, access_mode::read);
     const BoxDim& global_box = m_pdata->getGlobalBox();
-
-    ArrayHandle<unsigned int> h_lookup_center(m_rigid_bodies->getLookupCenters(),
-                                              access_location::host,
-                                              access_mode::read);
 
     ArrayHandle<Scalar3> h_linmom_accum(m_linmom_accum,
                                         access_location::host,
@@ -702,6 +704,9 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
     ArrayHandle<Scalar3> h_linmom_accum(m_linmom_accum, access_location::host, access_mode::read);
     ArrayHandle<Scalar3> h_angmom_accum(m_angmom_accum, access_location::host, access_mode::read);
 
+    ArrayHandle<unsigned int> h_rigid_center(m_rigid_bodies->getRigidCenters(),
+                                             access_location::host,
+                                             access_mode::read);
     ArrayHandle<Scalar4> h_velocity(m_pdata->getVelocities(),
                                     access_location::host,
                                     access_mode::readwrite);
@@ -714,9 +719,7 @@ void mpcd::CollisionMethod::transferRigidBodyMomenta(uint64_t timestep)
     ArrayHandle<Scalar3> h_inertia(m_pdata->getMomentsOfInertiaArray(),
                                    access_location::host,
                                    access_mode::read);
-    ArrayHandle<unsigned int> h_rigid_center(m_rigid_bodies->getRigidCenters(),
-                                             access_location::host,
-                                             access_mode::read);
+
     // add accumulated momentum to the central particle
     const unsigned int num_centers = m_rigid_bodies->getNLocal();
     for (unsigned int idx = 0; idx < num_centers; ++idx)
@@ -810,6 +813,9 @@ void mpcd::CollisionMethod::beginThermalizeConstituentParticlesGPU(uint64_t time
     m_angmom_accum.zeroFill();
 
         {
+        ArrayHandle<unsigned int> d_lookup_center(m_rigid_bodies->getLookupCenters(),
+                                                  access_location::device,
+                                                  access_mode::read);
         ArrayHandle<Scalar3> d_linmom_accum(m_linmom_accum,
                                             access_location::device,
                                             access_mode::readwrite);
@@ -829,10 +835,6 @@ void mpcd::CollisionMethod::beginThermalizeConstituentParticlesGPU(uint64_t time
         ArrayHandle<unsigned int> d_tag(m_pdata->getTags(),
                                         access_location::device,
                                         access_mode::read);
-
-        ArrayHandle<unsigned int> d_lookup_center(m_rigid_bodies->getLookupCenters(),
-                                                  access_location::device,
-                                                  access_mode::read);
 
         m_drawrandvec_tuner->begin();
         mpcd::gpu::draw_velocities_constituent_particles(d_linmom_accum.data,
@@ -858,6 +860,9 @@ void mpcd::CollisionMethod::beginThermalizeConstituentParticlesGPU(uint64_t time
 void mpcd::CollisionMethod::finishThermalizeConstituentParticlesGPU(uint64_t timestep)
     {
         {
+        ArrayHandle<unsigned int> d_rigid_center(m_rigid_bodies->getRigidCenters(),
+                                                 access_location::device,
+                                                 access_mode::read);
         ArrayHandle<Scalar3> d_linmom_accum(m_linmom_accum,
                                             access_location::device,
                                             access_mode::read);
@@ -876,9 +881,6 @@ void mpcd::CollisionMethod::finishThermalizeConstituentParticlesGPU(uint64_t tim
         ArrayHandle<Scalar3> d_inertia(m_pdata->getMomentsOfInertiaArray(),
                                        access_location::device,
                                        access_mode::read);
-        ArrayHandle<unsigned int> d_rigid_center(m_rigid_bodies->getRigidCenters(),
-                                                 access_location::device,
-                                                 access_mode::read);
 
         m_netvelo_tuner->begin();
         mpcd::gpu::get_net_velocity_rigid_body(d_linmom_accum.data,
@@ -895,6 +897,9 @@ void mpcd::CollisionMethod::finishThermalizeConstituentParticlesGPU(uint64_t tim
         m_netvelo_tuner->end();
         }
         {
+        ArrayHandle<unsigned int> d_lookup_center(m_rigid_bodies->getLookupCenters(),
+                                                  access_location::device,
+                                                  access_mode::read);
         ArrayHandle<Scalar3> d_angmom_accum(m_angmom_accum,
                                             access_location::device,
                                             access_mode::read);
@@ -910,10 +915,6 @@ void mpcd::CollisionMethod::finishThermalizeConstituentParticlesGPU(uint64_t tim
                                         access_location::device,
                                         access_mode::readwrite);
         ArrayHandle<int3> d_image(m_pdata->getImages(), access_location::device, access_mode::read);
-
-        ArrayHandle<unsigned int> d_lookup_center(m_rigid_bodies->getLookupCenters(),
-                                                  access_location::device,
-                                                  access_mode::read);
 
         m_applyrandvec_tuner->begin();
         mpcd::gpu::apply_thermalized_velocity_vectors(d_angmom_accum.data,
@@ -961,6 +962,9 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomentaGPU(uint64_t timestep)
     m_linmom_accum.zeroFill();
     m_angmom_accum.zeroFill();
 
+    ArrayHandle<unsigned int> d_lookup_center(m_rigid_bodies->getLookupCenters(),
+                                              access_location::device,
+                                              access_mode::read);
     ArrayHandle<unsigned int> d_embed_group(m_embed_group->getIndexArray(),
                                             access_location::device,
                                             access_mode::read);
@@ -975,9 +979,6 @@ void mpcd::CollisionMethod::accumulateRigidBodyMomentaGPU(uint64_t timestep)
                                     access_location::device,
                                     access_mode::read);
     ArrayHandle<int3> d_image(m_pdata->getImages(), access_location::device, access_mode::read);
-    ArrayHandle<unsigned int> d_lookup_center(m_rigid_bodies->getLookupCenters(),
-                                              access_location::device,
-                                              access_mode::read);
     const BoxDim& global_box = m_pdata->getGlobalBox();
 
     ArrayHandle<Scalar3> d_linmom_accum(m_linmom_accum,
@@ -1009,6 +1010,9 @@ void mpcd::CollisionMethod::transferRigidBodyMomentaGPU(uint64_t timestep)
     ArrayHandle<Scalar3> d_linmom_accum(m_linmom_accum, access_location::device, access_mode::read);
     ArrayHandle<Scalar3> d_angmom_accum(m_angmom_accum, access_location::device, access_mode::read);
 
+    ArrayHandle<unsigned int> d_rigid_center(m_rigid_bodies->getRigidCenters(),
+                                             access_location::device,
+                                             access_mode::read);
     ArrayHandle<Scalar4> d_velocity(m_pdata->getVelocities(),
                                     access_location::device,
                                     access_mode::readwrite);
@@ -1021,9 +1025,6 @@ void mpcd::CollisionMethod::transferRigidBodyMomentaGPU(uint64_t timestep)
     ArrayHandle<Scalar3> d_inertia(m_pdata->getMomentsOfInertiaArray(),
                                    access_location::device,
                                    access_mode::read);
-    ArrayHandle<unsigned int> d_rigid_center(m_rigid_bodies->getRigidCenters(),
-                                             access_location::device,
-                                             access_mode::read);
 
     m_transfer_tuner->begin();
     mpcd::gpu::transfer_rigid_body_momenta(d_linmom_accum.data,
