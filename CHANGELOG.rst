@@ -9,7 +9,7 @@ Change Log
 
 *Added*
 
-* The YLZ anisotropic potential pair: ``hoomd.hpmc.pair.aniso.YLZ`` 
+* The YLZ anisotropic potential pair: ``hoomd.hpmc.pair.aniso.YLZ``
   (`#2110 <https://github.com/glotzerlab/hoomd-blue/pull/2110>`__).
 
 *Fixed*
