@@ -34,6 +34,8 @@ extensions = [
 
 if find_spec("sphinxcontrib.katex") is not None:
     extensions.append("sphinxcontrib.katex")
+
+    html_css_files = ["fix-katex.css"]
 else:
     extensions.append("sphinx.ext.mathjax")
 

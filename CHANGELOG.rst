@@ -14,6 +14,10 @@ Change Log
 * The YLZ anisotropic MD pair potential: ``hoomd.md.pair.aniso.YLZ``
   (`#2110 <https://github.com/glotzerlab/hoomd-blue/pull/2110>`__).
 
+*Fixed*
+
+* Display vector math symbol correctly in the documentation
+  (`#2109 <https://github.com/glotzerlab/hoomd-blue/pull/2109>`__).
 
 5.3.1 (2025-07-18)
 ^^^^^^^^^^^^^^^^^^

@@ -1,11 +1,11 @@
-ipython==9.2.0
+ipython==9.4.0
 nbconvert==7.16.6
 nbsphinx==0.9.7
-numpy==2.2.6
+numpy==2.3.2
 pandoc==2.4
-furo==2024.8.6
-tornado==6.5
-sphinxcontrib-googleanalytics==0.4
-sphinxcontrib-katex==0.9.10
+furo==2025.7.19
+tornado==6.5.1
+sphinxcontrib-googleanalytics==0.5
+sphinxcontrib-katex==0.9.11
 sphinx-copybutton==0.5.2
 sphinx-notfound-page==1.1.0
