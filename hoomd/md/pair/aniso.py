@@ -199,10 +199,10 @@ class YLZ(AnisotropicPair):
         simulation.operations.integrator.forces = [ylz]
 
     {inherited}
-    
+
     ----------
 
-    **Members defined in** `YLZ`:    
+    **Members defined in** `YLZ`:
 
     .. py:attribute:: params
 
