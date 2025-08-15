@@ -186,7 +186,7 @@ class YLZ(AnisotropicPair):
     orientation of a pair of particles as function of their axis of
     symmetry :math:`\mu` in their local reference frame.
 
-    .. invisible-code-block: python
+    .. code-block: python
         ylz = hoomd.md.pair.aniso.YLZ(nlist = neighbor_list,
                                               default_r_cut = 2.6)
 
