@@ -191,6 +191,7 @@ class YLZ(AnisotropicPair):
     .. rubric:: Example:
 
     .. code-block: python
+
         ylz = hoomd.md.pair.aniso.YLZ(nlist = neighbor_list,
                                               default_r_cut = 2.6)
 
