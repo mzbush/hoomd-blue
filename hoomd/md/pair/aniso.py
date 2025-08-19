@@ -170,6 +170,8 @@ class YLZ(AnisotropicPair):
         u(r)\psi\left(\hat{r}_{ij},\mu_i,\mu_j\right)& \text{if }r_{min}<r<r_{cut}
         \end{cases}
 
+    .. math::
+
         \mathrm{u}(r)=
         \begin{cases}
         \epsilon\lbrack(\frac{r_{min}}{r})^{4}-2(\frac{r_{min}}{r})^{2}\rbrack
@@ -178,7 +180,11 @@ class YLZ(AnisotropicPair):
         & \text{if }r_{min}<r<r_{cut}
         \end{cases}
 
+    .. math::
+
         \psi = 1 + \beta(a-1)
+
+    .. math::
 
         a = \mu_{i}\cdot \mu_{j}-\left(\mu_{i}\cdot\hat{r}_{ij}\right)
         \left(\mu_{j}\cdot\hat{r}_{ij}\right)+\phi\left(\mu_{i}-\mu_{j}
@@ -187,10 +193,16 @@ class YLZ(AnisotropicPair):
     The modulation function :math:`\psi` creates torques to align the
     orientation of a pair of particles as function of their axis of
     symmetry :math:`\mu` in their local reference frame.
-    
+
+    The potential was introduced in `Hongyan Yuan, Changjin Huang, Ju Li,
+    George Lykotrafitis, and Sulin Zhang 2010`_.
+
+    .. _Hongyan Yuan, Changjin Huang, Ju Li, George Lykotrafitis, and Sulin Zhang 2010:
+        http://dx.doi.org/10.1103/PhysRevE.82.011905
+
     .. rubric:: Example:
 
-    .. code-block: python
+    .. code-block:: python
 
         ylz = hoomd.md.pair.aniso.YLZ(nlist = neighbor_list,
                                               default_r_cut = 2.6)
