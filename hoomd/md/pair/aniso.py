@@ -187,6 +187,8 @@ class YLZ(AnisotropicPair):
     The modulation function :math:`\psi` creates torques to align the
     orientation of a pair of particles as function of their axis of
     symmetry :math:`\mu` in their local reference frame.
+    
+    .. rubric:: Example:
 
     .. code-block: python
         ylz = hoomd.md.pair.aniso.YLZ(nlist = neighbor_list,
