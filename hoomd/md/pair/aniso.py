@@ -259,7 +259,9 @@ class YLZ(AnisotropicPair):
     """
 
     _cpp_class_name = "AnisoPotentialPairYLZ"
-    __doc__ = __doc__.replace("{inherited}", AnisotropicPair._doc_inherited)
+    __doc__ = inspect.cleandoc(__doc__).replace(
+        "{inherited}", inspect.cleandoc(AnisotropicPair._doc_inherited)
+    )
 
     def __init__(self, nlist, default_r_cut=None):
         super().__init__(nlist, default_r_cut, "none")
