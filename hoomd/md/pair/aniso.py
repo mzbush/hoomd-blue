@@ -227,16 +227,16 @@ class YLZ(AnisotropicPair):
 
         * ``params`` (`dict`, **required**)
 
-          * ``eps`` (`float`) - 
+          * ``eps`` (`float`) -
             energy parameter :math:`\epsilon` :math:`[\mathrm{energy}]`
-          * ``phi`` (`float`) - 
-            parameter related to local curvature :math:`\phi` 
-          * ``beta`` (`float`) - 
-            weight of energy penalty for misoriented particles :math:`\beta` 
-          * ``rmin`` (`float`) - 
+          * ``phi`` (`float`) -
+            parameter related to local curvature :math:`\phi`
+          * ``beta`` (`float`) -
+            weight of energy penalty for misoriented particles :math:`\beta`
+          * ``rmin`` (`float`) -
             cutoff where the 4,2 LJ begins :math:`r_{min}` :math:`[\mathrm{length}]`
-          * ``twozeta`` (`float`) - 
-            exponent of the cosine potential :math:`2\zeta` 
+          * ``twozeta`` (`float`) -
+            exponent of the cosine potential :math:`2\zeta`
 
         .. rubric:: Example:
 
