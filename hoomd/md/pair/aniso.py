@@ -153,13 +153,13 @@ class YLZ(AnisotropicPair):
         nlist (hoomd.md.nlist.NeighborList): Neighbor list
         default_r_cut (float): Default cutoff radius :math:`[\mathrm{length}]`.
 
-    `YLZ` computes the anisotropic interaction commonly used to model fluidized
-    membranes. This function combines a isotropic pair potential, with an
-    orientationally dependent modulation function, :math:`\psi`. The
-    isotropic pair potential is composed of two parts, a 2,4 Lennard-Jones
-    potential set to cut off at the potential minimum, :math:`r_{min}`.
-    The second part of the isotropic potential is a Cosine potential that
-    is a function of both :math:`r_{min}` and :math:`r_{cut}`.:
+    The YLZ potential models fluidized membranes by combining an isotropic pair
+    interaction with an orientation-dependent modulation function :math:`\psi`.
+    The isotropic term consists of:
+
+    1. A 2–4 Lennard-Jones potential truncated at its minimum :math:`r_{min}`.
+    2. A cosine potential defined between :math:`r_{min}` and :math:`r_{cut}`.
+
 
     .. math::
 
@@ -190,9 +190,9 @@ class YLZ(AnisotropicPair):
         \left(\mu_{j}\cdot\hat{r}_{ij}\right)+\phi\left(\mu_{i}-\mu_{j}
         \right)\cdot\hat{r}_{ij}-\phi^2
 
-    The modulation function :math:`\psi` creates torques to align the
-    orientation of a pair of particles as function of their axis of
-    symmetry :math:`\mu` in their local reference frame.
+    The modulation function :math:`\psi` introduces torques that align particle
+    orientations with respect to their symmetry axes :math:`\mu`.
+
 
     The potential was introduced in `Hongyan Yuan, Changjin Huang, Ju Li,
     George Lykotrafitis, and Sulin Zhang 2010`_.
