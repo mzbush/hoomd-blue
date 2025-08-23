@@ -147,7 +147,7 @@ class Dipole(AnisotropicPair):
 
 
 class YLZ(AnisotropicPair):
-    r"""Yuan, Lee, Zhang Potential (YLZ) potential.
+    r"""Yuan, Lee, Zhang (YLZ) potential.
 
     Args:
         nlist (hoomd.md.nlist.NeighborList): Neighbor list
