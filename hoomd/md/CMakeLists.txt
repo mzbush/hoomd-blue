@@ -8,6 +8,7 @@ set(_md_sources module-md.cc
                    AnisoPotentialPairALJ2.cc
                    AnisoPotentialPairALJ3.cc
                    AnisoPotentialPairDipole.cc
+                   AnisoPotentialPairYLZ.cc
                    AnisoPotentialPairGB.cc
                    AlchemyData.cc
                    BendingRigidityMeshForceCompute.cc
@@ -107,6 +108,7 @@ set(_md_headers ActiveForceComputeGPU.h
                 EvaluatorPairALJ.h
                 EvaluatorPairBuckingham.h
                 EvaluatorPairDipole.h
+                EvaluatorPairYLZ.h
                 EvaluatorPairDLVO.h
                 EvaluatorPairDPDThermoLJ.h
                 EvaluatorPairDPDThermoDPD.h
@@ -131,6 +133,7 @@ set(_md_headers ActiveForceComputeGPU.h
                 EvaluatorPairYukawa.h
                 EvaluatorPairWangFrenkel.h
                 EvaluatorPairZBL.h
+                EvaluatorPairZetterling.h
                 EvaluatorTersoff.h
                 EvaluatorWalls.h
                 FIREEnergyMinimizerGPU.h
@@ -258,6 +261,7 @@ list(APPEND _md_sources ActiveForceComputeGPU.cc
                            AnisoPotentialPairALJ2GPU.cc
                            AnisoPotentialPairALJ3GPU.cc
                            AnisoPotentialPairDipoleGPU.cc
+                           AnisoPotentialPairYLZGPU.cc
                            AnisoPotentialPairGBGPU.cc
                            BendingRigidityMeshForceComputeGPU.cc
                            BondTablePotentialGPU.cc
@@ -298,6 +302,7 @@ set(_md_cu_sources ActiveForceComputeGPU.cu
                       AnisoPotentialPairALJ2GPUKernel.cu
                       AnisoPotentialPairALJ3GPUKernel.cu
                       AnisoPotentialPairDipoleGPUKernel.cu
+                      AnisoPotentialPairYLZGPUKernel.cu
                       AnisoPotentialPairGBGPUKernel.cu
             	      BendingRigidityMeshForceComputeGPU.cu
                       ComputeThermoGPU.cu
@@ -582,7 +587,8 @@ set(_pair_evaluators Buckingham
                      ForceShiftedLJ
                      Table
                      ExpandedGaussian
-                     WangFrenkel)
+                     WangFrenkel
+                     Zetterling)
 
 
 foreach(_evaluator ${_pair_evaluators})
