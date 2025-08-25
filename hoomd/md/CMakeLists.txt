@@ -38,6 +38,7 @@ set(_md_sources module-md.cc
                    ManifoldPrimitive.cc
                    ManifoldSphere.cc
 		   MeshDynamicBondUpdater.cc
+		   MeshForceCompute.cc
                    MolecularForceCompute.cc
                    MuellerPlatheFlow.cc
                    NeighborListBinned.cc
@@ -168,6 +169,7 @@ set(_md_headers ActiveForceComputeGPU.h
                 ManifoldPrimitive.h
                 ManifoldSphere.h
 		MeshDynamicBondUpdater.h
+		MeshForceCompute.h
                 MolecularForceCompute.cuh
                 MolecularForceCompute.h
                 MuellerPlatheFlowEnum.h

@@ -92,6 +92,7 @@ void export_PotentialMeshBondHarmonic(pybind11::module& m);
 void export_PotentialMeshBondFENE(pybind11::module& m);
 void export_PotentialMeshBondTether(pybind11::module& m);
 
+void export_MeshForceCompute(pybind11::module& m);
 void export_BendingRigidityMeshForceCompute(pybind11::module& m);
 void export_HelfrichMeshForceCompute(pybind11::module& m);
 void export_VolumeConservationMeshForceCompute(pybind11::module& m);
@@ -408,6 +409,7 @@ PYBIND11_MODULE(_md, m)
     export_PotentialMeshBondFENE(m);
     export_PotentialMeshBondTether(m);
 
+    export_MeshForceCompute(m);
     export_BendingRigidityMeshForceCompute(m);
     export_HelfrichMeshForceCompute(m);
     export_VolumeConservationMeshForceCompute(m);
