@@ -58,7 +58,7 @@ class PYBIND11_EXPORT TriangleAreaConservationMeshForceComputeGPU
     //! Actually compute the forces
     void computeForces(uint64_t timestep) override;
 
-    void computeArea() override;
+    virtual void computeArea();
     };
 
 namespace detail
