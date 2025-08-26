@@ -414,6 +414,9 @@ class MeshDynamicalBonding(Updater):
         # initialize base class
         super().__init__(trigger)
 
+        for force in forces:
+            force._allow_if_updater = True
+
         self._forces = syncedlist.SyncedList(
             MeshPotential, syncedlist._PartialGetAttr("_cpp_obj"), iterable=forces
         )

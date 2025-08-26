@@ -192,10 +192,10 @@ class SyncedList(MutableSequence):
             return
         else:
             if value._attached:
-                if not value._two_attach:
-                    raise RuntimeError(f"Cannot place {value} into two simulations.")
+                if not value._allow_if_updater:
+                    raise RuntimeError(f"Cannot place {value} into list twice.")
                 else:
-                    value._two_attach = False
+                    value._allow_if_updater = False
 
     def _unregister_item(self, value):
         """Detaches and/or removes value to simulation if attached.

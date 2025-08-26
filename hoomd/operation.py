@@ -548,7 +548,7 @@ class Operation(AutotunedObject):
     )
 
     def __init__(self):
-        self._two_attach = False
+        self._allow_if_updater = False
 
 
 class TriggeredOperation(Operation):
