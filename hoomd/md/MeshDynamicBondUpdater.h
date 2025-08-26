@@ -47,7 +47,7 @@ class PYBIND11_EXPORT MeshDynamicBondUpdater : public Updater
     virtual ~MeshDynamicBondUpdater();
 
     /// Update box interpolation based on provided timestep
-    virtual void update(uint64_t timestep);
+    void update(uint64_t timestep) override;
 
     /// Get the list of force computes
     std::vector<std::shared_ptr<MeshForceCompute>>& getForces()

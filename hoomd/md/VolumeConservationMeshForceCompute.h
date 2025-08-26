@@ -80,16 +80,16 @@ class PYBIND11_EXPORT VolumeConservationMeshForceCompute : public MeshForceCompu
     bool m_ignore_type; //! do we ignore type to calculate global area
 
     //! Actually compute the forces
-    virtual void computeForces(uint64_t timestep);
+    void computeForces(uint64_t timestep) override;
 
     //! compute volumes
-    virtual void precomputeParameter();
+    void precomputeParameter() override;
 
-    virtual void postcomputeParameter(unsigned int idx_a,
-                                      unsigned int idx_b,
-                                      unsigned int idx_c,
-                                      unsigned int idx_d,
-                                      unsigned int type_id)
+    void postcomputeParameter(unsigned int idx_a,
+                              unsigned int idx_b,
+                              unsigned int idx_c,
+                              unsigned int idx_d,
+                              unsigned int type_id) override
         {
         ArrayHandle<Scalar> h_volume(m_volume, access_location::host, access_mode::readwrite);
         h_volume.data[type_id] += m_volume_diff;
@@ -99,7 +99,7 @@ class PYBIND11_EXPORT VolumeConservationMeshForceCompute : public MeshForceCompu
                               unsigned int idx_b,
                               unsigned int idx_c,
                               unsigned int idx_d,
-                              unsigned int type_id);
+                              unsigned int type_id) override;
     };
 
 namespace detail

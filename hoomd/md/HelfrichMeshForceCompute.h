@@ -50,7 +50,7 @@ class PYBIND11_EXPORT HelfrichMeshForceCompute : public MeshForceCompute
     //! Get ghost particle fields requested by this pair potential
     /*! \param timestep Current time step
      */
-    virtual CommFlags getRequestedCommFlags(uint64_t timestep)
+    CommFlags getRequestedCommFlags(uint64_t timestep) override
         {
         CommFlags flags = CommFlags(0);
         flags[comm_flag::tag] = 1;
@@ -79,22 +79,22 @@ class PYBIND11_EXPORT HelfrichMeshForceCompute : public MeshForceCompute
     Scalar3 m_sigma_dash_diff_d;
 
     //! Actually compute the forces
-    virtual void computeForces(uint64_t timestep);
+    void computeForces(uint64_t timestep) override;
 
-    virtual Scalar energyDiff(unsigned int idx_a,
+    Scalar energyDiff(unsigned int idx_a,
+                      unsigned int idx_b,
+                      unsigned int idx_c,
+                      unsigned int idx_d,
+                      unsigned int type_id) override;
+
+    //! compute sigmas
+    void precomputeParameter() override;
+
+    void postcomputeParameter(unsigned int idx_a,
                               unsigned int idx_b,
                               unsigned int idx_c,
                               unsigned int idx_d,
-                              unsigned int type_id);
-
-    //! compute sigmas
-    virtual void precomputeParameter();
-
-    virtual void postcomputeParameter(unsigned int idx_a,
-                                      unsigned int idx_b,
-                                      unsigned int idx_c,
-                                      unsigned int idx_d,
-                                      unsigned int type_id);
+                              unsigned int type_id) override;
     };
 
 namespace detail

@@ -85,7 +85,7 @@ class PYBIND11_EXPORT BendingRigidityMeshForceCompute : public MeshForceCompute
     GPUArray<Scalar> m_params; //!< Parameters
 
     //! Actually compute the forces
-    virtual void computeForces(uint64_t timestep);
+    void computeForces(uint64_t timestep) override;
 
     virtual Scalar calcEnergy(unsigned int idx_a,
                               unsigned int idx_b,
@@ -93,23 +93,23 @@ class PYBIND11_EXPORT BendingRigidityMeshForceCompute : public MeshForceCompute
                               unsigned int idx_d,
                               unsigned int type_id);
 
-    virtual Scalar energyDiff(unsigned int idx_a,
-                              unsigned int idx_b,
-                              unsigned int idx_c,
-                              unsigned int idx_d,
-                              unsigned int type_id);
+    Scalar energyDiff(unsigned int idx_a,
+                      unsigned int idx_b,
+                      unsigned int idx_c,
+                      unsigned int idx_d,
+                      unsigned int type_id) override;
 
-    virtual Scalar energyDiffSurrounding(unsigned int idx_a,
-                                         unsigned int idx_b,
-                                         unsigned int idx_c,
-                                         unsigned int idx_d,
-                                         unsigned int idx_e,
-                                         unsigned int idx_f,
-                                         unsigned int idx_g,
-                                         unsigned int idx_h,
-                                         unsigned int type_id);
+    Scalar energyDiffSurrounding(unsigned int idx_a,
+                                 unsigned int idx_b,
+                                 unsigned int idx_c,
+                                 unsigned int idx_d,
+                                 unsigned int idx_e,
+                                 unsigned int idx_f,
+                                 unsigned int idx_g,
+                                 unsigned int idx_h,
+                                 unsigned int type_id) override;
 
-    virtual bool checkSurrounding()
+    bool checkSurrounding() override
         {
         return true;
         }

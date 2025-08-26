@@ -70,13 +70,13 @@ class PYBIND11_EXPORT TriangleAreaConservationMeshForceCompute : public MeshForc
     GPUArray<Scalar> m_area;                               //!< memory space for area
 
     //! Actually compute the forces
-    virtual void computeForces(uint64_t timestep);
+    void computeForces(uint64_t timestep) override;
 
-    virtual Scalar energyDiff(unsigned int idx_a,
-                              unsigned int idx_b,
-                              unsigned int idx_c,
-                              unsigned int idx_d,
-                              unsigned int type_id);
+    Scalar energyDiff(unsigned int idx_a,
+                      unsigned int idx_b,
+                      unsigned int idx_c,
+                      unsigned int idx_d,
+                      unsigned int type_id) override;
     };
 
 namespace detail

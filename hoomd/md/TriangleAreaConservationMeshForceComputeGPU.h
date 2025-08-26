@@ -56,9 +56,9 @@ class PYBIND11_EXPORT TriangleAreaConservationMeshForceComputeGPU
     GPUArray<Scalar> m_sum;         //!< memory space for sum over area
 
     //! Actually compute the forces
-    virtual void computeForces(uint64_t timestep);
+    void computeForces(uint64_t timestep) override;
 
-    virtual void computeArea();
+    void computeArea() override;
     };
 
 namespace detail
