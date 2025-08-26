@@ -2,8 +2,7 @@
 // Part of HOOMD-blue, released under the BSD 3-Clause License.
 
 #include "VolumeConservationMeshParameters.h"
-#include "hoomd/ForceCompute.h"
-#include "hoomd/MeshDefinition.h"
+#include "MeshForceCompute.h"
 
 #include <memory>
 
@@ -30,7 +29,7 @@ namespace md
 
     \ingroup computes
 */
-class PYBIND11_EXPORT VolumeConservationMeshForceCompute : public ForceCompute
+class PYBIND11_EXPORT VolumeConservationMeshForceCompute : public MeshForceCompute
     {
     public:
     //! Constructs the compute
@@ -73,8 +72,6 @@ class PYBIND11_EXPORT VolumeConservationMeshForceCompute : public ForceCompute
 
     protected:
     GPUArray<volume_conservation_param_t> m_params; //!< Parameters
-
-    std::shared_ptr<MeshDefinition> m_mesh_data; //!< Mesh data to use in computing volume energy
 
     GPUArray<Scalar> m_volume; //!< memory space for volume
 

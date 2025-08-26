@@ -23,7 +23,7 @@ namespace md
 BendingRigidityMeshForceCompute::BendingRigidityMeshForceCompute(
     std::shared_ptr<SystemDefinition> sysdef,
     std::shared_ptr<MeshDefinition> meshdef)
-    : ForceCompute(sysdef), m_mesh_data(meshdef)
+    : MeshForceCompute(sysdef,meshdef)
     {
     m_exec_conf->msg->notice(5) << "Constructing BendingRigidityMeshForceCompute" << endl;
 
@@ -389,7 +389,7 @@ namespace detail
 void export_BendingRigidityMeshForceCompute(pybind11::module& m)
     {
     pybind11::class_<BendingRigidityMeshForceCompute,
-                     ForceCompute,
+                     MeshForceCompute,
                      std::shared_ptr<BendingRigidityMeshForceCompute>>(
         m,
         "BendingRigidityMeshForceCompute")

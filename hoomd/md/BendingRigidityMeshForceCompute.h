@@ -1,8 +1,8 @@
 // Copyright (c) 2009-2025 The Regents of the University of Michigan.
 // Part of HOOMD-blue, released under the BSD 3-Clause License.
 
-#include "hoomd/ForceCompute.h"
-#include "hoomd/MeshDefinition.h"
+#include "MeshForceCompute.h"
+
 
 #include <memory>
 
@@ -51,7 +51,7 @@ struct bending_params
 
     \ingroup computes
 */
-class PYBIND11_EXPORT BendingRigidityMeshForceCompute : public ForceCompute
+class PYBIND11_EXPORT BendingRigidityMeshForceCompute : public MeshForceCompute
     {
     public:
     //! Constructs the compute
@@ -84,8 +84,6 @@ class PYBIND11_EXPORT BendingRigidityMeshForceCompute : public ForceCompute
 
     protected:
     GPUArray<Scalar> m_params;                   //!< Parameters
-    std::shared_ptr<MeshDefinition> m_mesh_data; //!< Mesh data to use in computing
-                                                 // the bending energy
 
     //! Actually compute the forces
     virtual void computeForces(uint64_t timestep);

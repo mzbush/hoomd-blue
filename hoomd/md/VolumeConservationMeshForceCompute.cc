@@ -25,7 +25,7 @@ VolumeConservationMeshForceCompute::VolumeConservationMeshForceCompute(
     std::shared_ptr<SystemDefinition> sysdef,
     std::shared_ptr<MeshDefinition> meshdef,
     bool ignore_type)
-    : ForceCompute(sysdef), m_mesh_data(meshdef), m_ignore_type(ignore_type)
+    : MeshForceCompute(sysdef,meshdef), m_ignore_type(ignore_type)
     {
     m_exec_conf->msg->notice(5) << "Constructing VolumeConservationMeshForceCompute" << endl;
 
@@ -400,7 +400,7 @@ namespace detail
 void export_VolumeConservationMeshForceCompute(pybind11::module& m)
     {
     pybind11::class_<VolumeConservationMeshForceCompute,
-                     ForceCompute,
+                     MeshForceCompute,
                      std::shared_ptr<VolumeConservationMeshForceCompute>>(
         m,
         "VolumeConservationMeshForceCompute")

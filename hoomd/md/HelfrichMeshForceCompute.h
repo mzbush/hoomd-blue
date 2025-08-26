@@ -1,8 +1,7 @@
 // Copyright (c) 2009-2025 The Regents of the University of Michigan.
 // Part of HOOMD-blue, released under the BSD 3-Clause License.
 
-#include "hoomd/ForceCompute.h"
-#include "hoomd/MeshDefinition.h"
+#include "MeshForceCompute.h"
 
 #include <memory>
 
@@ -29,7 +28,7 @@ namespace md
 
     \ingroup computes
 */
-class PYBIND11_EXPORT HelfrichMeshForceCompute : public ForceCompute
+class PYBIND11_EXPORT HelfrichMeshForceCompute : public MeshForceCompute
     {
     public:
     //! Constructs the compute
@@ -62,7 +61,6 @@ class PYBIND11_EXPORT HelfrichMeshForceCompute : public ForceCompute
 
     protected:
     GPUArray<Scalar> m_params;                   //!< Parameters
-    std::shared_ptr<MeshDefinition> m_mesh_data; //!< Mesh data to use in computing helfich energy
 
     GPUArray<Scalar3>
         m_sigma_dash; //! sum of the distances weighted by the bending angle over all neighbors

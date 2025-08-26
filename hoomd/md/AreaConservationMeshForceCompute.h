@@ -2,8 +2,7 @@
 // Part of HOOMD-blue, released under the BSD 3-Clause License.
 
 #include "AreaConservationMeshParameters.h"
-#include "hoomd/ForceCompute.h"
-#include "hoomd/MeshDefinition.h"
+#include "MeshForceCompute.h"
 
 #include <memory>
 
@@ -29,7 +28,7 @@ namespace md
 
     \ingroup computes
 */
-class PYBIND11_EXPORT AreaConservationMeshForceCompute : public ForceCompute
+class PYBIND11_EXPORT AreaConservationMeshForceCompute : public MeshForceCompute
     {
     public:
     //! Constructs the compute
@@ -74,7 +73,6 @@ class PYBIND11_EXPORT AreaConservationMeshForceCompute : public ForceCompute
     GPUArray<area_conservation_param_t> m_params; //!< Parameters
     GPUArray<Scalar> m_area;                      //!< memory space for area
     Scalar m_area_diff;
-    std::shared_ptr<MeshDefinition> m_mesh_data; //!< Mesh data to use in computing energy
     bool m_ignore_type;                          //! ignore type to calculate global area if true
 
     //! Actually compute the forces

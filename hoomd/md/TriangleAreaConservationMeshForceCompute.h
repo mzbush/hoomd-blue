@@ -2,8 +2,7 @@
 // Part of HOOMD-blue, released under the BSD 3-Clause License.
 
 #include "TriangleAreaConservationMeshParameters.h"
-#include "hoomd/ForceCompute.h"
-#include "hoomd/MeshDefinition.h"
+#include "MeshForceCompute.h"
 
 #include <memory>
 
@@ -29,7 +28,7 @@ namespace md
 /*! Triangle Area Conservation forces are computed on every triangle in a mesh.
     \ingroup computes
 */
-class PYBIND11_EXPORT TriangleAreaConservationMeshForceCompute : public ForceCompute
+class PYBIND11_EXPORT TriangleAreaConservationMeshForceCompute : public MeshForceCompute
     {
     public:
     //! Constructs the compute
@@ -69,9 +68,6 @@ class PYBIND11_EXPORT TriangleAreaConservationMeshForceCompute : public ForceCom
     protected:
     GPUArray<triangle_area_conservation_param_t> m_params; //!< Parameters
     GPUArray<Scalar> m_area;                               //!< memory space for area
-
-    std::shared_ptr<MeshDefinition>
-        m_mesh_data; //!< Mesh data to use in computing area conservation energy
 
     //! Actually compute the forces
     virtual void computeForces(uint64_t timestep);

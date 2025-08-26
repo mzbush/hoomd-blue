@@ -26,7 +26,7 @@ namespace md
 */
 HelfrichMeshForceCompute::HelfrichMeshForceCompute(std::shared_ptr<SystemDefinition> sysdef,
                                                    std::shared_ptr<MeshDefinition> meshdef)
-    : ForceCompute(sysdef), m_mesh_data(meshdef)
+    : MeshForceCompute(sysdef,meshdef)
     {
     m_exec_conf->msg->notice(5) << "Constructing HelfrichMeshForceCompute" << endl;
 
@@ -822,7 +822,7 @@ namespace detail
 void export_HelfrichMeshForceCompute(pybind11::module& m)
     {
     pybind11::class_<HelfrichMeshForceCompute,
-                     ForceCompute,
+                     MeshForceCompute,
                      std::shared_ptr<HelfrichMeshForceCompute>>(m, "HelfrichMeshForceCompute")
         .def(pybind11::init<std::shared_ptr<SystemDefinition>, std::shared_ptr<MeshDefinition>>())
         .def("setParams", &HelfrichMeshForceCompute::setParamsPython)

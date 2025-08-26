@@ -24,7 +24,7 @@ namespace md
 TriangleAreaConservationMeshForceCompute::TriangleAreaConservationMeshForceCompute(
     std::shared_ptr<SystemDefinition> sysdef,
     std::shared_ptr<MeshDefinition> meshdef)
-    : ForceCompute(sysdef), m_mesh_data(meshdef)
+    : MeshForceCompute(sysdef,meshdef)
     {
     m_exec_conf->msg->notice(5) << "Constructing TriangleAreaConservationhMeshForceCompute" << endl;
 
@@ -394,7 +394,7 @@ namespace detail
 void export_TriangleAreaConservationMeshForceCompute(pybind11::module& m)
     {
     pybind11::class_<TriangleAreaConservationMeshForceCompute,
-                     ForceCompute,
+                     MeshForceCompute,
                      std::shared_ptr<TriangleAreaConservationMeshForceCompute>>(
         m,
         "TriangleAreaConservationMeshForceCompute")
