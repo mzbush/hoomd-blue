@@ -55,14 +55,14 @@ class PYBIND11_EXPORT MeshDynamicBondUpdater : public Updater
         return m_forces;
         }
 
-    Scalar getT()
+    Scalar getkT()
         {
-        return 1.0 / m_inv_T;
+        return 1.0 / m_inv_kT;
         };
 
-    void setT(Scalar T)
+    void setkT(Scalar T)
         {
-        m_inv_T = 1.0 / T;
+        m_inv_kT = 1.0 / T;
         };
 
     private:
@@ -71,7 +71,7 @@ class PYBIND11_EXPORT MeshDynamicBondUpdater : public Updater
     std::shared_ptr<MeshDefinition> m_mesh; //!< Active force to call rotationalDiffusion on
     std::vector<unsigned int> m_update_order;
     std::vector<bool> m_already_updated;
-    Scalar m_inv_T;
+    Scalar m_inv_kT;
     };
 
 namespace detail

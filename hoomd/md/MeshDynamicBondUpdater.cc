@@ -29,7 +29,7 @@ MeshDynamicBondUpdater::MeshDynamicBondUpdater(std::shared_ptr<SystemDefinition>
                                                std::shared_ptr<Trigger> trigger,
                                                std::shared_ptr<MeshDefinition> mesh,
                                                Scalar T)
-    : Updater(sysdef, trigger), m_mesh(mesh), m_inv_T(1.0 / T)
+    : Updater(sysdef, trigger), m_mesh(mesh), m_inv_kT(1.0 / T)
     {
     assert(m_pdata);
     assert(m_mesh);
@@ -234,7 +234,7 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
         UniformDistribution<Scalar> uniform(0, Scalar(1));
 
         Scalar rand_number = uniform(rng);
-        Scalar part_func = exp(-m_inv_T * energyDifference);
+        Scalar part_func = exp(-m_inv_kT * energyDifference);
 
         std::vector<unsigned int> tr_idx(6);
         std::vector<unsigned int> b_idx(4);
@@ -314,7 +314,7 @@ void MeshDynamicBondUpdater::update(uint64_t timestep)
                                                                      h_rtag.data[v_idx[6]],
                                                                      h_rtag.data[v_idx[7]],
                                                                      type_id);
-                part_func = exp(-m_inv_T * energyDifference);
+                part_func = exp(-m_inv_kT * energyDifference);
                 }
             }
 
@@ -404,7 +404,7 @@ void export_MeshDynamicBondUpdater(pybind11::module& m)
                             std::shared_ptr<MeshDefinition>,
                             Scalar>())
         .def_property_readonly("forces", &MeshDynamicBondUpdater::getForces)
-        .def_property("kT", &MeshDynamicBondUpdater::getT, &MeshDynamicBondUpdater::setT);
+        .def_property("kT", &MeshDynamicBondUpdater::getkT, &MeshDynamicBondUpdater::setkT);
     }
 
     } // end namespace detail
