@@ -147,6 +147,7 @@ from .pair import (
     ForceShiftedLJ,
     Moliere,
     ZBL,
+    Zetterling,
     Mie,
     ExpandedMie,
     ReactionField,
@@ -190,6 +191,7 @@ __all__ = [
     "Table",
     "WangFrenkel",
     "Yukawa",
+    "Zetterling",
     "aniso",
     "friction",
 ]

@@ -42,7 +42,7 @@ else:
 if os.getenv("READTHEDOCS"):
     extensions.append("sphinx_copybutton")
     extensions.append("notfound.extension")
-    extensions.append("sphinxcontrib.googleanalytics")
+    # extensions.append("sphinxcontrib.googleanalytics")
     googleanalytics_id = "G-ZR0DNZD21E"
 
     katex_prerender = True

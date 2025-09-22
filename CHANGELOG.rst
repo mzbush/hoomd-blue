@@ -4,13 +4,22 @@ Change Log
 5.x
 ---
 
-5.3.2 (not yet released)
+5.4.0 (not yet released)
 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+*Added*
+
+* The Zetterling MD pair potential: ``hoomd.md.pair.Zetterling``
+  (`#2086 <https://github.com/glotzerlab/hoomd-blue/pull/2086>`__).
+* The YLZ anisotropic MD pair potential: ``hoomd.md.pair.aniso.YLZ``
+  (`#2110 <https://github.com/glotzerlab/hoomd-blue/pull/2110>`__).
 
 *Fixed*
 
 * Display vector math symbol correctly in the documentation
   (`#2109 <https://github.com/glotzerlab/hoomd-blue/pull/2109>`__).
+* Display equations correctly in the documentation
+  (`#2118 <https://github.com/glotzerlab/hoomd-blue/pull/2118>`__).
 
 5.3.1 (2025-07-18)
 ^^^^^^^^^^^^^^^^^^
