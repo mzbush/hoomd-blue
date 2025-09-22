@@ -22,3 +22,6 @@ compile_commands.json
 
 # virtualenv
 .venv
+# pixi environments
+.pixi/*
+!.pixi/config.toml
