@@ -75,11 +75,6 @@ class PYBIND11_EXPORT ForceCompute : public Compute
     //! Computes the forces
     virtual void compute(uint64_t timestep);
 
-    virtual bool checkSurrounding()
-        {
-        return false;
-        }
-
     //! Total the potential energy
     Scalar calcEnergySum();
 
