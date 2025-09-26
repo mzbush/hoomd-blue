@@ -22,7 +22,7 @@ All releases:
 
 - [ ] Review change log.
 - [ ] Check readthedocs build, especially change log formatting.
-- [ ] Run *bumpversion*.
+- [ ] Run *bump-my-version*.
 - [ ] Tag and push.
 - [ ] Update conda-forge recipe.
 - [ ] Update *glotzerlab-software*.
