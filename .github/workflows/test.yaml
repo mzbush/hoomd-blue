@@ -28,7 +28,7 @@ jobs:
       compiler_family: ${{ matrix.config[0] }}
       compiler_version: ${{ matrix.config[1] }}
       python: ${{ matrix.config[3] }}
-      config: ${{ join(matrix.config, '_') }}
+      config: ${{ join(matrix.config, '') }}
 
       # Use self-hosted runners or fall back to GitHub hosted runners when self-hosted are offline.
       build_runner: ${{ needs.start_action_runners.outputs.active != '0' && '["self-hosted","jetstream2","CPU"]' || toJson('ubuntu-24.04') }}
@@ -71,7 +71,7 @@ jobs:
       compiler_family: ${{ matrix.config[0] }}
       compiler_version: ${{ matrix.config[1] }}
       python: ${{ matrix.config[3] }}
-      config: ${{ join(matrix.config, '_') }}
+      config: ${{ join(matrix.config, '') }}
 
       # Use self-hosted runners or fall back to GitHub hosted runners when self-hosted are offline.
       build_runner: ${{ needs.start_action_runners.outputs.active != '0' && '["self-hosted","jetstream2","CPU"]' || toJson('ubuntu-24.04') }}
@@ -95,7 +95,6 @@ jobs:
         - config: [gcc, 13, -py, 312, -mpi]
         - config: [gcc, 12, -py, 311, -mpi]
         - config: [gcc, 11, -py, 310, -mpi]
-        - config: [gcc, 10, -py, 310, -mpi]
 
   tests_complete:
     name: Unit test

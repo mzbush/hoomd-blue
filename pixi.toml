@@ -20,6 +20,7 @@ pybind11 = "*"
 pytest = "*"
 rowan = "*"
 sybil = "*"
+bump-my-version = "*"
 
 [feature.py310.dependencies]
 python = "3.10.*"

@@ -402,12 +402,6 @@ class MeshDynamicalBonding(Updater):
 
 
     {inherited}
-
-    Examples::
-
-        mdb = hoomd.md.update.MeshDynamicalBonding(hoomd.trigger.Periodic(100),
-              mesh, kT = 1, forces=[mesh_ponetial])
-
     """
 
     def __init__(self, trigger, mesh, kT, forces=[]):
