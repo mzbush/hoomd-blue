@@ -232,7 +232,10 @@ void mpcd::CollisionMethod::checkCollisionWarnings(uint64_t timestep)
                     }
                 }
             }
-
+        if (m_sysdef->isDomainDecomposed() && m_rigid_bodies && !rigid_types.empty())
+            {
+            throw std::runtime_error("Rigid bodies with MPCD unavailable for decomposed domain");
+            }
         // go through each molecule and check if the center of mass is in right location
         if (m_rigid_bodies && !rigid_types.empty())
             {
