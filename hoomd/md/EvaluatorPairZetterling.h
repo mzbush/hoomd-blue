@@ -92,7 +92,7 @@ class EvaluatorPairZetterling
             return v;
             }
 #endif
-        };
+        } __attribute__((aligned(16)));
 
     //! Constructs the pair potential evaluator
     /*! \param _rsq Squared distance between the particles

@@ -8,6 +8,7 @@ set(_md_sources module-md.cc
                    AnisoPotentialPairALJ2.cc
                    AnisoPotentialPairALJ3.cc
                    AnisoPotentialPairDipole.cc
+                   AnisoPotentialPairYLZ.cc
                    AnisoPotentialPairGB.cc
                    AlchemyData.cc
                    BendingRigidityMeshForceCompute.cc
@@ -36,6 +37,8 @@ set(_md_sources module-md.cc
                    ManifoldXYPlane.cc
                    ManifoldPrimitive.cc
                    ManifoldSphere.cc
+		   MeshDynamicBondUpdater.cc
+		   MeshForceCompute.cc
                    MolecularForceCompute.cc
                    MuellerPlatheFlow.cc
                    NeighborListBinned.cc
@@ -56,7 +59,7 @@ set(_md_sources module-md.cc
                    Thermostat.cc
                    TwoStepNVTAlchemy.cc
                    WallData.cc
-		               VolumeConservationMeshForceCompute.cc
+		   VolumeConservationMeshForceCompute.cc
                    ZeroMomentumUpdater.cc
                    )
 
@@ -106,6 +109,7 @@ set(_md_headers ActiveForceComputeGPU.h
                 EvaluatorPairALJ.h
                 EvaluatorPairBuckingham.h
                 EvaluatorPairDipole.h
+                EvaluatorPairYLZ.h
                 EvaluatorPairDLVO.h
                 EvaluatorPairDPDThermoLJ.h
                 EvaluatorPairDPDThermoDPD.h
@@ -164,6 +168,8 @@ set(_md_headers ActiveForceComputeGPU.h
                 ManifoldXYPlane.h
                 ManifoldPrimitive.h
                 ManifoldSphere.h
+		MeshDynamicBondUpdater.h
+		MeshForceCompute.h
                 MolecularForceCompute.cuh
                 MolecularForceCompute.h
                 MuellerPlatheFlowEnum.h
@@ -257,6 +263,7 @@ list(APPEND _md_sources ActiveForceComputeGPU.cc
                            AnisoPotentialPairALJ2GPU.cc
                            AnisoPotentialPairALJ3GPU.cc
                            AnisoPotentialPairDipoleGPU.cc
+                           AnisoPotentialPairYLZGPU.cc
                            AnisoPotentialPairGBGPU.cc
                            BendingRigidityMeshForceComputeGPU.cc
                            BondTablePotentialGPU.cc
@@ -270,7 +277,7 @@ list(APPEND _md_sources ActiveForceComputeGPU.cc
                            HarmonicAngleForceComputeGPU.cc
                            HarmonicDihedralForceComputeGPU.cc
                            HarmonicImproperForceComputeGPU.cc
-                  			   HelfrichMeshForceComputeGPU.cc
+                  	   HelfrichMeshForceComputeGPU.cc
                            MolecularForceCompute.cu
                            NeighborListGPU.cc
                            NeighborListGPUBinned.cc
@@ -284,7 +291,7 @@ list(APPEND _md_sources ActiveForceComputeGPU.cc
                            TriangleAreaConservationMeshForceComputeGPU.cc
                            TwoStepBDGPU.cc
                            TwoStepLangevinGPU.cc
-                  			   VolumeConservationMeshForceComputeGPU.cc
+                  	   VolumeConservationMeshForceComputeGPU.cc
                            TwoStepConstantVolumeGPU.cc
                            TwoStepConstantPressureGPU.cc
                            MuellerPlatheFlowGPU.cc
@@ -297,8 +304,9 @@ set(_md_cu_sources ActiveForceComputeGPU.cu
                       AnisoPotentialPairALJ2GPUKernel.cu
                       AnisoPotentialPairALJ3GPUKernel.cu
                       AnisoPotentialPairDipoleGPUKernel.cu
+                      AnisoPotentialPairYLZGPUKernel.cu
                       AnisoPotentialPairGBGPUKernel.cu
-            		      BendingRigidityMeshForceComputeGPU.cu
+            	      BendingRigidityMeshForceComputeGPU.cu
                       ComputeThermoGPU.cu
                       ComputeThermoHMAGPU.cu
                       ConstantForceComputeGPU.cu
@@ -310,7 +318,7 @@ set(_md_cu_sources ActiveForceComputeGPU.cu
                       HarmonicAngleForceGPU.cu
                       HarmonicDihedralForceGPU.cu
                       HarmonicImproperForceGPU.cu
-            		      HelfrichMeshForceComputeGPU.cu
+            	      HelfrichMeshForceComputeGPU.cu
                       MolecularForceCompute.cu
                       NeighborListGPUBinned.cu
                       NeighborListGPU.cu
@@ -329,7 +337,7 @@ set(_md_cu_sources ActiveForceComputeGPU.cu
                       TwoStepConstantVolumeGPU.cu
                       TwoStepNVEGPU.cu
                       TwoStepRATTLENVEGPU.cu
-            		      VolumeConservationMeshForceComputeGPU.cu
+            	      VolumeConservationMeshForceComputeGPU.cu
                       MuellerPlatheFlowGPU.cu
                       CosineSqAngleForceGPU.cu
                       )

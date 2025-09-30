@@ -1137,7 +1137,7 @@ class Moliere(Pair):
 
     .. math::
         U(r) = \frac{Z_i Z_j e^2}{4 \pi \epsilon_0 r_{ij}} \left[ 0.35 \exp
-          \left( -0.3 \frac{r_{ij}}{a_F} \right) + \\
+          \left( -0.3 \frac{r_{ij}}{a_F} \right) +
           0.55 \exp \left( -1.2 \frac{r_{ij}}{a_F} \right) + 0.10 \exp
           \left( -6.0 \frac{r_{ij}}{a_F} \right) \right]
 
@@ -1156,15 +1156,15 @@ class Moliere(Pair):
     Example::
 
         nl = nlist.Cell()
-        moliere = pair.Moliere(default_r_cut = 3.0, nlist=nl)
+        moliere = pair.Moliere(default_r_cut=3.0, nlist=nl)
 
         Zi = 54
         Zj = 7
         e = 1
         a0 = 1
-        aF = 0.8853 * a0 / (np.sqrt(Zi) + np.sqrt(Zj))**(2/3)
+        aF = 0.8853 * a0 / (np.sqrt(Zi) + np.sqrt(Zj)) ** (2 / 3)
 
-        moliere.params[('A', 'B')] = dict(qi=Zi*e, qj=Zj*e, aF=aF)
+        moliere.params[("A", "B")] = dict(qi=Zi * e, qj=Zj * e, aF=aF)
 
     {inherited}
 
@@ -1220,9 +1220,9 @@ class ZBL(Pair):
     .. math::
         U(r) =
           \frac{Z_i Z_j e^2}{4 \pi \epsilon_0 r_{ij}} \left[ 0.1818
-          \exp \left( -3.2 \frac{r_{ij}}{a_F} \right) \right. \\
-          + 0.5099 \exp \left( -0.9423 \frac{r_{ij}}{a_F} \right) \\
-          + 0.2802 \exp \left( -0.4029 \frac{r_{ij}}{a_F} \right) \\
+          \exp \left( -3.2 \frac{r_{ij}}{a_F} \right) \right.
+          + 0.5099 \exp \left( -0.9423 \frac{r_{ij}}{a_F} \right)
+          + 0.2802 \exp \left( -0.4029 \frac{r_{ij}}{a_F} \right)
           + \left. 0.02817 \exp \left( -0.2016 \frac{r_{ij}}{a_F} \right)
           \right]
 
@@ -1246,9 +1246,9 @@ class ZBL(Pair):
         Zj = 7
         e = 1
         a0 = 1
-        aF = 0.8853 * a0 / (Zi**(0.23) + Zj**(0.23))
+        aF = 0.8853 * a0 / (Zi ** (0.23) + Zj ** (0.23))
 
-        zbl.params[('A', 'B')] = dict(qi=Zi*e, qj=Zj*e, aF=aF)
+        zbl.params[("A", "B")] = dict(qi=Zi * e, qj=Zj * e, aF=aF)
 
     {inherited}
 
@@ -1536,14 +1536,12 @@ class DLVO(Pair):
     on every particle in the simulation state with:
 
     .. math::
-        \begin{split}
-        V_{\mathrm{DLVO}}(r) = &- \frac{A}{6} \left[
+        V_{\mathrm{DLVO}}(r) = - \frac{A}{6} \left[
             \frac{2a_1a_2}{r^2 - (a_1+a_2)^2} +
-            \frac{2a_1a_2}{r^2 - (a_1-a_2)^2} \\
+            \frac{2a_1a_2}{r^2 - (a_1-a_2)^2}
             + \log \left(
-            \frac{r^2 - (a_1+a_2)^2}{r^2 - (a_1-a_2)^2} \right) \right] \\
-            & + \frac{a_1 a_2}{a_1+a_2} Z e^{-\kappa(r - (a_1+a_2))}
-        \end{split}
+            \frac{r^2 - (a_1+a_2)^2}{r^2 - (a_1-a_2)^2} \right) \right]
+            + \frac{a_1 a_2}{a_1+a_2} Z e^{-\kappa(r - (a_1+a_2))}
 
     where :math:`a_1` is the radius of first particle in the pair, :math:`a_2`
     is the radius of second particle in the pair, :math:`A` is the Hamaker
@@ -1559,9 +1557,9 @@ class DLVO(Pair):
 
         nl = hoomd.md.nlist.Cell()
         dlvo = hoomd.md.pair.DLVO(nlist=nl)
-        dlvo.params[('A', 'A')] = dict(A=1.0, kappa=1.0, Z=2, a1=1, a2=1)
-        dlvo.params[('A', 'B')] = dict(A=2.0, kappa=0.5, Z=3, a1=1, a2=3)
-        dlvo.params[('B', 'B')] = dict(A=2.0, kappa=0.5, Z=3, a1=3, a2=3)
+        dlvo.params[("A", "A")] = dict(A=1.0, kappa=1.0, Z=2, a1=1, a2=1)
+        dlvo.params[("A", "B")] = dict(A=2.0, kappa=0.5, Z=3, a1=1, a2=3)
+        dlvo.params[("B", "B")] = dict(A=2.0, kappa=0.5, Z=3, a1=3, a2=3)
 
     {inherited}
 
@@ -2195,8 +2193,8 @@ class Zetterling(Pair):
     state:
 
     .. math::
-        U(r) = A \\frac{\\exp{(\\alpha r)\\cos{(2 k_F r)}}}{r^3}
-              + B \\left( \\frac{\\sigma}{r} \\right)^n
+        U(r) = A \frac{\exp{(\alpha r)\cos{(2 k_F r)}}}{r^3}
+              + B \left( \frac{\sigma}{r} \right)^n
 
     The potential was introduced in `F. H. M. Zetterling, M. Dzugutov, and S. Lidin
     2001`_.
