@@ -4,6 +4,14 @@ Change Log
 5.x
 ---
 
+5.5.0 (not released yet)
+^^^^^^^^^^^^^^^^^^^^
+
+*Added*
+
+* Implemented rigid body compatibility with MPCD without MPI
+  (`#2001 <https://github.com/glotzerlab/hoomd-blue/pull/2001>`__).
+
 5.4.0 (2025-09-26)
 ^^^^^^^^^^^^^^^^^^^^
 
