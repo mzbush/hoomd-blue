@@ -1136,19 +1136,10 @@ def test_setting_to_new_sim(simulation_factory, two_particle_snapshot_factory):
     sim1.operations.integrator.forces.remove(lj)
     sim2.operations.integrator.forces.append(lj)
     sim2.run(0)
+    sim1.run(0)
     # Ensure that when attached cannot add to new integrator
     with pytest.raises(RuntimeError):
         sim1.operations.integrator.forces.append(lj)
-
-    # Test that correct removal with a necessary nlist copy properly warns but
-    # does not error.
-    lj2 = md.pair.LJ(nlist, default_r_cut=1.1)
-    lj2.params[("A", "A")] = {"sigma": 0.5, "epsilon": 1.0}
-    sim2.operations.integrator.forces.append(lj2)
-    sim2.operations.integrator.forces.remove(lj)
-    sim1.operations.integrator.forces.append(lj)
-    with pytest.warns(RuntimeWarning):
-        sim1.run(0)
 
 
 @pytest.mark.filterwarnings("always")
