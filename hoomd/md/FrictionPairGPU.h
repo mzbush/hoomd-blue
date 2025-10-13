@@ -45,8 +45,6 @@ template<class evaluator> class FrictionPairGPU : public FrictionPair<evaluator>
     virtual void
     setParams(unsigned int typ1, unsigned int typ2, const typename evaluator::param_type& param);
 
-    virtual void setShape(unsigned int typ, const typename evaluator::shape_type& shape_param);
-
     protected:
     std::shared_ptr<Autotuner<2>> m_tuner; //!< Autotuner for block size and threads per particle
 
@@ -156,8 +154,6 @@ template<class evaluator> void FrictionPairGPU<evaluator>::computeForces(uint64_
     unsigned int block_size = this->m_tuner->getParam()[0];
     unsigned int threads_per_particle = this->m_tuner->getParam()[1];
 
-    // On the first iteration, shape parameters are updated. For optimization,
-    // could track this between calls to avoid extra copying.
     bool first = true;
 
     kernel::gpu_compute_pair_friction_forces<evaluator>(
@@ -193,8 +189,7 @@ template<class evaluator> void FrictionPairGPU<evaluator>::computeForces(uint64_
                               this->m_exec_conf->dev_prop,
                               first),
         this->m_params.data(),
-        this->m_shape_params.data());
-
+        
     this->m_tuner->end();
 
     if (this->m_exec_conf->isCUDAErrorCheckingEnabled())
@@ -209,14 +204,6 @@ void FrictionPairGPU<evaluator>::setParams(unsigned int typ1,
     FrictionPair<evaluator>::setParams(typ1, typ2, param);
     this->m_params[this->m_typpair_idx(typ1, typ2)].set_memory_hint();
     this->m_params[this->m_typpair_idx(typ2, typ1)].set_memory_hint();
-    }
-
-template<class evaluator>
-void FrictionPairGPU<evaluator>::setShape(unsigned int typ,
-                                          const typename evaluator::shape_type& shape_param)
-    {
-    FrictionPair<evaluator>::setShape(typ, shape_param);
-    this->m_shape_params[typ].set_memory_hint();
     }
 
 namespace detail

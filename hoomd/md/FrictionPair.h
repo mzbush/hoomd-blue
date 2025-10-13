@@ -35,34 +35,20 @@ namespace hoomd
     {
 namespace md
     {
-//! Template class for computing pair potentials
+
+//! Template class for computing frictional contacts
 /*! <b>Overview:</b>
-    FrictionPair computes standard pair potentials (and forces) between all particle pairs in
-   the simulation. It employs the use of a neighbor list to limit the number of computations done to
-   only those particles with the cutoff radius of each other. The computation of the actual V(r) is
-   not performed directly by this class, but by an friction_evaluator class (e.g. EvaluatorPairLJ)
+    FrictionPair is modeled after AnisoPotentialPair and computes frictional pair forces (and torques)
+   between all particles in the simulation. It employs the use of a neighbor list to limit the number of computations done to
+   only those particles with the cutoff radius of each other. The computation of the force (and torque) is
+   not performed directly by this class, but by an friction_evaluator class (e.g. EvaluatorPairFrictionLJBase)
    which is passed in as a template parameter so the computations are performed as efficiently as
-   possible.
-
-    FrictionPair handles most of the gory internal details common to all standard pair
-   potentials.
-     - A cutoff radius to be specified per particle type pair
-     - The energy can be globally shifted to 0 at the cutoff
-     - Per type pair parameters are stored and a set method is provided
-     - And all the details about looping through the particles, computing dr, computing the virial,
-   etc. are handled
-
-    \note XPLOR switching is not supported
-
+   possible.      
+    
     <b>Implementation details</b>
-
-    rcutsq and the params are stored per particle type pair. It wastes a little bit of space, but
-   benchmarks show that storing the symmetric type pairs and indexing with Index2D is faster than
-   not storing redundant pairs and indexing with Index2DUpperTriangular. All of these values are
-   stored in GlobalArray for easy access on the GPU by a derived class. The type of the parameters
-   is defined by \a param_type in the potential friction_evaluator class passed in. See the
-   appropriate documentation for the friction_evaluator for the definition of each element of the
-   parameters.
+     FrictionPair is accessing the velocity, angular momentum, diameter, and moment of inertia of all particles. 
+    It is used to calculate the relative velocity between the particles dv and the angular velocity angvel_i/j of each particle. This 
+    information is passed to the friction_evaluator class for the calculation of frictional pair force (and torque). 
 */
 
 template<class friction_evaluator> class FrictionPair : public ForceCompute
@@ -70,9 +56,6 @@ template<class friction_evaluator> class FrictionPair : public ForceCompute
     public:
     //! Param type from friction_evaluator
     typedef typename friction_evaluator::param_type param_type;
-
-    //! Shape param type from friction_evaluator
-    typedef typename friction_evaluator::shape_type shape_type;
 
     //! Construct the pair potential
     FrictionPair(std::shared_ptr<SystemDefinition> sysdef, std::shared_ptr<NeighborList> nlist);
@@ -98,48 +81,6 @@ template<class friction_evaluator> class FrictionPair : public ForceCompute
 
     /// Validate that types are within Ntypes
     virtual void validateTypes(unsigned int typ1, unsigned int typ2, std::string action);
-
-    //! Set the shape parameters for a single type
-    virtual void setShape(unsigned int typ, const shape_type& shape_param);
-
-    virtual pybind11::object getShapePython(std::string typ);
-
-    //! Set the shape parameters for a single type through Python
-    virtual void setShapePython(std::string typ, const pybind11::object shape_param);
-
-    std::vector<std::string> getTypeShapeMapping(
-        const std::vector<param_type, hoomd::detail::managed_allocator<param_type>>& params,
-        const std::vector<shape_type, hoomd::detail::managed_allocator<shape_type>>& shape_params)
-        const
-        {
-        std::vector<std::string> type_shape_mapping(m_pdata->getNTypes());
-        Scalar3 w = make_scalar3(0, 0, 0);
-        Scalar3 dv = make_scalar3(0, 0, 0);
-        Scalar3 dr = make_scalar3(0, 0, 0);
-        Scalar dia = Scalar(0.0);
-        Scalar rcut = Scalar(0.0);
-        for (unsigned int i = 0; i < type_shape_mapping.size(); i++)
-            {
-            friction_evaluator
-                evaluator(dr, w, w, dv, dia, dia, rcut, m_params[m_typpair_idx(i, i)]);
-            if (friction_evaluator::needsShape())
-                {
-                evaluator.setShape(&shape_params[i], &shape_params[i]);
-                }
-            type_shape_mapping[i] = evaluator.getShapeSpec();
-            }
-        return type_shape_mapping;
-        }
-
-    pybind11::list getTypeShapesPy()
-        {
-        std::vector<std::string> type_shape_mapping
-            = this->getTypeShapeMapping(m_params, m_shape_params);
-        pybind11::list type_shapes;
-        for (unsigned int i = 0; i < type_shape_mapping.size(); i++)
-            type_shapes.append(type_shape_mapping[i]);
-        return type_shapes;
-        }
 
     //! Shifting modes that can be applied to the energy
     enum energyShiftMode
@@ -222,9 +163,7 @@ template<class friction_evaluator> class FrictionPair : public ForceCompute
     GPUArray<Scalar> m_rcutsq;    //!< Cutoff radius squared per type pair
     std::vector<param_type, hoomd::detail::managed_allocator<param_type>>
         m_params; //!< Pair parameters per type pair
-    std::vector<shape_type, hoomd::detail::managed_allocator<shape_type>>
-        m_shape_params; //!< Shape parameters per type
-
+    
     /// Track whether we have attached to the Simulation object
     bool m_attached = true;
 
@@ -257,13 +196,6 @@ FrictionPair<friction_evaluator>::FrictionPair(std::shared_ptr<SystemDefinition>
         param_type(),
         hoomd::detail::managed_allocator<param_type>(m_exec_conf->isCUDAEnabled()));
     m_params.swap(params);
-
-    std::vector<shape_type, hoomd::detail::managed_allocator<shape_type>> shape_params(
-        static_cast<size_t>(m_pdata->getNTypes()),
-        shape_type(),
-        hoomd::detail::managed_allocator<shape_type>(m_exec_conf->isCUDAEnabled()));
-    m_shape_params.swap(shape_params);
-
     m_r_cut_nlist = std::make_shared<GPUArray<Scalar>>(m_typpair_idx.getNumElements(), m_exec_conf);
     nlist->addRCutMatrix(m_r_cut_nlist);
     }
@@ -318,54 +250,11 @@ void FrictionPair<friction_evaluator>::validateTypes(unsigned int typ1,
                                                      unsigned int typ2,
                                                      std::string action)
     {
-    // TODO change logic to just throw an exception
     auto n_types = this->m_pdata->getNTypes();
     if (typ1 >= n_types || typ2 >= n_types)
         {
         throw std::runtime_error("Error in" + action + " for pair potential. Invalid type");
         }
-    }
-
-/*! \param typ The type index.
-    \param param Shape parameter to set
-          set.
-*/
-template<class friction_evaluator>
-void FrictionPair<friction_evaluator>::setShape(unsigned int typ, const shape_type& shape_param)
-    {
-    if (typ >= m_pdata->getNTypes())
-        {
-        throw std::runtime_error("Error setting shape parameters in FrictionPair");
-        }
-
-    m_shape_params[typ] = shape_param;
-    }
-
-/*! \param typ The type index.
-    \param param Shape parameter to set
-          set.
-*/
-template<class friction_evaluator>
-void FrictionPair<friction_evaluator>::setShapePython(std::string typ, pybind11::object shape_param)
-    {
-    auto typ_ = m_pdata->getTypeByName(typ);
-    setShape(typ_, shape_type(shape_param, m_exec_conf->isCUDAEnabled()));
-    }
-
-/*! \param typ The type index.
-    \param param Shape parameter to set
-          set.
-*/
-template<class friction_evaluator>
-pybind11::object FrictionPair<friction_evaluator>::getShapePython(std::string typ)
-    {
-    auto typ_ = m_pdata->getTypeByName(typ);
-    if (typ_ >= m_pdata->getNTypes())
-        {
-        throw std::runtime_error("Error getting shape parameters in FrictionPair");
-        }
-
-    return m_shape_params[typ_].toPython();
     }
 
 /*! \param typ1 First type index in the pair
@@ -609,8 +498,6 @@ void FrictionPair<friction_evaluator>::computeForces(uint64_t timestep)
 
                 if (friction_evaluator::needsCharge())
                     eval.setCharge(qi, qj);
-                if (friction_evaluator::needsShape())
-                    eval.setShape(&m_shape_params[typei], &m_shape_params[typej]);
                 if (friction_evaluator::needsTags())
                     eval.setTags(h_tag.data[i], h_tag.data[j]);
                 if (friction_evaluator::needsNu())
@@ -641,7 +528,6 @@ void FrictionPair<friction_evaluator>::computeForces(uint64_t timestep)
                     Scalar3 force2 = Scalar(0.5) * force;
 
                     // add the force, potential energy and virial to the particle i
-                    // (FLOPS: 8)
                     fxi += force.x;
                     fyi += force.y;
                     fzi += force.z;
@@ -742,12 +628,9 @@ template<class T> void export_FrictionPair(pybind11::module& m, const std::strin
         .def(pybind11::init<std::shared_ptr<SystemDefinition>, std::shared_ptr<NeighborList>>())
         .def("setParams", &FrictionPair<T>::setParamsPython)
         .def("getParams", &FrictionPair<T>::getParamsPython)
-        .def(("set" + T::getShapeParamName()).c_str(), &FrictionPair<T>::setShapePython)
-        .def(("get" + T::getShapeParamName()).c_str(), &FrictionPair<T>::getShapePython)
         .def("setRCut", &FrictionPair<T>::setRCutPython)
         .def("getRCut", &FrictionPair<T>::getRCut)
         .def_property("mode", &FrictionPair<T>::getShiftMode, &FrictionPair<T>::setShiftModePython)
-        .def("getTypeShapesPy", &FrictionPair<T>::getTypeShapesPy);
     }
 
     } // end namespace detail

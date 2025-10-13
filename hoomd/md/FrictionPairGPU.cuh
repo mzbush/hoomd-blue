@@ -2,9 +2,6 @@
 // Part of HOOMD-blue, released under the BSD 3-Clause License.
 
 #include "hip/hip_runtime.h"
-// Copyright (c) 2009-2021 The Regents of the University of Michigan
-// This file is part of the HOOMD-blue project, released under the BSD 3-Clause License.
-
 #include "hoomd/HOOMDMath.h"
 #include "hoomd/Index1D.h"
 #include "hoomd/ParticleData.cuh"
@@ -71,7 +68,6 @@ struct a_pair_args_t
                   const unsigned int _compute_virial,
                   const unsigned int _threads_per_particle,
                   const hipDeviceProp_t& _devprop,
-                  bool _update_shape_param)
         : d_force(_d_force), d_torque(_d_torque), d_virial(_d_virial), virial_pitch(_virial_pitch),
           N(_N), n_max(_n_max), d_pos(_d_pos), d_vel(_d_vel), d_charge(_d_charge),
           d_orientation(_d_orientation), d_angmom(_d_angmom), d_diameter(_d_diameter),
@@ -79,8 +75,8 @@ struct a_pair_args_t
           dim(_dim), seed(_seed), timestep(_timestep), deltaT(_deltaT), d_n_neigh(_d_n_neigh),
           d_nlist(_d_nlist), d_head_list(_d_head_list), d_rcutsq(_d_rcutsq), ntypes(_ntypes),
           block_size(_block_size), shift_mode(_shift_mode), compute_virial(_compute_virial),
-          threads_per_particle(_threads_per_particle), devprop(_devprop),
-          update_shape_param(_update_shape_param) { };
+          threads_per_particle(_threads_per_particle), 
+          devprop(_devprop) { };
 
     Scalar4* d_force;                //!< Force to write out
     Scalar4* d_torque;               //!< Torque to write out
@@ -113,8 +109,6 @@ struct a_pair_args_t
     const unsigned int compute_virial;       //!< Flag to indicate if virials should be computed
     const unsigned int threads_per_particle; //!< Number of threads to launch per particle
     const hipDeviceProp_t& devprop;          //!< CUDA device properties
-    bool update_shape_param; //!< If true, update size of shape param and synchronize GPU execution
-                             //!< stream
     };
 
 #ifdef __HIPCC__
@@ -192,7 +186,6 @@ gpu_compute_pair_friction_forces_kernel(Scalar4* d_force,
                                         const unsigned int* d_nlist,
                                         const size_t* d_head_list,
                                         const typename evaluator::param_type* d_params,
-                                        const typename evaluator::shape_type* d_shape_params,
                                         const Scalar* d_rcutsq,
                                         const unsigned int ntypes,
                                         unsigned int max_extra_bytes)
@@ -205,9 +198,7 @@ gpu_compute_pair_friction_forces_kernel(Scalar4* d_force,
     typename evaluator::param_type* s_params = (typename evaluator::param_type*)(&s_data[0]);
     Scalar* s_rcutsq
         = (Scalar*)(&s_data[num_typ_parameters * sizeof(typename evaluator::param_type)]);
-    typename evaluator::shape_type* s_shape_params
-        = (typename evaluator::shape_type*)(&s_rcutsq[num_typ_parameters]);
-
+    
     // load in the per type pair parameters
     for (unsigned int cur_offset = 0; cur_offset < num_typ_parameters; cur_offset += blockDim.x)
         {
@@ -227,27 +218,12 @@ gpu_compute_pair_friction_forces_kernel(Scalar4* d_force,
             }
         }
 
-    unsigned int shape_param_size = sizeof(typename evaluator::shape_type) * ntypes / sizeof(int);
-    for (unsigned int cur_offset = 0; cur_offset < shape_param_size; cur_offset += blockDim.x)
-        {
-        if (cur_offset + threadIdx.x < shape_param_size)
-            {
-            ((int*)s_shape_params)[cur_offset + threadIdx.x]
-                = ((int*)d_shape_params)[cur_offset + threadIdx.x];
-            }
-        }
-
     __syncthreads();
 
     // initialize extra shared mem
-    char* s_extra = (char*)(s_shape_params + ntypes);
-
     unsigned int available_bytes = max_extra_bytes;
     for (unsigned int cur_pair = 0; cur_pair < typpair_idx.getNumElements(); ++cur_pair)
         s_params[cur_pair].load_shared(s_extra, available_bytes);
-
-    for (unsigned int cur_type = 0; cur_type < ntypes; ++cur_type)
-        s_shape_params[cur_type].load_shared(s_extra, available_bytes);
 
     __syncthreads();
 
@@ -397,9 +373,6 @@ gpu_compute_pair_friction_forces_kernel(Scalar4* d_force,
 
                 if (evaluator::needsCharge())
                     eval.setCharge(qi, qj);
-                if (evaluator::needsShape())
-                    eval.setShape(&(s_shape_params[__scalar_as_int(postypei.w)]),
-                                  &(s_shape_params[__scalar_as_int(postypej.w)]));
                 if (evaluator::needsTags())
                     eval.setTags(__ldg(d_tag + idx), __ldg(d_tag + cur_j));
 
@@ -511,13 +484,11 @@ struct FrictionPairForceComputeKernel
      * \param pair_args Other arguments to pass onto the kernel
      * \param N Number of particles to compute.
      * \param params Parameters for the potential, stored per type pair
-     * \param shape_params Parameters for the potential, stored per type pair
      */
 
     static void launch(const a_pair_args_t& pair_args,
                        unsigned int N,
                        const typename evaluator::param_type* params,
-                       const typename evaluator::shape_type* shape_params)
         {
         if (tpp == pair_args.threads_per_particle)
             {
@@ -525,8 +496,7 @@ struct FrictionPairForceComputeKernel
 
             Index2D typpair_idx(pair_args.ntypes);
             size_t shared_bytes = (2 * sizeof(Scalar) + sizeof(typename evaluator::param_type))
-                                      * typpair_idx.getNumElements()
-                                  + sizeof(typename evaluator::shape_type) * pair_args.ntypes;
+                                      * typpair_idx.getNumElements();
 
             unsigned int max_block_size;
             hipFuncAttributes attr;
@@ -558,10 +528,6 @@ struct FrictionPairForceComputeKernel
             for (unsigned int i = 0; i < typpair_idx.getNumElements(); ++i)
                 {
                 params[i].allocate_shared(ptr, available_bytes);
-                }
-            for (unsigned int i = 0; i < pair_args.ntypes; ++i)
-                {
-                shape_params[i].allocate_shared(ptr, available_bytes);
                 }
             extra_bytes = max_extra_bytes - available_bytes;
 
@@ -601,7 +567,6 @@ struct FrictionPairForceComputeKernel
                                pair_args.d_nlist,
                                pair_args.d_head_list,
                                params,
-                               shape_params,
                                pair_args.d_rcutsq,
                                pair_args.ntypes,
                                max_extra_bytes);
@@ -611,8 +576,7 @@ struct FrictionPairForceComputeKernel
             FrictionPairForceComputeKernel<evaluator, shift_mode, compute_virial, tpp / 2>::launch(
                 pair_args,
                 N,
-                params,
-                shape_params);
+                params);
             }
         }
     };
@@ -623,8 +587,7 @@ struct FrictionPairForceComputeKernel<evaluator, shift_mode, compute_virial, 0>
     {
     static void launch(const a_pair_args_t& pair_args,
                        unsigned int N,
-                       const typename evaluator::param_type* d_params,
-                       const typename evaluator::shape_type* shape_params)
+                       const typename evaluator::param_type* d_params)
         {
         // do nothing
         }
@@ -639,8 +602,7 @@ struct FrictionPairForceComputeKernel<evaluator, shift_mode, compute_virial, 0>
 */
 template<class evaluator>
 hipError_t gpu_compute_pair_friction_forces(const a_pair_args_t& pair_args,
-                                            const typename evaluator::param_type* d_params,
-                                            const typename evaluator::shape_type* d_shape_params)
+                                            const typename evaluator::param_type* d_params)
     {
     assert(d_params);
     assert(pair_args.d_rcutsq);
@@ -654,7 +616,7 @@ hipError_t gpu_compute_pair_friction_forces(const a_pair_args_t& pair_args,
         case 0:
             {
             FrictionPairForceComputeKernel<evaluator, 0, 1, gpu_friction_pair_force_max_tpp>::
-                launch(pair_args, pair_args.N, d_params, d_shape_params);
+                launch(pair_args, pair_args.N, d_params);
             break;
             }
         case 1:
@@ -664,8 +626,7 @@ hipError_t gpu_compute_pair_friction_forces(const a_pair_args_t& pair_args,
                                            1,
                                            gpu_friction_pair_force_max_tpp>::launch(pair_args,
                                                                                     pair_args.N,
-                                                                                    d_params,
-                                                                                    d_shape_params);
+                                                                                    d_params);
             break;
             }
         default:
@@ -679,7 +640,7 @@ hipError_t gpu_compute_pair_friction_forces(const a_pair_args_t& pair_args,
         case 0:
             {
             FrictionPairForceComputeKernel<evaluator, 0, 0, gpu_friction_pair_force_max_tpp>::
-                launch(pair_args, pair_args.N, d_params, d_shape_params);
+                launch(pair_args, pair_args.N, d_params);
             break;
             }
         case 1:
@@ -689,8 +650,7 @@ hipError_t gpu_compute_pair_friction_forces(const a_pair_args_t& pair_args,
                                            0,
                                            gpu_friction_pair_force_max_tpp>::launch(pair_args,
                                                                                     pair_args.N,
-                                                                                    d_params,
-                                                                                    d_shape_params);
+                                                                                    d_params);
             break;
             }
         default:
@@ -702,8 +662,7 @@ hipError_t gpu_compute_pair_friction_forces(const a_pair_args_t& pair_args,
 #else
 template<class evaluator>
 hipError_t gpu_compute_pair_friction_forces(const a_pair_args_t& pair_args,
-                                            const typename evaluator::param_type* d_params,
-                                            const typename evaluator::shape_type* d_shape_params);
+                                            const typename evaluator::param_type* d_params);
 #endif
 
     } // end namespace kernel

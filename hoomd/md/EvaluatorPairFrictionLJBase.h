@@ -1,9 +1,6 @@
 // Copyright (c) 2009-2025 The Regents of the University of Michigan.
 // Part of HOOMD-blue, released under the BSD 3-Clause License.
 
-// $Id$
-// $URL$
-
 #ifndef __PAIR_EVALUATOR_FRICTIONLJBASE_H__
 #define __PAIR_EVALUATOR_FRICTIONLJBASE_H__
 
@@ -115,36 +112,6 @@ template<class Derived> class EvaluatorPairFrictionLJBase
         __attribute__((aligned(16)));
 #endif
 
-    struct shape_type
-        {
-        vec3<Scalar> mu;
-
-        //! Load dynamic data members into shared memory and increase pointer
-        /*! \param ptr Pointer to load data to (will be incremented)
-            \param available_bytes Size of remaining shared memory allocation
-        */
-        DEVICE void load_shared(char*& ptr, unsigned int& available_bytes) { }
-
-        HOSTDEVICE void allocate_shared(char*& ptr, unsigned int& available_bytes) const { }
-
-        HOSTDEVICE shape_type() { }
-
-#ifndef __HIPCC__
-
-        shape_type(pybind11::object shape_params, bool managed) { }
-
-        pybind11::object toPython()
-            {
-            return pybind11::none();
-            }
-#endif // __HIPCC__
-
-#ifdef ENABLE_HIP
-        //! Attach managed memory to CUDA stream
-        void set_memory_hint() const { }
-#endif
-        };
-
     //! Constructs the pair potential evaluator
     /*! \param _dr Displacement vector between particle centers of mass
         \param _rcutsq Squared distance at which the potential goes to 0
@@ -175,12 +142,6 @@ template<class Derived> class EvaluatorPairFrictionLJBase
         {
         }
 
-    //! Whether the pair potential uses shape.
-    HOSTDEVICE static bool needsShape()
-        {
-        return true;
-        }
-
     //! Whether the pair potential needs particle tags.
     HOSTDEVICE static bool needsTags()
         {
@@ -204,12 +165,6 @@ template<class Derived> class EvaluatorPairFrictionLJBase
         {
         return false;
         }
-
-    //! Accept the optional shape values
-    /*! \param shape_i Shape of particle i
-        \param shape_j Shape of particle j
-    */
-    HOSTDEVICE void setShape(const shape_type* shapei, const shape_type* shapej) { }
 
     // Seed, Timestep, and the particle ids are necessary for the correlation of the pair noise
     // (equation 26 and 27 of manuscript)
@@ -402,14 +357,6 @@ template<class Derived> class EvaluatorPairFrictionLJBase
     static std::string getName()
         {
         return "FrictionLJBase";
-        }
-    static std::string getShapeParamName()
-        {
-        return "shape";
-        }
-    std::string getShapeSpec() const
-        {
-        throw std::runtime_error("Shape definition not supported for this pair potential.");
         }
 #endif
 
