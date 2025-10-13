@@ -67,7 +67,7 @@ struct a_pair_args_t
                   const unsigned int _shift_mode,
                   const unsigned int _compute_virial,
                   const unsigned int _threads_per_particle,
-                  const hipDeviceProp_t& _devprop,
+                  const hipDeviceProp_t& _devprop)
         : d_force(_d_force), d_torque(_d_torque), d_virial(_d_virial), virial_pitch(_virial_pitch),
           N(_N), n_max(_n_max), d_pos(_d_pos), d_vel(_d_vel), d_charge(_d_charge),
           d_orientation(_d_orientation), d_angmom(_d_angmom), d_diameter(_d_diameter),
@@ -219,8 +219,10 @@ gpu_compute_pair_friction_forces_kernel(Scalar4* d_force,
         }
 
     __syncthreads();
-
+    
     // initialize extra shared mem
+    char* s_extra = (char*)(ntypes);
+
     unsigned int available_bytes = max_extra_bytes;
     for (unsigned int cur_pair = 0; cur_pair < typpair_idx.getNumElements(); ++cur_pair)
         s_params[cur_pair].load_shared(s_extra, available_bytes);
@@ -488,7 +490,7 @@ struct FrictionPairForceComputeKernel
 
     static void launch(const a_pair_args_t& pair_args,
                        unsigned int N,
-                       const typename evaluator::param_type* params,
+                       const typename evaluator::param_type* params)
         {
         if (tpp == pair_args.threads_per_particle)
             {

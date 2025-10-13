@@ -56,6 +56,13 @@ The functional form of :math:`f(u^\perp_{i,j},r_{i,j})` specifies the frictional
 `FrictionalPair` does not support the ``'xplor'`` shifting mode or the ``r_on``
 parameter.
 
+.. invisible-code-block: python
+    neighbor_list = hoomd.md.nlist.Cell(buffer = 0.4)
+    simulation = hoomd.util.make_example_simulation()
+    simulation.operations.integrator = hoomd.md.Integrator(
+        dt=0.001,
+        integrate_rotational_dof = True)
+
 """
 
 from hoomd.md.pair.pair import Pair
@@ -150,8 +157,7 @@ class FrictionLJConstant(FrictionalPair):
 
     .. code-block:: python
 
-        cell = hoomd.md.nlist.Cell(buffer=0.4)
-        constant_lj = hoomd.md.pair.friction.FrictionLJConstant(nlist=cell,
+        constant_lj = hoomd.md.pair.friction.FrictionLJConstant(nlist=neighbor_list,
                                                                 default_r_cut=3)
 
         constant_lj_params = {'epsilon':1, 'sigma':1, 'kappa_f':3, 'kT':1}
@@ -259,8 +265,7 @@ class FrictionLJCoulombNewton(FrictionalPair):
 
     .. code-block:: python
 
-        cell = hoomd.md.nlist.Cell(buffer=0.4)
-        coulombNewton_lj = hoomd.md.pair.friction.FrictionLJCoulombNewton(nlist=cell,
+        coulombNewton_lj = hoomd.md.pair.friction.FrictionLJCoulombNewton(nlist=neighbor_list,
                                                                 default_r_cut=3)
 
         coulombNewton_lj_params = { 'epsilon':1,
@@ -363,8 +368,7 @@ class FrictionLJLinear(FrictionalPair):
 
     .. code-block:: python
 
-        cell = hoomd.md.nlist.Cell(buffer=0.4)
-        linear_lj = hoomd.md.pair.friction.FrictionLJLinear(nlist=cell,
+        linear_lj = hoomd.md.pair.friction.FrictionLJLinear(nlist=neighbor_list,
                                                                 default_r_cut=3)
 
         linear_lj_params = {'epsilon':1, 'sigma':1, 'kT':1}

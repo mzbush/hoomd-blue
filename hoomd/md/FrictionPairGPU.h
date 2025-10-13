@@ -188,7 +188,7 @@ template<class evaluator> void FrictionPairGPU<evaluator>::computeForces(uint64_
                               threads_per_particle,
                               this->m_exec_conf->dev_prop,
                               first),
-        this->m_params.data(),
+        this->m_params.data())
 
     this->m_tuner->end();
 
