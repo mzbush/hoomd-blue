@@ -5,13 +5,12 @@ r"""Frictional pair force classes apply a force, and torque on every
 particle in the simulation state. The following general expression
 for Markovian tangential friction forces is implemented for
 interactions between two spherical particles and is discussed in detail in
-`Hofmann, Dormann, Liebchen, and Schmid 2025`_. For two particles :math:`i` and
+`Hofmann et. al. 2025`_. For two particles :math:`i` and
 :math:`j` with radii :math:`R_{i,j}`, center positions :math:`\mathbf{r}_{i,j}`,
 angular velocities :math:`\mathbf{\omega}_{i,j}`, and translational velocities
 :math:`\mathbf{v}_{i,j}`, their surface velocities at the contact point are given by
 
-.. _Hofmann, Dormann, Liebchen, and Schmid 2025:
-https://doi.org/10.48550/arXiv.2507.16388
+.. _Hofmann et. al. 2025: https://doi.org/10.48550/arXiv.2507.16388
 
 .. math::
 
@@ -57,12 +56,12 @@ The functional form of :math:`f(u^\perp_{i,j},r_{i,j})` specifies the frictional
 parameter.
 
 .. invisible-code-block: python
+
     neighbor_list = hoomd.md.nlist.Cell(buffer = 0.4)
     simulation = hoomd.util.make_example_simulation()
     simulation.operations.integrator = hoomd.md.Integrator(
         dt=0.001,
         integrate_rotational_dof = True)
-
 """
 
 from hoomd.md.pair.pair import Pair
@@ -96,10 +95,9 @@ class FrictionLJConstant(FrictionalPair):
 
     `FrictionLJConstant` computes the frictional interaction
     between pairs of particles with a constant friction or Coulomb friction model
-    as described in `Hofmann, Dormann, Liebchen, and Schmid 2025`_.
+    as described in `Hofmann et. al. 2025`_.
 
-    .. _Hofmann, Dormann, Liebchen, Schmid 2025:
-    https://doi.org/10.48550/arXiv.2507.16388
+    .. _Hofmann et. al. 2025: https://doi.org/10.48550/arXiv.2507.16388
 
     The constant friction model is defined by the function
 
@@ -192,10 +190,9 @@ class FrictionLJCoulombNewton(FrictionalPair):
 
     `FrictionLJCoulombNewton` computes the frictional interaction
     between pairs of particles with a Coulomb-Newton friction model as described in
-    `Hofmann, Dormann, Liebchen, and Schmid 2025`_.
+    `Hofmann et. al. 2025`_.
 
-    .. _Hofmann, Dormann, Liebchen, and Schmid 2025:
-    https://doi.org/10.48550/arXiv.2507.16388
+    .. _Hofmann et. al. 2025: https://doi.org/10.48550/arXiv.2507.16388
 
     The Coulomb-Newton friction model is defined by the function
 
@@ -269,12 +266,8 @@ class FrictionLJCoulombNewton(FrictionalPair):
                                                                 nlist=neighbor_list,
                                                                 default_r_cut=3)
 
-        coulombNewton_lj_params = { 'epsilon':1,
-                                    'sigma':1,
-                                    'gamma_f':1,
-                                    'kappa_f':3,
-                                    'kT':1
-                                }
+        coulombNewton_lj_params = { 'epsilon':1, 'sigma':1, 'gamma_f':1, 'kappa_f':3,
+                                    'kT':1}
 
         coulombNewton_lj.params.default = coulombNewton_lj_params
         simulation.operations.integrator.forces = [coulombNewton_lj]
@@ -311,10 +304,9 @@ class FrictionLJLinear(FrictionalPair):
 
     `FrictionLJLinear` computes the frictional interaction
     between pairs of particles with a linear friction model as described in
-    `Hofmann, Dormann, Liebchen, and Schmid 2025`_.
+    `Hofmann et. al. 2025`_.
 
-    .. _Hofmann, Dormann, Liebchen, and Schmid 2025:
-    https://doi.org/10.48550/arXiv.2507.16388
+    .. _Hofmann et. al. 2025: https://doi.org/10.48550/arXiv.2507.16388
 
     The linear friction model is defined by the function
 
