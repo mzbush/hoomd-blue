@@ -220,7 +220,7 @@ gpu_compute_pair_friction_forces_kernel(Scalar4* d_force,
     __syncthreads();
 
     // initialize extra shared mem
-    char* s_extra = (char*)(ntypes);
+    char* s_extra = (char*)(s_params + num_typ_parameters);
 
     unsigned int available_bytes = max_extra_bytes;
     for (unsigned int cur_pair = 0; cur_pair < typpair_idx.getNumElements(); ++cur_pair)
