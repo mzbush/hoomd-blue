@@ -14,10 +14,6 @@
 #include "hoomd/RNGIdentifiers.h"
 #include "hoomd/RandomNumbers.h"
 #include "hoomd/VectorMath.h"
-#include <iostream>
-/*! \file EvaluatorPairFrictionLJBase.h
-    \brief Defines the base for frictional contact interactions
-*/
 
 // need to declare these class methods with __device__ qualifiers when building
 // in nvcc.  HOSTDEVICE is __host__ __device__ when included in nvcc and blank

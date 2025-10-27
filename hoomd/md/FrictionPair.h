@@ -369,7 +369,7 @@ void FrictionPair<friction_evaluator>::computeForces(uint64_t timestep)
         // for each particle
         for (int i = 0; i < (int)m_pdata->getN(); i++)
             {
-            // access the particle's position and type (MEM TRANSFER: 4 scalars)
+            // access the particle's position and type
             Scalar3 pi = make_scalar3(h_pos.data[i].x, h_pos.data[i].y, h_pos.data[i].z);
 
             quat<Scalar> quat_i(h_orientation.data[i]);
@@ -424,11 +424,11 @@ void FrictionPair<friction_evaluator>::computeForces(uint64_t timestep)
             const unsigned int size = (unsigned int)h_n_neigh.data[i];
             for (unsigned int k = 0; k < size; k++)
                 {
-                // access the index of this neighbor (MEM TRANSFER: 1 scalar)
+                // access the index of this neighbor
                 unsigned int j = h_nlist.data[myHead + k];
                 assert(j < m_pdata->getN() + m_pdata->getNGhosts());
 
-                // calculate dr_ji (MEM TRANSFER: 3 scalars / FLOPS: 3)
+                // calculate dr_ji
                 Scalar3 pj = make_scalar3(h_pos.data[j].x, h_pos.data[j].y, h_pos.data[j].z);
                 Scalar3 dx = pi - pj;
                 quat<Scalar> quat_j(h_orientation.data[j]);
@@ -454,7 +454,7 @@ void FrictionPair<friction_evaluator>::computeForces(uint64_t timestep)
                 // get the diameter of jth particle
                 Scalar dia_j = h_diameter.data[j];
 
-                // access the type of the neighbor particle (MEM TRANSFER: 1 scalar)
+                // access the type of the neighbor particle
                 unsigned int typej = __scalar_as_int(h_pos.data[j].w);
                 assert(typej < m_pdata->getNTypes());
 
@@ -515,17 +515,6 @@ void FrictionPair<friction_evaluator>::computeForces(uint64_t timestep)
 
                 if (evaluated)
                     {
-                    // Prevent the particles to rotate out of plane in the 2D case (Only a problem
-                    // if the pairwise temperature is non zero). Dont know why it is not handled by
-                    // the Integrator
-                    if (m_sysdef->getNDimensions() == 2)
-                        {
-                        force.z = 0.0;
-                        torque_i.x = 0.0;
-                        torque_i.y = 0.0;
-                        torque_j.x = 0.0;
-                        torque_j.y = 0.0;
-                        }
                     Scalar3 force2 = Scalar(0.5) * force;
 
                     // add the force, potential energy and virial to the particle i
@@ -547,8 +536,7 @@ void FrictionPair<friction_evaluator>::computeForces(uint64_t timestep)
                         virialzzi += dx.z * force2.z;
                         }
 
-                    // add the force to particle j if we are using the third law (MEM TRANSFER: 10
-                    // scalars / FLOPS: 8)
+                    // add the force to particle j if we are using the third law
                     if (third_law && j < m_pdata->getN())
                         {
                         h_force.data[j].x -= force.x;
