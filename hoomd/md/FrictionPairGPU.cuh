@@ -378,7 +378,7 @@ gpu_compute_pair_friction_forces_kernel(Scalar4* d_force,
                     }
 
                 // call evaluator
-                eval.evaluate(jforce, pair_eng, energy_shift, torquei, torquej);
+                eval.evaluate(jforce, pair_eng, torquei, torquej);
 
                 if (dim == 2)
                     {

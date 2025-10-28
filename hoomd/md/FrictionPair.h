@@ -474,7 +474,7 @@ void FrictionPair<friction_evaluator>::computeForces(uint64_t timestep)
                     eval.setNu(nu_ito);
                     }
 
-                bool evaluated = eval.evaluate(force, pair_eng, energy_shift, torque_i, torque_j);
+                bool evaluated = eval.evaluate(force, pair_eng, torque_i, torque_j);
 
                 if (evaluated)
                     {
