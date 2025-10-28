@@ -86,7 +86,7 @@ class FrictionalPair(Pair):
 
     __doc__ = inspect.cleandoc(__doc__) + "\n\n" + inspect.cleandoc(Pair._doc_inherited)
 
-    _accepted_modes = "none"
+    _accepted_modes = ("none",)
 
     def __init__(self, nlist, default_r_cut=None, mode="none"):
         super().__init__(nlist, default_r_cut, 0.0, mode)
