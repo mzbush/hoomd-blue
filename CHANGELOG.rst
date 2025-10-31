@@ -4,6 +4,14 @@ Change Log
 5.x
 ---
 
+6.0.0 (not released)
+^^^^^^^^^^^^^^^^^^^^
+
+*Fixed*
+
+* Use the provided alpha parameter in ``make_pppm_coulomb_forces``
+  (`#2153 <https://github.com/glotzerlab/hoomd-blue/pull/2153>`__).
+
 5.4.0 (2025-09-26)
 ^^^^^^^^^^^^^^^^^^^^
 
