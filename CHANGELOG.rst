@@ -12,6 +12,16 @@ Change Log
 * Use the provided alpha parameter in ``make_pppm_coulomb_forces``
   (`#2153 <https://github.com/glotzerlab/hoomd-blue/pull/2153>`__).
 
+*Changed*
+
+* Setting two tuples of type parameters like this ``lj.r_cut[('A', 'B'), ('C', 'D')] = ...``
+  now sets the parameters A-B and C-D. This is consistent with the behavior when setting
+  more than two parameters. For example: ``lj.r_cut[('A', 'B'), ('C', 'D'), ('E', 'F')] = ...``
+  sets parameters for A-B, C-D, and E-F. In previous HOOMD-blue releases, the two-tuple
+  code path was different (it would set A-C, A-D, B-C, and B-D). Update your scripts
+  accordingly.
+  (`#2157 <https://github.com/glotzerlab/hoomd-blue/pull/2157>`__)
+
 5.4.0 (2025-09-26)
 ^^^^^^^^^^^^^^^^^^^^
 
