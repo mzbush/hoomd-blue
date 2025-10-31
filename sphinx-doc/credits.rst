@@ -134,3 +134,4 @@ The following people have contributed to HOOMD-blue:
 * Nathan Barrett, Pritzker School of Molecular Engineering
 * Domagoj Fijan, University of Michigan
 * Cristina Butu, Columbia University
+* Shuo-Lin Weng, Texas A&M University
