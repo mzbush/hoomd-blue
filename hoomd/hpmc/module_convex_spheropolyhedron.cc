@@ -48,7 +48,9 @@ void export_convex_spheropolyhedron(pybind11::module& m)
 #ifdef ENABLE_HIP
 
     export_IntegratorHPMCMonoGPU<ShapeSpheropolyhedron>(m, "IntegratorHPMCMonoSpheropolyhedronGPU");
-    export_ComputeFreeVolumeGPU<ShapeSpheropolyhedron>(m, "ComputeFreeVolumeConvexSpheropolyhedronGPU");
+    export_ComputeFreeVolumeGPU<ShapeSpheropolyhedron>(
+        m,
+        "ComputeFreeVolumeConvexSpheropolyhedronGPU");
     export_UpdaterGCAGPU<ShapeSpheropolyhedron>(m, "UpdaterGCAConvexSpheropolyhedronGPU");
 
 #endif
