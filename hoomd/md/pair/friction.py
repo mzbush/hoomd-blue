@@ -52,7 +52,7 @@ acting on particle :math:`i`,
     \end{align*}
 
 which is a pair friction force and torque resulting from the friction with the particle
-:math:`k`.
+:math:`j`.
 
 The functional form of :math:`f(u^\perp_{i,j},r_{i,j})` specifies the frictional model.
 
