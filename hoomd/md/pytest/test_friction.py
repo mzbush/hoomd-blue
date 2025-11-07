@@ -19,9 +19,9 @@ friction_test_parameters = [
             "kT": 1,
         },
         [[-0.35, -0.35, -0.1], [0.35, 0.35, 0.1]],
-        [[0.8, 0.0, 0.0],[-0.8, 0.0, 0.0]],
-        [[0.0,0.0,0.0,1.0],[0.0,0.0,0.0,1.0]],
-        [   
+        [[0.8, 0.0, 0.0], [-0.8, 0.0, 0.0]],
+        [[0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0]],
+        [
             [0.19503148, -0.97515738, 0.0390063, 0.09751574],
             [0.81649658, 0.0, -0.40824829, -0.40824829],
         ],
@@ -39,8 +39,8 @@ friction_test_parameters = [
             "kT": 1,
         },
         [[-0.35, -0.35, -0.1], [0.35, 0.35, 0.1]],
-        [[0.8, 0.0, 0.0],[-0.8, 0.0, 0.0]],
-        [[0.0,0.0,0.0,1.0],[0.0,0.0,0.0,1.0]],
+        [[0.8, 0.0, 0.0], [-0.8, 0.0, 0.0]],
+        [[0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0]],
         [
             [0.19503148, -0.97515738, 0.0390063, 0.09751574],
             [0.81649658, 0.0, -0.40824829, -0.40824829],
@@ -60,8 +60,8 @@ friction_test_parameters = [
             "kT": 1,
         },
         [[-0.35, -0.35, -0.1], [0.35, 0.35, 0.1]],
-        [[0.8, 0.0, 0.0],[-0.8, 0.0, 0.0]],
-        [[0.0,0.0,0.0,1.0],[0.0,0.0,0.0,1.0]],
+        [[0.8, 0.0, 0.0], [-0.8, 0.0, 0.0]],
+        [[0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0]],
         [
             [0.19503148, -0.97515738, 0.0390063, 0.09751574],
             [0.81649658, 0.0, -0.40824829, -0.40824829],
@@ -70,6 +70,7 @@ friction_test_parameters = [
         [5.99367133, -5.03986561, -3.33832001],
     ),
 ]
+
 
 @pytest.fixture(scope="session")
 def friction_snapshot_factory(device):
@@ -83,7 +84,7 @@ def friction_snapshot_factory(device):
         orientation_i=(),
         orientation_j=(),
         dimensions=3,
-        L=20,      
+        L=20,
     ):
         snapshot = hoomd.Snapshot(device.communicator)
         if snapshot.communicator.rank == 0:
@@ -102,10 +103,11 @@ def friction_snapshot_factory(device):
             snapshot.particles.types = ["A", "B"]
             snapshot.particles.typeid[:] = [0, 1]
             snapshot.particles.moment_inertia[:] = [(0.1, 0.1, 0.1)] * N
-            
+
         return snapshot
-    
+
     return make_snapshot
+
 
 @pytest.mark.parametrize(
     "friction_cls, friction_args, params, positions,"
@@ -123,16 +125,17 @@ def test_params(
     force,
     torque,
 ):
-    rcut = 2.0**(1.0/6.0)*params["sigma"]
+    rcut = 2.0 ** (1.0 / 6.0) * params["sigma"]
     friction = friction_cls(
         nlist=hoomd.md.nlist.Cell(buffer=0.4), default_r_cut=rcut, **friction_args
     )
-    
+
     friction.params.default = params
     for key in params:
         assert friction.params[("A", "A")][key] == pytest.approx(params[key])
         assert friction.params[("A", "B")][key] == pytest.approx(params[key])
         assert friction.params[("B", "B")][key] == pytest.approx(params[key])
+
 
 # Test the only the deterministic forces and torques (zero temperature)
 @pytest.mark.parametrize(
@@ -154,19 +157,20 @@ def test_deterministic_forces_torques(
     torque,
 ):
     snapshot = friction_snapshot_factory(
-        position_i = positions[0],
-        position_j = positions[1],
-        velocity_i = velocities[0],
-        velocity_j = velocities[1],
-        angmom_i = angmom[0],
-        angmom_j = angmom[1],
+        position_i=positions[0],
+        position_j=positions[1],
+        velocity_i=velocities[0],
+        velocity_j=velocities[1],
+        angmom_i=angmom[0],
+        angmom_j=angmom[1],
         orientation_i=orientations[0],
         orientation_j=orientations[1],
     )
     sim = simulation_factory(snapshot)
-    rcut = 2.0**(1.0/6.0)*params["sigma"]
-    friction = friction_cls(nlist=hoomd.md.nlist.Cell(buffer=0.4), default_r_cut=rcut,
-                             **friction_args)
+    rcut = 2.0 ** (1.0 / 6.0) * params["sigma"]
+    friction = friction_cls(
+        nlist=hoomd.md.nlist.Cell(buffer=0.4), default_r_cut=rcut, **friction_args
+    )
     # Set temperature to zero
     params["kT"] = 0
     friction.params.default = params
@@ -175,7 +179,7 @@ def test_deterministic_forces_torques(
         dt=0.001, forces=[friction], integrate_rotational_dof=True
     )
     sim.run(0)
-    
+
     sim_forces = friction.forces
     sim_torques = friction.torques
     if sim.device.communicator.rank == 0:
@@ -190,6 +194,7 @@ def test_deterministic_forces_torques(
         numpy.testing.assert_allclose(sim_torques[0], torque, **TOLERANCES)
 
         numpy.testing.assert_allclose(sim_torques[1], torque, **TOLERANCES)
+
 
 # Test the frictional model for some timesteps (nonzero temperature)
 @pytest.mark.parametrize(
@@ -211,19 +216,20 @@ def test_forces_torques(
     torque,
 ):
     snapshot = friction_snapshot_factory(
-        position_i = positions[0],
-        position_j = positions[1],
-        velocity_i = velocities[0],
-        velocity_j = velocities[1],
-        angmom_i = angmom[0],
-        angmom_j = angmom[1],
+        position_i=positions[0],
+        position_j=positions[1],
+        velocity_i=velocities[0],
+        velocity_j=velocities[1],
+        angmom_i=angmom[0],
+        angmom_j=angmom[1],
         orientation_i=orientations[0],
         orientation_j=orientations[1],
     )
     sim = simulation_factory(snapshot)
-    rcut = 2.0**(1.0/6.0)*params["sigma"]
-    friction = friction_cls(nlist=hoomd.md.nlist.Cell(buffer=0.4), default_r_cut=rcut,
-                             **friction_args)
+    rcut = 2.0 ** (1.0 / 6.0) * params["sigma"]
+    friction = friction_cls(
+        nlist=hoomd.md.nlist.Cell(buffer=0.4), default_r_cut=rcut, **friction_args
+    )
     friction.params.default = params
     sim.operations.integrator = hoomd.md.Integrator(
         dt=0.001, forces=[friction], integrate_rotational_dof=True
@@ -235,10 +241,10 @@ def test_forces_torques(
     if sim.device.communicator.rank == 0:
         # check nonzero force and torques
         for x in sim_forces[0]:
-            assert x != 0 
+            assert x != 0
         for x in sim_forces[1]:
             assert x != 0
         for x in sim_torques[0]:
             assert x != 0
         for x in sim_torques[1]:
-            assert x != 0    
+            assert x != 0
