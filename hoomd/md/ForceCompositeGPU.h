@@ -36,14 +36,14 @@ class PYBIND11_EXPORT ForceCompositeGPU : public ForceComposite
      * \param remote If true, consider remote bodies, otherwise bodies
      *        with a local central particle
      */
-    virtual void updateCompositeParticles(uint64_t timestep);
+    void updateCompositeParticles(uint64_t timestep) override;
 
     protected:
     //! Compute the forces and torques on the central particle
-    virtual void computeForces(uint64_t timestep);
+    void computeForces(uint64_t timestep) override;
 
     //! Helper kernel to sort rigid bodies by their center particles
-    virtual void findRigidCenters();
+    void findRigidCenters() override;
 
     /// Autotuner for block size and threads per body.
     std::shared_ptr<Autotuner<2>> m_tuner_force;

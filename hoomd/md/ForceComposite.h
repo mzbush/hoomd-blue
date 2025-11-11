@@ -282,7 +282,7 @@ class PYBIND11_EXPORT ForceComposite : public MolecularForceCompute
         }
 
     //! Helper function to check if particles have been sorted and rebuild indices if necessary
-    virtual void checkParticlesSorted()
+    void checkParticlesSorted() override
         {
         if (m_rebuild_molecules)
             // identify center particles for use in GPU kernel
@@ -300,7 +300,7 @@ class PYBIND11_EXPORT ForceComposite : public MolecularForceCompute
     virtual Scalar requestBodyGhostLayerWidth(unsigned int type, Scalar* h_r_ghost);
 
     //! Compute the forces and torques on the central particle
-    virtual void computeForces(uint64_t timestep);
+    void computeForces(uint64_t timestep) override;
     };
 
     } // end namespace md
