@@ -9,6 +9,8 @@ Next release
 
 *Added*
 
+* Implemented rigid body compatibility with MPCD without MPI
+  (`#2136 <https://github.com/glotzerlab/hoomd-blue/pull/2136>`__).
 * Add thermodynamically consistent frictional contact forces: ``hoomd.md.pair.friction``
   (`#2116 <https://github.com/glotzerlab/hoomd-blue/pull/2116>`__).
 
