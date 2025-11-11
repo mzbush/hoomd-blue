@@ -176,10 +176,10 @@ class TestCollisionMethod:
                     "constituent_types": ["B", "B", "B", "B"],
                     "positions": np.array(
                         [
-                            [1, 0, -1 / (2 ** (1.0 / 2.0))],
-                            [-1, 0, -1 / (2 ** (1.0 / 2.0))],
-                            [0, -1, 1 / (2 ** (1.0 / 2.0))],
-                            [0, 1, 1 / (2 ** (1.0 / 2.0))],
+                            [1.0, 0.0, -1.0],
+                            [-1.0, 0.0, -1.0],
+                            [0.0, -1.0, 0.5],
+                            [0.0, 1.0, 0.5],
                         ]
                     )
                     * 2,
@@ -193,6 +193,7 @@ class TestCollisionMethod:
         ],
         ids=["dimer", "cross", "uneven-mass"],
     )
+    @pytest.mark.serial
     def test_rigid_collide(
         self,
         one_particle_snapshot_factory,
@@ -309,12 +310,10 @@ class TestCollisionMethod:
 
     @pytest.mark.parametrize(
         "embedded_filter_flags",
-        [
-            ("constituent",),
-            ("constituent", "free"),
-        ],
-        ids=["Non-participatory", "Participatory"],
+        [("B", "D"), ("B", "D", "C"), ("B", "C")],
+        ids=["Non-participatory", "Participatory", "Constituent-non-participatory"],
     )
+    @pytest.mark.serial
     def test_rigid_collide_free(
         self,
         two_particle_snapshot_factory,
@@ -324,7 +323,7 @@ class TestCollisionMethod:
         embedded_filter_flags,
     ):
         def_rigid = {
-            "constituent_types": ["B", "B", "B", "B"],
+            "constituent_types": ["B", "B", "B", "D"],
             "positions": np.array(
                 [
                     [1, 0, -1 / (2 ** (1.0 / 2.0))],
@@ -350,7 +349,7 @@ class TestCollisionMethod:
         # create simulation
         total_mass = properties_rigid["mass"][0]
         initial_snap = two_particle_snapshot_factory(
-            particle_types=["A", "B", "C"], L=21
+            particle_types=["A", "B", "C", "D"], L=21
         )
         if initial_snap.communicator.rank == 0:
             # put a free particle that doesn't participate in collision on top of
@@ -375,9 +374,11 @@ class TestCollisionMethod:
         intermed_snap = sim.state.get_snapshot()
         if intermed_snap.communicator.rank == 0:
             # add mass of constituents
-            flags = (
+            flags = np.logical_or(
                 intermed_snap.particles.typeid
-                == intermed_snap.particles.types.index("B")
+                == intermed_snap.particles.types.index("B"),
+                intermed_snap.particles.typeid
+                == intermed_snap.particles.types.index("D"),
             )
             intermed_snap.particles.mass[flags] = properties_rigid["mass"][1:]
             intermed_snap.wrap()
@@ -395,7 +396,7 @@ class TestCollisionMethod:
         sim.operations.integrator.cell_list.shift = False
         sim.operations.integrator.collision_method = cls(
             period=1,
-            embedded_particles=hoomd.filter.Rigid(flags=embedded_filter_flags),
+            embedded_particles=hoomd.filter.Type(embedded_filter_flags),
             **init_args,
         )
 
@@ -404,7 +405,7 @@ class TestCollisionMethod:
         new_snap = sim.state.get_snapshot()
         if new_snap.communicator.rank == 0:
             # check if the free particle participated in collisions
-            participated_flag = "free" in embedded_filter_flags
+            participated_flag = "C" in embedded_filter_flags
             free_flag = new_snap.particles.typeid == new_snap.particles.types.index("C")
             assert np.array_equiv(
                 new_snap.particles.velocity[free_flag], [0.0, 1.0, 0.0]
@@ -417,8 +418,9 @@ class TestCollisionMethod:
             central_flag = new_snap.particles.typeid == new_snap.particles.types.index(
                 "A"
             )
-            constit_flag = new_snap.particles.typeid == new_snap.particles.types.index(
-                "B"
+            constit_flag = np.logical_or(
+                new_snap.particles.typeid == new_snap.particles.types.index("B"),
+                new_snap.particles.typeid == new_snap.particles.types.index("D"),
             )
 
             new_velo_central = new_snap.particles.velocity[central_flag]
@@ -473,3 +475,91 @@ class TestCollisionMethod:
 
             expected_velocity = np.add(expected_tangential_velocity, new_velo_central)
             assert np.allclose(new_velo_constituent, expected_velocity)
+
+
+@pytest.mark.parametrize(
+    "def_rigid,masses,init_args",
+    [
+        (
+            {
+                "constituent_types": ["B", "B"],
+                "positions": [[-2.4, 0, 0], [2.4, 0, 0]],
+                "orientations": [[1, 0, 0, 0], [1, 0, 0, 0]],
+            },
+            np.array([2, 1, 1]),
+            {},
+        ),
+        (
+            {
+                "constituent_types": ["B", "B"],
+                "positions": [[-2.4, 0, 0], [2.4, 0, 0]],
+                "orientations": [[1, 0, 0, 0], [1, 0, 0, 0]],
+            },
+            np.array([1, 1, 1]),
+            {"kT": 1},
+        ),
+        (
+            {
+                "constituent_types": ["B", "B", "B", "B"],
+                "positions": [[-2.4, 0, 0], [2.4, 0, 0], [0, -2.4, 0], [0, 2.4, 0]],
+                "orientations": [
+                    [1, 0, 0, 0],
+                    [1, 0, 0, 0],
+                    [1, 0, 0, 0],
+                    [1, 0, 0, 0],
+                ],
+            },
+            np.array([2, 1, 1, 0, 0]),
+            {"kT": 1},
+        ),
+        (
+            {
+                "constituent_types": ["B", "B"],
+                "positions": [[-2.4, 0, 0], [2.4, 0, 0]],
+                "orientations": [[1, 0, 0, 0], [1, 0, 0, 0]],
+            },
+            np.array([2, 0.5, 1.5]),
+            {"kT": 1},
+        ),
+    ],
+    ids=["thermostat_error", "summation_error", "zero_mass_error", "center_loc_error"],
+)
+@pytest.mark.serial
+def test_rigid_mass_errors(
+    small_snap, simulation_factory, def_rigid, masses, init_args
+):
+    # create simulation
+    initial_snap = small_snap
+    if initial_snap.communicator.rank == 0:
+        initial_snap.particles.types = ["A", "B"]
+        initial_snap.particles.mass[:] = [masses[0]]
+    sim = simulation_factory(initial_snap)
+    sim.seed = 5
+
+    rigid = hoomd.md.constrain.Rigid()
+    rigid.body["A"] = def_rigid
+    rigid.create_bodies(sim.state)
+
+    # add mass of constituents
+    intermed_snap = sim.state.get_snapshot()
+    if intermed_snap.communicator.rank == 0:
+        flags = intermed_snap.particles.typeid == intermed_snap.particles.types.index(
+            "B"
+        )
+        intermed_snap.particles.mass[flags] = masses[1:]
+        intermed_snap.wrap()
+    sim.state.set_snapshot(intermed_snap)
+
+    sim.operations.integrator = hoomd.mpcd.Integrator(dt=0, rigid=rigid)
+    sim.operations.integrator.collision_method = (
+        hoomd.mpcd.collide.StochasticRotationDynamics(
+            period=1,
+            embedded_particles=hoomd.filter.Rigid(flags=("constituent",)),
+            angle=90,
+            **init_args,
+        )
+    )
+
+    # run simulation
+    with pytest.raises(RuntimeError):
+        sim.run(1)

@@ -47,6 +47,12 @@ ForceComposite::ForceComposite(std::shared_ptr<SystemDefinition> sysdef)
         h_body_len.data[i] = 0;
         }
 
+    GPUVector<unsigned int> rigid_center(m_exec_conf);
+    m_rigid_center.swap(rigid_center);
+
+    GPUVector<unsigned int> lookup_center(m_exec_conf);
+    m_lookup_center.swap(lookup_center);
+
     m_d_max.resize(m_pdata->getNTypes(), Scalar(0.0));
     m_d_max_changed.resize(m_pdata->getNTypes(), false);
 
@@ -1046,6 +1052,45 @@ void ForceComposite::updateCompositeParticles(uint64_t timestep)
             = make_scalar4(updated_vel.x, updated_vel.y, updated_vel.z, mass);
         h_image.data[particle_index] = img + imgi;
         }
+    }
+
+void ForceComposite::findRigidCenters()
+    {
+    ArrayHandle<unsigned int> h_tag(m_pdata->getTags(), access_location::host, access_mode::read);
+    ArrayHandle<unsigned int> h_rtag(m_pdata->getRTags(), access_location::host, access_mode::read);
+    ArrayHandle<unsigned int> h_body(m_pdata->getBodies(),
+                                     access_location::host,
+                                     access_mode::read);
+
+    m_rigid_center.resize(m_pdata->getN() + m_pdata->getNGhosts());
+    m_lookup_center.resize(m_pdata->getN() + m_pdata->getNGhosts());
+    ArrayHandle<unsigned int> h_rigid_center(m_rigid_center,
+                                             access_location::host,
+                                             access_mode::overwrite);
+    ArrayHandle<unsigned int> h_lookup_center(m_lookup_center,
+                                              access_location::host,
+                                              access_mode::overwrite);
+    unsigned int num_centers = 0;
+    const unsigned int n_particles_local = m_pdata->getN() + m_pdata->getNGhosts();
+    for (unsigned int idx = 0; idx < n_particles_local; ++idx)
+        {
+        unsigned int lookup_center = NO_BODY;
+
+        // if particle is in a rigid body, find its center
+        const unsigned int central_tag = h_body.data[idx];
+        if (central_tag < MIN_FLOPPY)
+            {
+            lookup_center = h_rtag.data[central_tag];
+            // also record rigid particles that are centers
+            if (lookup_center == idx)
+                {
+                h_rigid_center.data[num_centers++] = lookup_center;
+                }
+            }
+
+        h_lookup_center.data[idx] = lookup_center;
+        }
+    m_n_rigid = num_centers;
     }
 
 namespace detail
