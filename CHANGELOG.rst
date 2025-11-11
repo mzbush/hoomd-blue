@@ -4,7 +4,7 @@ Change Log
 5.x
 ---
 
-6.0.0 (not released)
+Next release
 ^^^^^^^^^^^^^^^^^^^^
 
 *Added*
