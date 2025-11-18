@@ -434,15 +434,10 @@ void ForceComposite::validateRigidBodies()
     m_particles_added_removed = false;
     }
 
-void ForceComposite::pyCreateRigidBodies(pybind11::dict charges)
+void ForceComposite::pyCreateRigidBodies(pybind11::dict charges, pybind11::dict masses)
     {
-    if (pybind11::len(charges) == 0)
-        {
-        createRigidBodies(std::unordered_map<unsigned int, std::vector<Scalar>>());
-        return;
-        }
-
     std::unordered_map<unsigned int, std::vector<Scalar>> charges_map;
+    std::unordered_map<unsigned int, std::vector<Scalar>> masses_map;
         {
         ArrayHandle<unsigned int> h_body_len(m_body_len, access_location::host, access_mode::read);
         for (const auto& item : charges)
@@ -464,13 +459,33 @@ void ForceComposite::pyCreateRigidBodies(pybind11::dict charges)
                 }
             charges_map.insert({type, charges_vector});
             }
+        for (const auto& item : masses)
+            {
+            const auto type = m_pdata->getTypeByName(item.first.cast<std::string>());
+            if (h_body_len.data[type] == 0)
+                {
+                throw std::runtime_error("Masses provided for non-central particle type.");
+                }
+            const auto masses_list = item.second.cast<pybind11::list>();
+            if (pybind11::len(masses_list) != h_body_len.data[type])
+                {
+                throw std::runtime_error("Masses provided not consistent with rigid body size.");
+                }
+            std::vector<Scalar> masses_vector;
+            for (auto& mass : masses_list)
+                {
+                masses_vector.emplace_back(mass.cast<Scalar>());
+                }
+            masses_map.insert({type, masses_vector});
+            }
         }
 
-    createRigidBodies(charges_map);
+    createRigidBodies(charges_map, masses_map);
     }
 
 void ForceComposite::createRigidBodies(
-    const std::unordered_map<unsigned int, std::vector<Scalar>> charges)
+    const std::unordered_map<unsigned int, std::vector<Scalar>> charges,
+    const std::unordered_map<unsigned int, std::vector<Scalar>> masses)
     {
     SnapshotParticleData<Scalar> snap;
     const BoxDim& global_box = m_pdata->getGlobalBox();
@@ -573,7 +588,10 @@ void ForceComposite::createRigidBodies(
                     snap.charge[constituent_particle_tag]
                         = charges.at(body_type)[current_body_index];
                     }
-
+                if (!masses.empty())
+                    {
+                    snap.mass[constituent_particle_tag] = masses.at(body_type)[current_body_index];
+                    }
                 // Set position and orientation of constituents
                 vec3<Scalar> body_position(snap.pos[particle_tag]);
                 quat<Scalar> body_orientation(snap.orientation[particle_tag]);
