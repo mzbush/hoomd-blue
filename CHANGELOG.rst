@@ -9,14 +9,20 @@ Next release
 
 *Added*
 
+* Implemented rigid body compatibility with MPCD without MPI
+  (`#2136 <https://github.com/glotzerlab/hoomd-blue/pull/2136>`__).
 * Add thermodynamically consistent frictional contact forces: ``hoomd.md.pair.friction``
   (`#2116 <https://github.com/glotzerlab/hoomd-blue/pull/2116>`__).
+* ``create_bodies`` method takes optional ``masses`` argument to set masses
+  (`#2169 <https://github.com/glotzerlab/hoomd-blue/pull/2169>`__).
 
 *Fixed*
 
 * Use the provided alpha parameter in ``make_pppm_coulomb_forces``
   (`#2153 <https://github.com/glotzerlab/hoomd-blue/pull/2153>`__).
 * Add a unit test to verify that the export name of ``hoomd.hpmc.compute.FreeVolume``, and resolved the existing export name conflicts (`#2163 <https://github.com/glotzerlab/hoomd-blue/pull/2163>`__).
+* Scale move sizes correctly when the acceptance rate is 0
+  (`#2174 <https://github.com/glotzerlab/hoomd-blue/pull/2174>`__).
 
 *Changed*
 
