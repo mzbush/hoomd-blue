@@ -4,7 +4,7 @@ Change Log
 6.x
 ---
 
-Next release
+6.0.0 (2025-11-21)
 ^^^^^^^^^^^^^^^^^^^^
 
 *Added*
