@@ -225,29 +225,18 @@ class TestCollisionMethod:
             initial_snap.particles.velocity[:] = [velo_rigid]
             initial_snap.particles.angmom[:] = [angmom_rigid]
 
+            # place the mpcd particles on top of constituents
+            initial_snap.mpcd.N = N_mpcd
+            initial_snap.mpcd.types = ["C"]
+            initial_snap.mpcd.position[:] = def_rigid["positions"]
+            initial_snap.mpcd.velocity[:] = velo_mpcd
+
         sim = simulation_factory(initial_snap)
         sim.seed = 5
 
         rigid = hoomd.md.constrain.Rigid()
         rigid.body["A"] = def_rigid
-        rigid.create_bodies(sim.state)
-
-        intermed_snap = sim.state.get_snapshot()
-        if intermed_snap.communicator.rank == 0:
-            # add mass of constituents
-            flags = (
-                intermed_snap.particles.typeid
-                == intermed_snap.particles.types.index("B")
-            )
-            intermed_snap.particles.mass[flags] = properties_rigid["mass"][flags]
-            intermed_snap.wrap()
-
-            # place the mpcd particles on top of constituents
-            intermed_snap.mpcd.N = N_mpcd
-            intermed_snap.mpcd.types = ["C"]
-            intermed_snap.mpcd.position[:] = intermed_snap.particles.position[flags]
-            intermed_snap.mpcd.velocity[:] = velo_mpcd
-        sim.state.set_snapshot(intermed_snap)
+        rigid.create_bodies(sim.state, masses={"A": properties_rigid["mass"][1:]})
 
         sim.operations.integrator = hoomd.mpcd.Integrator(
             dt=0, integrate_rotational_dof=True, rigid=rigid
@@ -364,31 +353,18 @@ class TestCollisionMethod:
             initial_snap.particles.angmom[:] = [[0, 0, 0, 0], [0, 0, 0, 0]]
             initial_snap.particles.typeid[:] = [0, 2]
 
+            # place the mpcd particles on top of constituents
+            initial_snap.mpcd.N = N_mpcd
+            initial_snap.mpcd.types = ["C"]
+            initial_snap.mpcd.position[:] = def_rigid["positions"]
+            initial_snap.mpcd.velocity[:] = velo_mpcd
+
         sim = simulation_factory(initial_snap)
         sim.seed = 5
 
         rigid = hoomd.md.constrain.Rigid()
         rigid.body["A"] = def_rigid
-        rigid.create_bodies(sim.state)
-
-        intermed_snap = sim.state.get_snapshot()
-        if intermed_snap.communicator.rank == 0:
-            # add mass of constituents
-            flags = np.logical_or(
-                intermed_snap.particles.typeid
-                == intermed_snap.particles.types.index("B"),
-                intermed_snap.particles.typeid
-                == intermed_snap.particles.types.index("D"),
-            )
-            intermed_snap.particles.mass[flags] = properties_rigid["mass"][1:]
-            intermed_snap.wrap()
-
-            # place the mpcd particles on top of constituents
-            intermed_snap.mpcd.N = N_mpcd
-            intermed_snap.mpcd.types = ["C"]
-            intermed_snap.mpcd.position[:] = intermed_snap.particles.position[flags]
-            intermed_snap.mpcd.velocity[:] = velo_mpcd
-        sim.state.set_snapshot(intermed_snap)
+        rigid.create_bodies(sim.state, masses={"A": properties_rigid["mass"][1:]})
 
         sim.operations.integrator = hoomd.mpcd.Integrator(
             dt=0, integrate_rotational_dof=True, rigid=rigid
@@ -538,17 +514,7 @@ def test_rigid_mass_errors(
 
     rigid = hoomd.md.constrain.Rigid()
     rigid.body["A"] = def_rigid
-    rigid.create_bodies(sim.state)
-
-    # add mass of constituents
-    intermed_snap = sim.state.get_snapshot()
-    if intermed_snap.communicator.rank == 0:
-        flags = intermed_snap.particles.typeid == intermed_snap.particles.types.index(
-            "B"
-        )
-        intermed_snap.particles.mass[flags] = masses[1:]
-        intermed_snap.wrap()
-    sim.state.set_snapshot(intermed_snap)
+    rigid.create_bodies(sim.state, masses={"A": masses[1:]})
 
     sim.operations.integrator = hoomd.mpcd.Integrator(dt=0, rigid=rigid)
     sim.operations.integrator.collision_method = (
