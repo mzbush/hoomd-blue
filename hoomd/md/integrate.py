@@ -243,18 +243,18 @@ class Integrator(_DynamicIntegrator):
 
     .. code-block:: python
     
-        cell = hoomd.md.nlist.Cell(buffer=0.4)
-        lj = hoomd.md.pair.LJ(nlist=cell)       
-        lj.params[('A', 'A')]  = dict(epsilon=1.0, sigma=1.0)
-        lj.r_cut[('A', 'A')] = 2.5
-        nve = hoomd.md.methods.ConstantVolume(
-            filter=hoomd.filter.All(), 
-            thermostat=None,
-            )
-        integrator = hoomd.md.Integrator(dt=dt=0.005, 
-                                        methods=[nve], 
-                                        forces=[lj],
-                                        )
+            cell = hoomd.md.nlist.Cell(buffer=0.4)
+            lj = hoomd.md.pair.LJ(nlist=cell)       
+            lj.params[('A', 'A')]  = dict(epsilon=1.0, sigma=1.0)
+            lj.r_cut[('A', 'A')] = 2.5
+            nve = hoomd.md.methods.ConstantVolume(
+                filter=hoomd.filter.All(), 
+                thermostat=None,
+                )
+            integrator = hoomd.md.Integrator(dt=dt=0.005, 
+                                            methods=[nve], 
+                                            forces=[lj],
+                                            )
 
 
     {inherited}
