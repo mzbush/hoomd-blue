@@ -27,15 +27,15 @@ contact point
 
 .. math::
 
-    \mathbf{u}^\perp_{i,j} =  \mathbf{P}(\mathbf{\hat{r}}^{ij})(\mathbf{v}_j
+    \mathbf{u}^\perp_{i,j} =  \mathbf{P}(\mathbf{\hat{r}}_{ij})(\mathbf{v}_j
                             -\mathbf{v}_i) -(\mathbf{\omega}_iR_i+\mathbf{\omega}_jR_j)
-                            \times \mathbf{\hat{r}}^{ij}\, ,
+                            \times \mathbf{\hat{r}}_{ij},
 
-with the projection operator 
+with the projection operator
 
 .. math::
 
-    \mathbf{P}(\mathbf{\hat{r}}_{ij})=1-\mathbf{\hat{r}}_{ij}\mathbf{\hat{r}}_{ij}`.
+    \mathbf{P}(\mathbf{\hat{r}}_{ij})=1-\mathbf{\hat{r}}_{ij}\mathbf{\hat{r}}_{ij}.
 
 We model the tangential friction force at the contact point very generally as
 
@@ -53,13 +53,13 @@ be included. It has the form
 
 .. math::
 
-    \mathbf{F}^\mathrm{R,contact}_{i} = -\mathbf{F}^\mathrm{R,contact}_j = 
+    \mathbf{F}^\mathrm{R,contact}_{i} = -\mathbf{F}^\mathrm{R,contact}_j =
                                         \sqrt{D(u^\perp_{ij},r_{ij})}\Big[\mathbf{P}
                                         (\mathbf{\hat{r}}_{ij})\mathbf{\xi}_{ij}
                                         - \mathbf{\hat{r}}_{ij} \times \mathbf{N}
                                         _{ij}\Big]
 
-where :math:`\mathbf{\xi}_{ij}` and :math:`\mathbf{N}_{ij}` are Gaussian white noise 
+where :math:`\mathbf{\xi}_{ij}` and :math:`\mathbf{N}_{ij}` are Gaussian white noise
 vectors with correlations
 
 .. math::
@@ -82,16 +82,16 @@ The function :math:`D(u,r)` is calculated as
     D(u,r) = \frac{1}{kT\nu}\int_u^\infty \mathrm{d}u'f(u',r)\mathrm{exp}(-\frac{u'^2
             -u^2}{2kT\nu})
 
-with :math:`\nu=(1/m_i+1/m_j)+(R^2_i/I_i+R_j^2/I_j)`. 
+with :math:`\nu=(1/m_i+1/m_j)+(R^2_i/I_i+R_j^2/I_j)`.
 
 The suface force :math:`\mathbf{F}_i^\mathrm{contact}=\mathbf{F}^\mathrm{f,contact}_i
-+\mathbf{F}^\mathrm{R,contact}_i` generates a center-of-mass force and a torque acting on
-particle :math:`i`, 
++\mathbf{F}^\mathrm{R,contact}_i` generates a center-of-mass force and a torque acting
+on particle :math:`i`,
 
 .. math::
 
     \mathbf{F}_{ij} = \mathbf{F}_i^\mathrm{contact},\quad \mathbf{\tau}_{ij}=R_i\hat{
-                        \mathbf{r}}^{ij}\times\mathbf{F}^\mathrm{contact}_i,
+                        \mathbf{r}}_{ij}\times\mathbf{F}^\mathrm{contact}_i,
 
 which is the pair frictional contact force and torque resulting from the friction with
 particle :math:`j`.
