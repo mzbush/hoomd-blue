@@ -9,6 +9,8 @@ Next release
 
 *Added*
 
+* Support 2D simulations in ``hoomd.md.pair.friction`` (#2184).
+
 *Changed*
 
 *Deprecated*
