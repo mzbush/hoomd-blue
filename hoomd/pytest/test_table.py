@@ -250,10 +250,7 @@ def test_nan_is_ok():
     output = StringIO("")
 
     table_writer = hoomd.write.Table(
-        trigger=1, 
-        logger=logger,
-        output=output,
-        delimiter=","
+        trigger=1,  logger=logger, output=output, delimiter=","
     )
 
     sim.operations.writers.append(table_writer)
