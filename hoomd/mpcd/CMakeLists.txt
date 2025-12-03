@@ -6,7 +6,6 @@ endif()
 set(_mpcd_cc_sources
     module.cc
     ATCollisionMethod.cc
-    CellCommunicator.cc
     CellThermoCompute.cc
     CellList.cc
     CollisionMethod.cc
@@ -27,7 +26,6 @@ set(_mpcd_headers
     BounceBackNVE.h
     BulkGeometry.h
     BulkStreamingMethod.h
-    CellCommunicator.h
     CellThermoCompute.h
     CellList.h
     CollisionMethod.h
@@ -88,7 +86,6 @@ if(ENABLE_HIP)
         BounceBackStreamingMethodGPU.cuh
         BounceBackStreamingMethodGPU.h
         BulkStreamingMethodGPU.h
-        CellCommunicator.cuh
         CellThermoComputeGPU.cuh
         CellThermoComputeGPU.h
         CellListGPU.cuh
