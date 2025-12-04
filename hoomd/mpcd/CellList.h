@@ -13,12 +13,14 @@
 #error This header cannot be compiled by nvcc
 #endif
 
+#include "CellThermoTypes.h"
 #include "CommunicatorUtilities.h"
 #include "ParticleData.h"
 
 #include "hoomd/Compute.h"
 #include "hoomd/GPUFlags.h"
 #include "hoomd/ParticleGroup.h"
+#include "hoomd/SystemDefinition.h"
 
 #include "hoomd/extern/nano-signal-slot/nano_signal_slot.hpp"
 #include <pybind11/pybind11.h>
@@ -48,6 +50,12 @@ class PYBIND11_EXPORT CellList : public Compute
     //! Sizes the cell list based on the box
     void computeDimensions();
 
+    //! Start autotuning kernel launch parameters
+    void startAutotuning() override;
+
+    //! Check if kernel autotuning is complete
+    bool isAutotuningComplete() override;
+
     //! Get the cell list data
     const GPUArray<unsigned int>& getCellList() const
         {
@@ -58,6 +66,18 @@ class PYBIND11_EXPORT CellList : public Compute
     const GPUArray<unsigned int>& getCellSizeArray() const
         {
         return m_cell_np;
+        }
+
+    //! Get the cell velocities from the last call to compute
+    const GPUArray<double4>& getCellVelocities() const
+        {
+        return m_cell_vel;
+        }
+
+    //! Get the cell energies from the last call to compute
+    const GPUArray<double3>& getCellEnergies() const
+        {
+        return m_cell_energy;
         }
 
     //! Get the total number of cells in the list
@@ -243,6 +263,23 @@ class PYBIND11_EXPORT CellList : public Compute
         return m_dim_signal;
         }
 
+    //! Get the signal for requested thermo flags
+    /*!
+     * \returns A signal that subscribers can attach a callback to in order
+     *          to request certain data.
+     *
+     * For performance reasons, the CellThermoCompute should be able to
+     * supply many related cell-level quantities from a single kernel launch.
+     * However, sometimes these quantities are not needed, and it is better
+     * to skip calculating them. Subscribing classes can optionally request
+     * some of these quantities via a callback return mpcd::detail::ThermoFlags
+     * with the appropriate bits set.
+     */
+    Nano::Signal<mpcd::detail::ThermoFlags()>& getFlagsSignal()
+        {
+        return m_flag_signal;
+        }
+
     protected:
     std::shared_ptr<mpcd::ParticleData> m_mpcd_pdata; //!< MPCD particle data
     std::shared_ptr<ParticleGroup> m_embed_group;     //!< Embedded particles
@@ -268,6 +305,14 @@ class PYBIND11_EXPORT CellList : public Compute
 
     int3 m_origin_idx; //!< Origin as a global index
 
+    GPUVector<double4> m_cell_vel;    //!< Average velocity of a cell + cell mass
+    GPUVector<double3> m_cell_energy; //!< Kinetic energy, unscaled temperature, dof in each cell
+
+    Nano::Signal<mpcd::detail::ThermoFlags()> m_flag_signal; //!< Signal for requested flags
+    mpcd::detail::ThermoFlags m_flags;                       //!< Requested thermo flags
+    //! Updates the requested optional flags
+    void updateFlags();
+
 #ifdef ENABLE_MPI
     unsigned int m_num_extra;               //!< Number of extra cells to communicate over
     std::array<unsigned int, 6> m_num_comm; //!< Number of cells to communicate on each face
@@ -286,6 +331,9 @@ class PYBIND11_EXPORT CellList : public Compute
     //! Builds the cell list and handles cell list memory
     virtual void buildCellList();
 
+    //! Do final cell property calculation
+    void finishComputeProperties();
+
     //! Callback to sort cell list when particle data is sorted
     virtual void sort(uint64_t timestep,
                       const GPUArray<unsigned int>& order,
@@ -293,6 +341,7 @@ class PYBIND11_EXPORT CellList : public Compute
 
     private:
     bool m_needs_compute_dim; //!< True if the dimensions need to be (re-)computed
+    bool m_property_sum; //!< True if all contributions to cell properties have been accumulated
     //! Slot for box resizing
     void slotBoxChanged()
         {

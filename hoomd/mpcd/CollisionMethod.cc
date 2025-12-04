@@ -99,12 +99,6 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
         }
 #endif // ENABLE_HIP
 
-    // set random grid shift
-    m_cl->drawGridShift(timestep);
-
-    // update cell list
-    m_cl->compute(timestep);
-
     // setup rigid bodies before collision happens
     const bool rigid_body_collision = m_embed_group && m_rigid_bodies;
     if (rigid_body_collision)
@@ -142,6 +136,12 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
             storeInitialEmbeddedGroupVelocities(timestep);
             }
         }
+
+    // set random grid shift
+    m_cl->drawGridShift(timestep);
+
+    // update cell list
+    m_cl->compute(timestep);
 
     // apply collisions
     rule(timestep);
