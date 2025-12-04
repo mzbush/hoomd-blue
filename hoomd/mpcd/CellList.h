@@ -334,11 +334,6 @@ class PYBIND11_EXPORT CellList : public Compute
     //! Do final cell property calculation
     void finishComputeProperties();
 
-    //! Callback to sort cell list when particle data is sorted
-    virtual void sort(uint64_t timestep,
-                      const GPUArray<unsigned int>& order,
-                      const GPUArray<unsigned int>& rorder);
-
     private:
     bool m_needs_compute_dim; //!< True if the dimensions need to be (re-)computed
     bool m_property_sum; //!< True if all contributions to cell properties have been accumulated
