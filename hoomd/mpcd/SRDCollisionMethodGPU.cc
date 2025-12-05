@@ -37,7 +37,7 @@ void mpcd::SRDCollisionMethodGPU::drawRotationVectors(uint64_t timestep)
     if (m_T)
         {
         ArrayHandle<double> d_factors(m_factors, access_location::device, access_mode::overwrite);
-        ArrayHandle<double3> d_cell_energy(m_thermo->getCellEnergies(),
+        ArrayHandle<double3> d_cell_energy(m_cl->getCellEnergies(),
                                            access_location::device,
                                            access_mode::read);
 
@@ -89,7 +89,7 @@ void mpcd::SRDCollisionMethodGPU::rotate(uint64_t timestep)
     unsigned int N_tot = N_mpcd;
 
     // acquire cell velocities and rotation vectors
-    ArrayHandle<double4> d_cell_vel(m_thermo->getCellVelocities(),
+    ArrayHandle<double4> d_cell_vel(m_cl->getCellVelocities(),
                                     access_location::device,
                                     access_mode::read);
     ArrayHandle<double3> d_rotvec(m_rotvec, access_location::device, access_mode::read);
@@ -162,12 +162,7 @@ void mpcd::SRDCollisionMethodGPU::setCellList(std::shared_ptr<mpcd::CellList> cl
         detachCallbacks();
         if (m_cl)
             {
-            m_thermo = std::make_shared<mpcd::CellThermoComputeGPU>(m_sysdef, m_cl);
             attachCallbacks();
-            }
-        else
-            {
-            m_thermo = std::shared_ptr<mpcd::CellThermoComputeGPU>();
             }
         }
     }

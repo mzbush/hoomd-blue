@@ -449,8 +449,8 @@ void mpcd::CellList::buildCellList()
             vel_mass_i = h_vel_embed->data[h_embed_member_idx->data[cur_p - N_mpcd]];
             mass_i = vel_mass_i.w;
             }
-        Scalar3 pos_i = make_scalar3(postype_i.x, postype_i.y, postype_i.z);
-        double3 vel_i = make_double3(vel_mass_i.x, vel_mass_i.y, vel_mass_i.z);
+        const Scalar3 pos_i = make_scalar3(postype_i.x, postype_i.y, postype_i.z);
+        const double3 vel_i = make_double3(vel_mass_i.x, vel_mass_i.y, vel_mass_i.z);
 
         if (std::isnan(pos_i.x) || std::isnan(pos_i.y) || std::isnan(pos_i.z))
             {

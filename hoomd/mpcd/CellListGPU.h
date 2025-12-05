@@ -36,9 +36,6 @@ class PYBIND11_EXPORT CellListGPU : public mpcd::CellList
     //! Compute the cell list of particles on the GPU
     void buildCellList() override;
 
-    //! Do final cell property calculation
-    void finishComputeProperties();
-
 #ifdef ENABLE_MPI
     //! Determine if embedded particles require migration on the gpu
     virtual bool needsEmbedMigrate(uint64_t timestep);

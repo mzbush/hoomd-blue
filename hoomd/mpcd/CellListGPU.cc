@@ -57,10 +57,17 @@ mpcd::CellListGPU::~CellListGPU() { }
 
 void mpcd::CellListGPU::buildCellList()
     {
+    // zero accumulators
+    m_cell_vel.zeroFill();
+    m_cell_energy.zeroFill();
     ArrayHandle<unsigned int> d_cell_list(m_cell_list,
                                           access_location::device,
                                           access_mode::overwrite);
     ArrayHandle<unsigned int> d_cell_np(m_cell_np, access_location::device, access_mode::overwrite);
+    ArrayHandle<double4> d_cell_vel(m_cell_vel, access_location::device, access_mode::overwrite);
+    ArrayHandle<double3> d_cell_energy(m_cell_energy,
+                                       access_location::device,
+                                       access_mode::overwrite);
     ArrayHandle<Scalar4> d_pos(m_mpcd_pdata->getPositions(),
                                access_location::device,
                                access_mode::read);
@@ -91,6 +98,9 @@ void mpcd::CellListGPU::buildCellList()
         ArrayHandle<Scalar4> d_pos_embed(m_pdata->getPositions(),
                                          access_location::device,
                                          access_mode::read);
+        ArrayHandle<Scalar4> d_vel_embed(m_pdata->getVelocities(),
+                                         access_location::device,
+                                         access_mode::read);
         ArrayHandle<unsigned int> d_embed_member_idx(m_embed_group->getIndexArray(),
                                                      access_location::device,
                                                      access_mode::read);
@@ -98,12 +108,15 @@ void mpcd::CellListGPU::buildCellList()
 
         m_tuner_cell->begin();
         mpcd::gpu::compute_cell_list(d_cell_np.data,
+                                     d_cell_vel.data,
+                                     d_cell_energy.data,
                                      d_cell_list.data,
                                      m_conditions.getDeviceFlags(),
                                      d_vel.data,
                                      d_embed_cell_ids.data,
                                      d_pos.data,
                                      d_pos_embed.data,
+                                     d_vel_embed.data,
                                      d_embed_member_idx.data,
                                      m_pdata->getBox().getPeriodic(),
                                      m_origin_idx,
@@ -116,6 +129,7 @@ void mpcd::CellListGPU::buildCellList()
                                      m_cell_list_indexer,
                                      N_mpcd,
                                      N_tot,
+                                     m_flags[mpcd::detail::thermo_options::energy],
                                      m_tuner_cell->getParam()[0]);
         if (m_exec_conf->isCUDAErrorCheckingEnabled())
             CHECK_CUDA_ERROR();
@@ -125,11 +139,14 @@ void mpcd::CellListGPU::buildCellList()
         {
         m_tuner_cell->begin();
         mpcd::gpu::compute_cell_list(d_cell_np.data,
+                                     d_cell_vel.data,
+                                     d_cell_energy.data,
                                      d_cell_list.data,
                                      m_conditions.getDeviceFlags(),
                                      d_vel.data,
                                      NULL,
                                      d_pos.data,
+                                     NULL,
                                      NULL,
                                      NULL,
                                      m_pdata->getBox().getPeriodic(),
@@ -143,6 +160,7 @@ void mpcd::CellListGPU::buildCellList()
                                      m_cell_list_indexer,
                                      N_mpcd,
                                      N_tot,
+                                     m_flags[mpcd::detail::thermo_options::energy],
                                      m_tuner_cell->getParam()[0]);
         if (m_exec_conf->isCUDAErrorCheckingEnabled())
             CHECK_CUDA_ERROR();

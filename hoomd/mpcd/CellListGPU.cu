@@ -19,12 +19,15 @@ namespace kernel
 //! Kernel to compute the MPCD cell list on the GPU
 /*!
  * \param d_cell_np Array of number of particles per cell
+ * \param d_cell_vel Array of center of mass velocity + cell mass per cell
+ * \param d_cell_energy Array of per cell kinetic energy, temperature, and dof
  * \param d_cell_list 2D array of MPCD particles in each cell
  * \param d_conditions Conditions flags for error reporting
  * \param d_vel MPCD particle velocities
  * \param d_embed_cell_ids Cell indexes of embedded particles
  * \param d_pos MPCD particle positions
  * \param d_pos_embed Particle positions
+ * \param d_vel_embed Particle velocities
  * \param d_embed_member_idx Indexes of embedded particles in \a d_pos_embed
  * \param periodic Flags if local simulation is periodic
  * \param origin_idx Global origin index for the local box
@@ -37,21 +40,26 @@ namespace kernel
  * \param cell_list_indexer 2D indexer for particle position in cell
  * \param N_mpcd Number of MPCD particles
  * \param N_tot Total number of particle (MPCD + embedded)
+ * \param need_energy True if computing the energy
  *
  * \b Implementation
  * One thread is launched per particle. The particle is floored into a bin subject to a random grid
- * shift. The number of particles in that bin is atomically incremented. If the addition of the
+ * shift. The number of particles in that bin is atomically incremented and the contribution of the
+ * particle's properties to the cell's properties is added to a running sum. If the addition of the
  * particle will not overflow the allocated memory, the particle is written into that bin.
  * Otherwise, a flag is set to resize the cell list and recompute. The MPCD particle's cell id is
  * stashed into the velocity array.
  */
 __global__ void compute_cell_list(unsigned int* d_cell_np,
+                                  double4* d_cell_vel,
+                                  double3* d_cell_energy,
                                   unsigned int* d_cell_list,
                                   uint3* d_conditions,
                                   Scalar4* d_vel,
                                   unsigned int* d_embed_cell_ids,
                                   const Scalar4* d_pos,
                                   const Scalar4* d_pos_embed,
+                                  const Scalar4* d_vel_embed,
                                   const unsigned int* d_embed_member_idx,
                                   const uchar3 periodic,
                                   const int3 origin_idx,
@@ -63,7 +71,8 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
                                   const Index3D cell_indexer,
                                   const Index2D cell_list_indexer,
                                   const unsigned int N_mpcd,
-                                  const unsigned int N_tot)
+                                  const unsigned int N_tot,
+                                  const bool need_energy)
     {
     // one thread per particle
     unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -71,15 +80,22 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
         return;
 
     Scalar4 postype_i;
+    Scalar4 vel_mass_i;
+    double mass_i;
     if (idx < N_mpcd)
         {
         postype_i = d_pos[idx];
+        vel_mass_i = d_vel[idx];
+        mass_i = 1;
         }
     else
         {
         postype_i = d_pos_embed[d_embed_member_idx[idx - N_mpcd]];
+        vel_mass_i = d_vel_embed[d_embed_member_idx[idx - N_mpcd]];
+        mass_i = vel_mass_i.w;
         }
     const Scalar3 pos_i = make_scalar3(postype_i.x, postype_i.y, postype_i.z);
+    const double3 vel_i = make_double3(vel_mass_i.x, vel_mass_i.y, vel_mass_i.z);
 
     if (isnan(pos_i.x) || isnan(pos_i.y) || isnan(pos_i.z))
         {
@@ -175,6 +191,18 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
         {
         d_embed_cell_ids[idx - N_mpcd] = bin_idx;
         }
+
+    // compute the contribution of the particle to cell properties
+    atomicAdd(&d_cell_vel[bin_idx].x, vel_i.x * mass_i);
+    atomicAdd(&d_cell_vel[bin_idx].y, vel_i.y * mass_i);
+    atomicAdd(&d_cell_vel[bin_idx].z, vel_i.z * mass_i);
+    atomicAdd(&d_cell_vel[bin_idx].w, mass_i);
+
+    if (need_energy)
+        {
+        double ke = 0.5 * mass_i * (vel_i.x * vel_i.x + vel_i.y * vel_i.y + vel_i.z * vel_i.z);
+        atomicAdd(&d_cell_energy[bin_idx].x, ke);
+        }
     }
 
 /*!
@@ -224,12 +252,15 @@ __global__ void cell_check_migrate_embed(unsigned int* d_migrate_flag,
 
 /*!
  * \param d_cell_np Array of number of particles per cell
+ * \param d_cell_vel Array of center of mass velocity + cell mass per cell
+ * \param d_cell_energy Array of per cell kinetic energy, temperature, and dof
  * \param d_cell_list 2D array of MPCD particles in each cell
  * \param d_conditions Conditions flags for error reporting
  * \param d_vel MPCD particle velocities
  * \param d_embed_cell_ids Cell indexes of embedded particles
  * \param d_pos MPCD particle positions
  * \param d_pos_embed Particle positions
+ * \param d_vel_embed Particle velocities
  * \param d_embed_member_idx Indexes of embedded particles in \a d_pos_embed
  * \param periodic Flags if local simulation is periodic
  * \param origin_idx Global origin index for the local box
@@ -242,17 +273,21 @@ __global__ void cell_check_migrate_embed(unsigned int* d_migrate_flag,
  * \param cell_list_indexer 2D indexer for particle position in cell
  * \param N_mpcd Number of MPCD particles
  * \param N_tot Total number of particle (MPCD + embedded)
+ * \param need_energy True if computing the energy
  * \param block_size Number of threads per block
  *
  * \returns cudaSuccess on completion, or an error on failure
  */
 cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
+                                         double4* d_cell_vel,
+                                         double3* d_cell_energy,
                                          unsigned int* d_cell_list,
                                          uint3* d_conditions,
                                          Scalar4* d_vel,
                                          unsigned int* d_embed_cell_ids,
                                          const Scalar4* d_pos,
                                          const Scalar4* d_pos_embed,
+                                         const Scalar4* d_vel_embed,
                                          const unsigned int* d_embed_member_idx,
                                          const uchar3& periodic,
                                          const int3& origin_idx,
@@ -265,6 +300,7 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
                                          const Index2D& cell_list_indexer,
                                          const unsigned int N_mpcd,
                                          const unsigned int N_tot,
+                                         const bool need_energy,
                                          const unsigned int block_size)
     {
     // set the number of particles in each cell to zero
@@ -281,12 +317,15 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
     unsigned int run_block_size = min(block_size, max_block_size);
     dim3 grid(N_tot / run_block_size + 1);
     mpcd::gpu::kernel::compute_cell_list<<<grid, run_block_size>>>(d_cell_np,
+                                                                   d_cell_vel,
+                                                                   d_cell_energy,
                                                                    d_cell_list,
                                                                    d_conditions,
                                                                    d_vel,
                                                                    d_embed_cell_ids,
                                                                    d_pos,
                                                                    d_pos_embed,
+                                                                   d_vel_embed,
                                                                    d_embed_member_idx,
                                                                    periodic,
                                                                    origin_idx,
@@ -298,7 +337,8 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
                                                                    cell_indexer,
                                                                    cell_list_indexer,
                                                                    N_mpcd,
-                                                                   N_tot);
+                                                                   N_tot,
+                                                                   need_energy);
 
     return cudaSuccess;
     }
