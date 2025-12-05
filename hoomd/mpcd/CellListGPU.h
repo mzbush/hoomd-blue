@@ -36,10 +36,8 @@ class PYBIND11_EXPORT CellListGPU : public mpcd::CellList
     //! Compute the cell list of particles on the GPU
     void buildCellList() override;
 
-    //! Callback to sort cell list on the GPU when particle data is sorted
-    virtual void sort(uint64_t timestep,
-                      const GPUArray<unsigned int>& order,
-                      const GPUArray<unsigned int>& rorder);
+    //! Do final cell property calculation
+    void finishComputeProperties();
 
 #ifdef ENABLE_MPI
     //! Determine if embedded particles require migration on the gpu
@@ -51,8 +49,6 @@ class PYBIND11_EXPORT CellListGPU : public mpcd::CellList
     /// Autotuner for the cell list calculation.
     std::shared_ptr<Autotuner<1>> m_tuner_cell;
 
-    /// Autotuner for sorting the cell list.
-    std::shared_ptr<Autotuner<1>> m_tuner_sort;
 #ifdef ENABLE_MPI
     /// Autotuner for checking embedded migration.
     std::shared_ptr<Autotuner<1>> m_tuner_embed_migrate;
