@@ -105,7 +105,7 @@ void mpcd::SorterGPU::computeOrder(uint64_t timestep)
  * arrays. The communication flags are \b not sorted in MPI because by design,
  * the caller is responsible for clearing out any old flags before using them.
  */
-void mpcd::SorterGPU::applyOrder() const
+void mpcd::SorterGPU::applySortOrder() const
     {
         // apply the sorted order
         {
