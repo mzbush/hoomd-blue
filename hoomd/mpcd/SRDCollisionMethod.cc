@@ -32,22 +32,20 @@ mpcd::SRDCollisionMethod::~SRDCollisionMethod()
 void mpcd::SRDCollisionMethod::startAutotuning()
     {
     mpcd::CollisionMethod::startAutotuning();
-    if (m_thermo)
-        m_thermo->startAutotuning();
+    if (m_cl)
+        m_cl->startAutotuning();
     }
 
 bool mpcd::SRDCollisionMethod::isAutotuningComplete()
     {
     bool result = mpcd::CollisionMethod::isAutotuningComplete();
-    if (m_thermo)
-        result = result && m_thermo->isAutotuningComplete();
+    if (m_cl)
+        result = result && m_cl->isAutotuningComplete();
     return result;
     }
 
 void mpcd::SRDCollisionMethod::rule(uint64_t timestep)
     {
-    m_thermo->compute(timestep);
-
     // resize the rotation vectors and rescale factors
     m_rotvec.resize(m_cl->getNCells());
     if (m_T)
@@ -78,7 +76,7 @@ void mpcd::SRDCollisionMethod::drawRotationVectors(uint64_t timestep)
         {
         h_factors.reset(
             new ArrayHandle<double>(m_factors, access_location::host, access_mode::overwrite));
-        h_cell_energy.reset(new ArrayHandle<double3>(m_thermo->getCellEnergies(),
+        h_cell_energy.reset(new ArrayHandle<double3>(m_cl->getCellEnergies(),
                                                      access_location::host,
                                                      access_mode::read));
         T_set = (*m_T)(timestep);
@@ -162,7 +160,7 @@ void mpcd::SRDCollisionMethod::rotate(uint64_t timestep)
         }
 
     // acquire cell velocities
-    ArrayHandle<double4> h_cell_vel(m_thermo->getCellVelocities(),
+    ArrayHandle<double4> h_cell_vel(m_cl->getCellVelocities(),
                                     access_location::host,
                                     access_mode::read);
 
@@ -264,29 +262,24 @@ void mpcd::SRDCollisionMethod::setCellList(std::shared_ptr<mpcd::CellList> cl)
         detachCallbacks();
         if (m_cl)
             {
-            m_thermo = std::make_shared<mpcd::CellThermoCompute>(m_sysdef, m_cl);
             attachCallbacks();
-            }
-        else
-            {
-            m_thermo = std::shared_ptr<mpcd::CellThermoCompute>();
             }
         }
     }
 
 void mpcd::SRDCollisionMethod::attachCallbacks()
     {
-    assert(m_thermo);
-    m_thermo->getFlagsSignal()
+    assert(m_cl);
+    m_cl->getFlagsSignal()
         .connect<mpcd::SRDCollisionMethod, &mpcd::SRDCollisionMethod::getRequestedThermoFlags>(
             this);
     }
 
 void mpcd::SRDCollisionMethod::detachCallbacks()
     {
-    if (m_thermo)
+    if (m_cl)
         {
-        m_thermo->getFlagsSignal()
+        m_cl->getFlagsSignal()
             .disconnect<mpcd::SRDCollisionMethod,
                         &mpcd::SRDCollisionMethod::getRequestedThermoFlags>(this);
         }
