@@ -12,7 +12,6 @@
 #include "CellThermoComputeGPU.cuh"
 #include "CellThermoTypes.h"
 
-#include "CellCommunicator.cuh"
 #include "ReductionOperators.h"
 
 #include "hoomd/WarpTools.cuh"
@@ -760,48 +759,6 @@ cudaError_t reduce_net_cell_thermo(mpcd::detail::cell_thermo_element* d_reduced,
     cub::DeviceReduce::Sum(d_tmp, tmp_bytes, d_tmp_thermo, d_reduced, (unsigned int)Ncell);
     return cudaSuccess;
     }
-
-//! Explicit template instantiation of pack for cell velocity
-template cudaError_t __attribute__((visibility("default")))
-pack_cell_buffer(typename mpcd::detail::CellVelocityPackOp::element* d_send_buf,
-                 const double4* d_props,
-                 const unsigned int* d_send_idx,
-                 const mpcd::detail::CellVelocityPackOp op,
-                 const unsigned int num_send,
-                 unsigned int block_size);
-
-//! Explicit template instantiation of pack for cell energy
-template cudaError_t __attribute__((visibility("default")))
-pack_cell_buffer(typename mpcd::detail::CellEnergyPackOp::element* d_send_buf,
-                 const double3* d_props,
-                 const unsigned int* d_send_idx,
-                 const mpcd::detail::CellEnergyPackOp op,
-                 const unsigned int num_send,
-                 unsigned int block_size);
-
-//! Explicit template instantiation of unpack for cell velocity
-template cudaError_t __attribute__((visibility("default")))
-unpack_cell_buffer(double4* d_props,
-                   const unsigned int* d_cells,
-                   const unsigned int* d_recv,
-                   const unsigned int* d_recv_begin,
-                   const unsigned int* d_recv_end,
-                   const typename mpcd::detail::CellVelocityPackOp::element* d_recv_buf,
-                   const mpcd::detail::CellVelocityPackOp op,
-                   const unsigned int num_cells,
-                   const unsigned int block_size);
-
-//! Explicit template instantiation of unpack for cell energy
-template cudaError_t __attribute__((visibility("default")))
-unpack_cell_buffer(double3* d_props,
-                   const unsigned int* d_cells,
-                   const unsigned int* d_recv,
-                   const unsigned int* d_recv_begin,
-                   const unsigned int* d_recv_end,
-                   const typename mpcd::detail::CellEnergyPackOp::element* d_recv_buf,
-                   const mpcd::detail::CellEnergyPackOp op,
-                   const unsigned int num_cells,
-                   const unsigned int block_size);
 
     } // end namespace gpu
     } // end namespace mpcd

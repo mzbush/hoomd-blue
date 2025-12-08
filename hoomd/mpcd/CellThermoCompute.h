@@ -15,9 +15,6 @@
 
 #include "CellList.h"
 #include "CellThermoTypes.h"
-#ifdef ENABLE_MPI
-#include "CellCommunicator.h"
-#endif // ENABLE_MPI
 
 #include "hoomd/Compute.h"
 #include "hoomd/SystemDefinition.h"
