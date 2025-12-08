@@ -23,12 +23,15 @@ namespace gpu
     {
 //! Kernel driver to compute mpcd cell list
 cudaError_t compute_cell_list(unsigned int* d_cell_np,
+                              double4* d_cell_vel,
+                              double3* d_cell_energy,
                               unsigned int* d_cell_list,
                               uint3* d_conditions,
                               Scalar4* d_vel,
                               unsigned int* d_embed_cell_ids,
                               const Scalar4* d_pos,
                               const Scalar4* d_pos_embed,
+                              const Scalar4* d_vel_embed,
                               const unsigned int* d_embed_member_idx,
                               const uchar3& periodic,
                               const int3& origin_idx,
@@ -41,6 +44,7 @@ cudaError_t compute_cell_list(unsigned int* d_cell_np,
                               const Index2D& cell_list_indexer,
                               const unsigned int N_mpcd,
                               const unsigned int N_tot,
+                              const bool need_energy,
                               const unsigned int block_size);
 
 //! Kernel driver to check if any embedded particles require migration

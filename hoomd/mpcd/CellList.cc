@@ -380,10 +380,16 @@ void mpcd::CellList::buildCellList()
                                           access_location::host,
                                           access_mode::overwrite);
     ArrayHandle<unsigned int> h_cell_np(m_cell_np, access_location::host, access_mode::overwrite);
+    ArrayHandle<double4> h_cell_vel(m_cell_vel, access_location::host, access_mode::overwrite);
+    ArrayHandle<double3> h_cell_energy(m_cell_energy,
+                                       access_location::host,
+                                       access_mode::overwrite);
+
     // zero the cell counter
     m_cell_np.zeroFill();
     m_cell_vel.zeroFill();
     m_cell_energy.zeroFill();
+    m_property_sum = false;
 
     uint3 conditions = make_uint3(0, 0, 0);
 
@@ -399,6 +405,7 @@ void mpcd::CellList::buildCellList()
     // we can't modify the velocity of embedded particles, so we only read their position
     std::unique_ptr<ArrayHandle<unsigned int>> h_embed_cell_ids;
     std::unique_ptr<ArrayHandle<Scalar4>> h_pos_embed;
+    std::unique_ptr<ArrayHandle<Scalar4>> h_vel_embed;
     std::unique_ptr<ArrayHandle<unsigned int>> h_embed_member_idx;
     if (m_embed_group)
         {
@@ -406,6 +413,9 @@ void mpcd::CellList::buildCellList()
                                                              access_location::host,
                                                              access_mode::overwrite));
         h_pos_embed.reset(new ArrayHandle<Scalar4>(m_pdata->getPositions(),
+                                                   access_location::host,
+                                                   access_mode::read));
+        h_vel_embed.reset(new ArrayHandle<Scalar4>(m_pdata->getVelocities(),
                                                    access_location::host,
                                                    access_mode::read));
         h_embed_member_idx.reset(new ArrayHandle<unsigned int>(m_embed_group->getIndexArray(),
@@ -431,15 +441,22 @@ void mpcd::CellList::buildCellList()
     for (unsigned int cur_p = 0; cur_p < N_tot; ++cur_p)
         {
         Scalar4 postype_i;
+        Scalar4 vel_mass_i;
+        double mass_i;
         if (cur_p < N_mpcd)
             {
             postype_i = h_pos.data[cur_p];
+            vel_mass_i = h_vel.data[cur_p];
+            mass_i = 1;
             }
         else
             {
             postype_i = h_pos_embed->data[h_embed_member_idx->data[cur_p - N_mpcd]];
+            vel_mass_i = h_vel_embed->data[h_embed_member_idx->data[cur_p - N_mpcd]];
+            mass_i = vel_mass_i.w;
             }
-        Scalar3 pos_i = make_scalar3(postype_i.x, postype_i.y, postype_i.z);
+        const Scalar3 pos_i = make_scalar3(postype_i.x, postype_i.y, postype_i.z);
+        const double3 vel_i = make_double3(vel_mass_i.x, vel_mass_i.y, vel_mass_i.z);
 
         if (std::isnan(pos_i.x) || std::isnan(pos_i.y) || std::isnan(pos_i.z))
             {
@@ -535,6 +552,22 @@ void mpcd::CellList::buildCellList()
             h_embed_cell_ids->data[cur_p - N_mpcd] = bin_idx;
             }
 
+        // compute the contribution of the particle to cell velocity
+        double4 cell_vel = h_cell_vel.data[bin_idx];
+        cell_vel.x += mass_i * vel_i.x;
+        cell_vel.y += mass_i * vel_i.y;
+        cell_vel.z += mass_i * vel_i.z;
+        cell_vel.w += mass_i;
+        h_cell_vel.data[bin_idx] = make_double4(cell_vel.x, cell_vel.y, cell_vel.z, cell_vel.w);
+        // compute optional cell properties
+        if (m_flags[mpcd::detail::thermo_options::energy])
+            {
+            double3 cell_energy = h_cell_energy.data[bin_idx];
+            cell_energy.x
+                += 0.5 * mass_i * (vel_i.x * vel_i.x + vel_i.y * vel_i.y + vel_i.z * vel_i.z);
+            cell_energy.z += __int_as_double(1);
+            h_cell_energy.data[bin_idx] = make_double3(cell_energy.x, 0.0, cell_energy.z);
+            }
         // increment the counter always
         ++h_cell_np.data[bin_idx];
         }
