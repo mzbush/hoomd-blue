@@ -226,9 +226,12 @@ class TestCollisionMethod:
             initial_snap.particles.angmom[:] = [angmom_rigid]
 
             # place the mpcd particles on top of constituents
+            positions = np.add(def_rigid["positions"], pos_rigid)
+            positions[positions < -21 * 0.5] = positions[positions < -21 * 0.5] + 21
+            positions[positions > 21 * 0.5] = positions[positions > 21 * 0.5] - 21
             initial_snap.mpcd.N = N_mpcd
             initial_snap.mpcd.types = ["C"]
-            initial_snap.mpcd.position[:] = def_rigid["positions"]
+            initial_snap.mpcd.position[:] = positions
             initial_snap.mpcd.velocity[:] = velo_mpcd
 
         sim = simulation_factory(initial_snap)
