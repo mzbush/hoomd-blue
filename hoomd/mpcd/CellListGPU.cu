@@ -86,7 +86,7 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
         {
         postype_i = d_pos[idx];
         vel_mass_i = d_vel[idx];
-        mass_i = 1;
+        mass_i = 1.0;
         }
     else
         {
@@ -202,6 +202,7 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
         {
         double ke = 0.5 * mass_i * (vel_i.x * vel_i.x + vel_i.y * vel_i.y + vel_i.z * vel_i.z);
         atomicAdd(&d_cell_energy[bin_idx].x, ke);
+        atomicAdd(&d_cell_energy[bin_idx].z, __int_as_double(1));
         }
     }
 
@@ -308,7 +309,14 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
         = cudaMemset(d_cell_np, 0, sizeof(unsigned int) * cell_indexer.getNumElements());
     if (error != cudaSuccess)
         return error;
-
+    cudaError_t error_vel
+        = cudaMemset(d_cell_vel, 0, sizeof(double3) * cell_indexer.getNumElements());
+    if (error_vel != cudaSuccess)
+        return error_vel;
+    cudaError_t error_energy
+        = cudaMemset(d_cell_energy, 0, sizeof(double3) * cell_indexer.getNumElements());
+    if (error_energy != cudaSuccess)
+        return error_energy;
     unsigned int max_block_size;
     cudaFuncAttributes attr;
     cudaFuncGetAttributes(&attr, (const void*)mpcd::gpu::kernel::compute_cell_list);

@@ -57,9 +57,6 @@ mpcd::CellListGPU::~CellListGPU() { }
 
 void mpcd::CellListGPU::buildCellList()
     {
-    // zero accumulators
-    m_cell_vel.zeroFill();
-    m_cell_energy.zeroFill();
     ArrayHandle<unsigned int> d_cell_list(m_cell_list,
                                           access_location::device,
                                           access_mode::overwrite);
