@@ -256,8 +256,6 @@ class TestCollisionMethod:
         sim.run(1)
         new_snap = sim.state.get_snapshot()
         if new_snap.communicator.rank == 0:
-            print(new_snap.particles.position)
-            print(new_snap.mpcd.position)
             assert np.array_equal(properties_rigid["mass"], new_snap.particles.mass)
             central_flag = new_snap.particles.typeid == new_snap.particles.types.index(
                 "A"
