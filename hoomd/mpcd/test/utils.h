@@ -26,6 +26,18 @@ class AllThermoRequest
                 this);
         }
 
+    //! Constructor
+    /*!
+     * \param cl CellList to supply flags to.
+     *
+     * \post This object is connected to \a cl.
+     */
+    AllThermoRequest(std::shared_ptr<mpcd::CellList> cl) : m_cl(cl)
+        {
+        if (m_cl)
+            m_cl->getFlagsSignal().connect<AllThermoRequest, &AllThermoRequest::operator()>(this);
+        }
+
     //! Destructor
     /*!
      * \post This object is disconnected from its compute.
@@ -34,6 +46,9 @@ class AllThermoRequest
         {
         if (m_thermo)
             m_thermo->getFlagsSignal().disconnect<AllThermoRequest, &AllThermoRequest::operator()>(
+                this);
+        if (m_cl)
+            m_cl->getFlagsSignal().disconnect<AllThermoRequest, &AllThermoRequest::operator()>(
                 this);
         }
 
@@ -49,6 +64,7 @@ class AllThermoRequest
 
     private:
     std::shared_ptr<mpcd::CellThermoCompute> m_thermo;
+    std::shared_ptr<mpcd::CellList> m_cl;
     };
 
 Scalar3 scale(const Scalar3& ref_pos, std::shared_ptr<BoxDim> ref_box, std::shared_ptr<BoxDim> box)
