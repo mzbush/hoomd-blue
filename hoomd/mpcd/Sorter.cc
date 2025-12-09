@@ -58,36 +58,25 @@ void mpcd::Sorter::update(uint64_t timestep)
  */
 void mpcd::Sorter::computeOrder(uint64_t timestep)
     {
-    // compute the cell list at current timestep, guarantees owned particles are on rank
     m_cl->compute(timestep);
-
-    ArrayHandle<unsigned int> h_cell_list(m_cl->getCellList(),
-                                          access_location::host,
-                                          access_mode::read);
-    ArrayHandle<unsigned int> h_cell_np(m_cl->getCellSizeArray(),
-                                        access_location::host,
-                                        access_mode::read);
-    const Index2D& cli = m_cl->getCellListIndexer();
-
-    // loop through the cell list to generate the sorting order for MPCD particles
+    m_order.resize(m_mpcd_pdata->getN());
     ArrayHandle<unsigned int> h_order(m_order, access_location::host, access_mode::overwrite);
-    ArrayHandle<unsigned int> h_rorder(m_rorder, access_location::host, access_mode::overwrite);
-    const unsigned int N_mpcd = m_mpcd_pdata->getN();
-    unsigned int cur_p = 0;
-    for (unsigned int idx = 0; idx < m_cl->getNCells(); ++idx)
+
+    // sort indices
+    std::vector<unsigned int> indexes(m_mpcd_pdata->getN());
+    std::iota(indexes.begin(), indexes.end(), 0);
+    ArrayHandle<Scalar4> h_vel(m_mpcd_pdata->getVelocities(),
+                               access_location::host,
+                               access_mode::read);
+    std::sort(indexes.begin(),
+              indexes.end(),
+              [&h_vel](unsigned int i, unsigned int j)
+              { return __scalar_as_int(h_vel.data[i].w) < __scalar_as_int(h_vel.data[j].w); });
+
+    // assign the order
+    for (unsigned int idx = 0; idx < m_mpcd_pdata->getN(); ++idx)
         {
-        const unsigned int np = h_cell_np.data[idx];
-        for (unsigned int offset = 0; offset < np; ++offset)
-            {
-            const unsigned int pid = h_cell_list.data[cli(offset, idx)];
-            // only count MPCD particles, and skip embedded particles
-            if (pid < N_mpcd)
-                {
-                h_order.data[cur_p] = pid;
-                h_rorder.data[pid] = cur_p;
-                ++cur_p;
-                }
-            }
+        h_order.data[idx] = indexes[idx];
         }
     }
 
@@ -129,6 +118,7 @@ void mpcd::Sorter::applySortOrder() const
         for (unsigned int idx = 0; idx < m_mpcd_pdata->getN(); ++idx)
             {
             const unsigned int old_idx = h_order.data[idx];
+            // std::cout << old_idx << std::endl;
             h_pos_alt.data[idx] = h_pos.data[old_idx];
             h_vel_alt.data[idx] = h_vel.data[old_idx];
             h_tag_alt.data[idx] = h_tag.data[old_idx];
