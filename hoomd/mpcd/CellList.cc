@@ -447,7 +447,7 @@ void mpcd::CellList::buildCellList()
             {
             postype_i = h_pos.data[cur_p];
             vel_mass_i = h_vel.data[cur_p];
-            mass_i = 1;
+            mass_i = m_mpcd_pdata->getMass();
             }
         else
             {

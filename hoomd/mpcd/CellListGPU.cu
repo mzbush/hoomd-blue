@@ -24,6 +24,7 @@ namespace kernel
  * \param d_cell_list 2D array of MPCD particles in each cell
  * \param d_conditions Conditions flags for error reporting
  * \param d_vel MPCD particle velocities
+ * \param mpcd_mass MPCD particle mass
  * \param d_embed_cell_ids Cell indexes of embedded particles
  * \param d_pos MPCD particle positions
  * \param d_pos_embed Particle positions
@@ -56,6 +57,7 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
                                   unsigned int* d_cell_list,
                                   uint3* d_conditions,
                                   Scalar4* d_vel,
+                                  double mpcd_mass,
                                   unsigned int* d_embed_cell_ids,
                                   const Scalar4* d_pos,
                                   const Scalar4* d_pos_embed,
@@ -86,7 +88,7 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
         {
         postype_i = d_pos[idx];
         vel_mass_i = d_vel[idx];
-        mass_i = 1.0;
+        mass_i = mpcd_mass;
         }
     else
         {
@@ -287,6 +289,7 @@ __global__ void cell_apply_sort(unsigned int* d_cell_list,
  * \param d_cell_list 2D array of MPCD particles in each cell
  * \param d_conditions Conditions flags for error reporting
  * \param d_vel MPCD particle velocities
+ * \param mpcd_mass MPCD particle mass
  * \param d_embed_cell_ids Cell indexes of embedded particles
  * \param d_pos MPCD particle positions
  * \param d_pos_embed Particle positions
@@ -314,6 +317,7 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
                                          unsigned int* d_cell_list,
                                          uint3* d_conditions,
                                          Scalar4* d_vel,
+                                         double mpcd_mass,
                                          unsigned int* d_embed_cell_ids,
                                          const Scalar4* d_pos,
                                          const Scalar4* d_pos_embed,
@@ -359,6 +363,7 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
                                                                    d_cell_list,
                                                                    d_conditions,
                                                                    d_vel,
+                                                                   mpcd_mass,
                                                                    d_embed_cell_ids,
                                                                    d_pos,
                                                                    d_pos_embed,
