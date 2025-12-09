@@ -339,7 +339,7 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
     if (error != cudaSuccess)
         return error;
     cudaError_t error_vel
-        = cudaMemset(d_cell_vel, 0, sizeof(double3) * cell_indexer.getNumElements());
+        = cudaMemset(d_cell_vel, 0, sizeof(double4) * cell_indexer.getNumElements());
     if (error_vel != cudaSuccess)
         return error_vel;
     cudaError_t error_energy
