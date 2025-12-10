@@ -582,53 +582,6 @@ void mpcd::CellList::buildCellList()
     m_conditions.resetFlags(conditions);
     }
 
-/*!
- * \param timestep Timestep that the sorting occurred
- * \param order Mapping of sorted particle indexes onto old particle indexes
- * \param rorder Mapping of old particle indexes onto sorted particle indexes
- */
-void mpcd::CellList::sort(uint64_t timestep,
-                          const GPUArray<unsigned int>& order,
-                          const GPUArray<unsigned int>& rorder)
-    {
-    // no need to do any sorting if we can still be called at the current timestep
-    if (peekCompute(timestep))
-        return;
-
-    // if mapping is not valid, signal that we need to force a recompute next time
-    // that the cell list is needed. We don't call forceCompute() directly because this
-    // always runs compute(), and we just want to defer to the next compute() call.
-    if (rorder.isNull())
-        {
-        m_force_compute = true;
-        return;
-        }
-
-    // iterate through particles in cell list, and update their indexes using reverse
-    // mapping
-    ArrayHandle<unsigned int> h_rorder(rorder, access_location::host, access_mode::read);
-    ArrayHandle<unsigned int> h_cell_np(m_cell_np, access_location::host, access_mode::read);
-    ArrayHandle<unsigned int> h_cell_list(m_cell_list,
-                                          access_location::host,
-                                          access_mode::readwrite);
-    const unsigned int N_mpcd = m_mpcd_pdata->getN();
-
-    for (unsigned int idx = 0; idx < getNCells(); ++idx)
-        {
-        const unsigned int np = h_cell_np.data[idx];
-        for (unsigned int offset = 0; offset < np; ++offset)
-            {
-            const unsigned int cl_idx = m_cell_list_indexer(offset, idx);
-            const unsigned int pid = h_cell_list.data[cl_idx];
-            // only update indexes of MPCD particles, not virtual or embedded particles
-            if (pid < N_mpcd)
-                {
-                h_cell_list.data[cl_idx] = h_rorder.data[pid];
-                }
-            }
-        }
-    }
-
 void mpcd::CellList::finishComputeProperties()
     {
     if (!m_property_sum)
@@ -731,6 +684,53 @@ void mpcd::CellList::finishComputeProperties()
         }
     // ensure that properties will not be normalized twice
     m_property_sum = false;
+    }
+
+/*!
+ * \param timestep Timestep that the sorting occurred
+ * \param order Mapping of sorted particle indexes onto old particle indexes
+ * \param rorder Mapping of old particle indexes onto sorted particle indexes
+ */
+void mpcd::CellList::sort(uint64_t timestep,
+                          const GPUArray<unsigned int>& order,
+                          const GPUArray<unsigned int>& rorder)
+    {
+    // no need to do any sorting if we can still be called at the current timestep
+    if (peekCompute(timestep))
+        return;
+
+    // if mapping is not valid, signal that we need to force a recompute next time
+    // that the cell list is needed. We don't call forceCompute() directly because this
+    // always runs compute(), and we just want to defer to the next compute() call.
+    if (rorder.isNull())
+        {
+        m_force_compute = true;
+        return;
+        }
+
+    // iterate through particles in cell list, and update their indexes using reverse
+    // mapping
+    ArrayHandle<unsigned int> h_rorder(rorder, access_location::host, access_mode::read);
+    ArrayHandle<unsigned int> h_cell_np(m_cell_np, access_location::host, access_mode::read);
+    ArrayHandle<unsigned int> h_cell_list(m_cell_list,
+                                          access_location::host,
+                                          access_mode::readwrite);
+    const unsigned int N_mpcd = m_mpcd_pdata->getN();
+
+    for (unsigned int idx = 0; idx < getNCells(); ++idx)
+        {
+        const unsigned int np = h_cell_np.data[idx];
+        for (unsigned int offset = 0; offset < np; ++offset)
+            {
+            const unsigned int cl_idx = m_cell_list_indexer(offset, idx);
+            const unsigned int pid = h_cell_list.data[cl_idx];
+            // only update indexes of MPCD particles, not virtual or embedded particles
+            if (pid < N_mpcd)
+                {
+                h_cell_list.data[cl_idx] = h_rorder.data[pid];
+                }
+            }
+        }
     }
 
 #ifdef ENABLE_MPI
