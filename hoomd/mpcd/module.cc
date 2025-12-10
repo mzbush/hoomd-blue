@@ -20,7 +20,6 @@ namespace mpcd
  */
 namespace detail
     {
-void export_ATCollisionMethod(pybind11::module&);
 void export_BlockForce(pybind11::module&);
 void export_CellList(pybind11::module&);
 void export_CollisionMethod(pybind11::module&);
@@ -50,7 +49,6 @@ void export_SRDCollisionMethod(pybind11::module&);
 void export_StreamingMethod(pybind11::module&);
 void export_VirtualParticleFiller(pybind11::module&);
 #ifdef ENABLE_HIP
-void export_ATCollisionMethodGPU(pybind11::module&);
 void export_CellListGPU(pybind11::module&);
 #ifdef ENABLE_MPI
 void export_CommunicatorGPU(pybind11::module&);
@@ -197,7 +195,6 @@ PYBIND11_MODULE(_mpcd, m)
     export_VirtualParticleFiller(m);
     export_StreamingMethod(m);
 
-    export_ATCollisionMethod(m);
     export_BlockForce(m);
     export_CellList(m);
 #ifdef ENABLE_MPI
@@ -224,7 +221,6 @@ PYBIND11_MODULE(_mpcd, m)
     export_SineForce(m);
     export_SRDCollisionMethod(m);
 #ifdef ENABLE_HIP
-    export_ATCollisionMethodGPU(m);
     export_CellListGPU(m);
 #ifdef ENABLE_MPI
     export_CommunicatorGPU(m);

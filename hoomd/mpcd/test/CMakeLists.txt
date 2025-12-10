@@ -1,6 +1,5 @@
 # external_field test will not link properly due to separable compilation, disabling.
 set(TEST_LIST
-    at_collision_method
     cell_list
     force
     parallel_plate_geometry_filler

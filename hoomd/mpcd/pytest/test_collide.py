@@ -31,15 +31,27 @@ def test_cell_list(small_snap, simulation_factory):
     assert cl.num_cells == (20, 30, 40)
 
 
+# @pytest.mark.parametrize(
+#     "cls, init_args",
+#     [
+#         (
+#             hoomd.mpcd.collide.AndersenThermostat,
+#             {
+#                 "kT": 1.0,
+#             },
+#         ),
+#         (
+#             hoomd.mpcd.collide.StochasticRotationDynamics,
+#             {
+#                 "angle": 90,
+#             },
+#         ),
+#     ],
+#     ids=["AndersenThermostat", "StochasticRotationDynamics"],
+# )
 @pytest.mark.parametrize(
     "cls, init_args",
     [
-        (
-            hoomd.mpcd.collide.AndersenThermostat,
-            {
-                "kT": 1.0,
-            },
-        ),
         (
             hoomd.mpcd.collide.StochasticRotationDynamics,
             {
@@ -47,7 +59,7 @@ def test_cell_list(small_snap, simulation_factory):
             },
         ),
     ],
-    ids=["AndersenThermostat", "StochasticRotationDynamics"],
+    ids=["StochasticRotationDynamics"],
 )
 class TestCollisionMethod:
     def test_create(self, small_snap, simulation_factory, cls, init_args):
