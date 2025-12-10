@@ -23,7 +23,6 @@ namespace detail
 void export_ATCollisionMethod(pybind11::module&);
 void export_BlockForce(pybind11::module&);
 void export_CellList(pybind11::module&);
-void export_CellThermoCompute(pybind11::module&);
 void export_CollisionMethod(pybind11::module&);
 #ifdef ENABLE_MPI
 void export_Communicator(pybind11::module&);
@@ -53,7 +52,6 @@ void export_VirtualParticleFiller(pybind11::module&);
 #ifdef ENABLE_HIP
 void export_ATCollisionMethodGPU(pybind11::module&);
 void export_CellListGPU(pybind11::module&);
-void export_CellThermoComputeGPU(pybind11::module&);
 #ifdef ENABLE_MPI
 void export_CommunicatorGPU(pybind11::module&);
 #endif // ENABLE_MPI
@@ -202,7 +200,6 @@ PYBIND11_MODULE(_mpcd, m)
     export_ATCollisionMethod(m);
     export_BlockForce(m);
     export_CellList(m);
-    export_CellThermoCompute(m);
 #ifdef ENABLE_MPI
     export_Communicator(m);
 #endif // ENABLE_MPI
@@ -229,7 +226,6 @@ PYBIND11_MODULE(_mpcd, m)
 #ifdef ENABLE_HIP
     export_ATCollisionMethodGPU(m);
     export_CellListGPU(m);
-    export_CellThermoComputeGPU(m);
 #ifdef ENABLE_MPI
     export_CommunicatorGPU(m);
 #endif // ENABLE_MPI
