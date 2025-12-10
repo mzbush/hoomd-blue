@@ -305,12 +305,13 @@ class PYBIND11_EXPORT CellList : public Compute
                                              access_mode::read);
         return h_net_properties.data[mpcd::detail::thermo_index::temperature];
         }
+
     //! Get the signal for requested thermo flags
     /*!
      * \returns A signal that subscribers can attach a callback to in order
      *          to request certain data.
      *
-     * For performance reasons, the CellThermoCompute should be able to
+     * For performance reasons, the CellList should be able to
      * supply many related cell-level quantities from a single kernel launch.
      * However, sometimes these quantities are not needed, and it is better
      * to skip calculating them. Subscribing classes can optionally request
