@@ -261,7 +261,50 @@ class PYBIND11_EXPORT CellList : public Compute
         {
         return m_dim_signal;
         }
+    //! Get the net momentum of the particles from the last call to compute
+    Scalar3 getNetMomentum()
+        {
+        ArrayHandle<double> h_net_properties(m_net_properties,
+                                             access_location::host,
+                                             access_mode::read);
+        const Scalar3 net_momentum
+            = make_scalar3(h_net_properties.data[mpcd::detail::thermo_index::momentum_x],
+                           h_net_properties.data[mpcd::detail::thermo_index::momentum_y],
+                           h_net_properties.data[mpcd::detail::thermo_index::momentum_z]);
+        return net_momentum;
+        }
 
+    //! Get the net energy of the particles from the last call to compute
+    Scalar getNetEnergy()
+        {
+        if (!m_flags[mpcd::detail::thermo_options::energy])
+            {
+            m_exec_conf->msg->error()
+                << "Energy requested from CellList, but was not computed." << std::endl;
+            throw std::runtime_error("Net cell energy not available");
+            }
+
+        ArrayHandle<double> h_net_properties(m_net_properties,
+                                             access_location::host,
+                                             access_mode::read);
+        return h_net_properties.data[mpcd::detail::thermo_index::energy];
+        }
+
+    //! Get the average cell temperature from the last call to compute
+    Scalar getTemperature()
+        {
+        if (!m_flags[mpcd::detail::thermo_options::energy])
+            {
+            m_exec_conf->msg->error()
+                << "Temperature requested from CellList, but was not computed." << std::endl;
+            throw std::runtime_error("Net cell temperature not available");
+            }
+
+        ArrayHandle<double> h_net_properties(m_net_properties,
+                                             access_location::host,
+                                             access_mode::read);
+        return h_net_properties.data[mpcd::detail::thermo_index::temperature];
+        }
     //! Get the signal for requested thermo flags
     /*!
      * \returns A signal that subscribers can attach a callback to in order
@@ -304,8 +347,9 @@ class PYBIND11_EXPORT CellList : public Compute
 
     int3 m_origin_idx; //!< Origin as a global index
 
-    GPUVector<double4> m_cell_vel;    //!< Average velocity of a cell + cell mass
-    GPUVector<double3> m_cell_energy; //!< Kinetic energy, unscaled temperature, dof in each cell
+    GPUVector<double4> m_cell_vel;     //!< Average velocity of a cell + cell mass
+    GPUVector<double3> m_cell_energy;  //!< Kinetic energy, unscaled temperature, dof in each cell
+    GPUArray<double> m_net_properties; //!< Scalar properties of the system
 
     Nano::Signal<mpcd::detail::ThermoFlags()> m_flag_signal; //!< Signal for requested flags
     mpcd::detail::ThermoFlags m_flags;                       //!< Requested thermo flags

@@ -27,6 +27,9 @@ mpcd::CellList::CellList(std::shared_ptr<SystemDefinition> sysdef, Scalar cell_s
     assert(m_mpcd_pdata);
     m_exec_conf->msg->notice(5) << "Constructing MPCD CellList" << std::endl;
 
+    GPUArray<double> net_properties(mpcd::detail::thermo_index::num_quantities, m_exec_conf);
+    m_net_properties.swap(net_properties);
+
     setCellSize(cell_size);
     m_origin_idx = make_int3(0, 0, 0);
     m_cell_dim = make_uint3(0, 0, 0);
@@ -60,6 +63,9 @@ mpcd::CellList::CellList(std::shared_ptr<SystemDefinition> sysdef,
     {
     assert(m_mpcd_pdata);
     m_exec_conf->msg->notice(5) << "Constructing MPCD CellList" << std::endl;
+
+    GPUArray<double> net_properties(mpcd::detail::thermo_index::num_quantities, m_exec_conf);
+    m_net_properties.swap(net_properties);
 
     setGlobalDim(global_cell_dim);
     m_origin_idx = make_int3(0, 0, 0);
@@ -629,46 +635,99 @@ void mpcd::CellList::finishComputeProperties()
         {
         return;
         }
-    ArrayHandle<unsigned int> h_cell_np(m_cell_np, access_location::host, access_mode::read);
-    ArrayHandle<double4> h_cell_vel(m_cell_vel, access_location::host, access_mode::readwrite);
-    ArrayHandle<double3> h_cell_energy(m_cell_energy,
-                                       access_location::host,
-                                       access_mode::readwrite);
-
-    // iterate over all cells and compute average velocity, energy, temperature
-    const bool need_energy = m_flags[mpcd::detail::thermo_options::energy];
-    for (unsigned int idx = 0; idx < getNCells(); ++idx)
+    unsigned int n_temp_cells = 0;
         {
-        // average cell properties if the cell has mass
-        const double4 cell_vel = h_cell_vel.data[idx];
-        double3 vel_cm = make_double3(cell_vel.x, cell_vel.y, cell_vel.z);
-        const double mass = cell_vel.w;
+        const bool need_energy = m_flags[mpcd::detail::thermo_options::energy];
+        ArrayHandle<unsigned int> h_cell_np(m_cell_np, access_location::host, access_mode::read);
+        ArrayHandle<double4> h_cell_vel(m_cell_vel, access_location::host, access_mode::readwrite);
+        ArrayHandle<double3> h_cell_energy(m_cell_energy,
+                                           access_location::host,
+                                           access_mode::readwrite);
+        double3 net_momentum = make_double3(0, 0, 0);
+        double net_energy(0.0), net_temp(0.0);
 
-        if (mass > 0.)
+        // iterate over all cells and compute average velocity, energy, temperature
+        for (unsigned int idx = 0; idx < getNCells(); ++idx)
             {
-            // average velocity is only defined when there is some mass in the cell
-            vel_cm.x /= mass;
-            vel_cm.y /= mass;
-            vel_cm.z /= mass;
-            }
-        h_cell_vel.data[idx] = make_double4(vel_cm.x, vel_cm.y, vel_cm.z, mass);
+            // average cell properties if the cell has mass
+            const double4 cell_vel = h_cell_vel.data[idx];
+            double3 vel_cm = make_double3(cell_vel.x, cell_vel.y, cell_vel.z);
+            const double mass = cell_vel.w;
 
-        if (need_energy)
-            {
-            const double3 cell_energy = h_cell_energy.data[idx];
-            const double ke = cell_energy.x;
-            double temp(0.0);
-            const unsigned int np = h_cell_np.data[idx];
-            // temperature is only defined for 2 or more particles
-            if (np > 1)
+            // add accumulated momentum to total net momentum
+            net_momentum.x += cell_vel.x;
+            net_momentum.y += cell_vel.y;
+            net_momentum.z += cell_vel.z;
+
+            // get center of mass velocity from momentum
+            if (mass > 0.)
                 {
-                const double ke_cm
-                    = 0.5 * mass
-                      * (vel_cm.x * vel_cm.x + vel_cm.y * vel_cm.y + vel_cm.z * vel_cm.z);
-                temp = 2. * (ke - ke_cm) / (m_sysdef->getNDimensions() * (np - 1));
+                // average velocity is only defined when there is some mass in the cell
+                vel_cm.x /= mass;
+                vel_cm.y /= mass;
+                vel_cm.z /= mass;
                 }
-            h_cell_energy.data[idx] = make_double3(ke, temp, __int_as_double(np));
+            h_cell_vel.data[idx] = make_double4(vel_cm.x, vel_cm.y, vel_cm.z, mass);
+
+            if (need_energy)
+                {
+                const double3 cell_energy = h_cell_energy.data[idx];
+                const double ke = cell_energy.x;
+                double temp(0.0);
+                const unsigned int np = h_cell_np.data[idx];
+                // temperature is only defined for 2 or more particles
+                if (np > 1)
+                    {
+                    const double ke_cm
+                        = 0.5 * mass
+                          * (vel_cm.x * vel_cm.x + vel_cm.y * vel_cm.y + vel_cm.z * vel_cm.z);
+                    temp = 2. * (ke - ke_cm) / (m_sysdef->getNDimensions() * (np - 1));
+                    ++n_temp_cells;
+                    }
+                h_cell_energy.data[idx] = make_double3(ke, temp, __int_as_double(np));
+                // accumulate
+                net_energy += ke;
+                net_temp += temp;
+                }
             }
+        ArrayHandle<double> h_net_properties(m_net_properties,
+                                             access_location::host,
+                                             access_mode::overwrite);
+
+        h_net_properties.data[mpcd::detail::thermo_index::momentum_x] = net_momentum.x;
+        h_net_properties.data[mpcd::detail::thermo_index::momentum_y] = net_momentum.y;
+        h_net_properties.data[mpcd::detail::thermo_index::momentum_z] = net_momentum.z;
+        h_net_properties.data[mpcd::detail::thermo_index::energy] = net_energy;
+        h_net_properties.data[mpcd::detail::thermo_index::temperature] = net_temp;
+        }
+
+#ifdef ENABLE_MPI
+    if (m_decomposition)
+        {
+        ArrayHandle<double> h_net_properties(m_net_properties,
+                                             access_location::host,
+                                             access_mode::readwrite);
+        MPI_Allreduce(MPI_IN_PLACE,
+                      h_net_properties.data,
+                      mpcd::detail::thermo_index::num_quantities,
+                      MPI_DOUBLE,
+                      MPI_SUM,
+                      m_exec_conf->getMPICommunicator());
+
+        MPI_Allreduce(MPI_IN_PLACE,
+                      &n_temp_cells,
+                      1,
+                      MPI_UNSIGNED,
+                      MPI_SUM,
+                      m_exec_conf->getMPICommunicator());
+        }
+#endif // ENABLE_MPI
+    if (n_temp_cells > 0)
+        {
+        ArrayHandle<double> h_net_properties(m_net_properties,
+                                             access_location::host,
+                                             access_mode::readwrite);
+        h_net_properties.data[mpcd::detail::thermo_index::temperature] /= (double)n_temp_cells;
         }
     // ensure that properties will not be normalized twice
     m_property_sum = false;

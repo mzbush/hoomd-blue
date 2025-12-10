@@ -740,13 +740,13 @@ void celllist_thermo_basic_test(std::shared_ptr<ExecutionConfiguration> exec_con
         }
 
     // Check the net stats of the system
-    // CHECK_CLOSE(thermo->getNetMomentum().x, 4.0, tol);
-    // CHECK_CLOSE(thermo->getNetMomentum().y, -4.0, tol);
-    // CHECK_CLOSE(thermo->getNetMomentum().z, -1.0, tol);
-    // CHECK_CLOSE(thermo->getNetEnergy(), 28.5, tol);
-    // CHECK_CLOSE(thermo->getTemperature(),
-    //             0.5 * (2.0 * 0.5 * 0.5 / 3.0 + 2.0 * (1.5 * 1.5 + 2.5 * 2.5) / 3.0),
-    //             tol);
+    CHECK_CLOSE(cl->getNetMomentum().x, 4.0, tol);
+    CHECK_CLOSE(cl->getNetMomentum().y, -4.0, tol);
+    CHECK_CLOSE(cl->getNetMomentum().z, -1.0, tol);
+    CHECK_CLOSE(cl->getNetEnergy(), 28.5, tol);
+    CHECK_CLOSE(cl->getTemperature(),
+                0.5 * (2.0 * 0.5 * 0.5 / 3.0 + 2.0 * (1.5 * 1.5 + 2.5 * 2.5) / 3.0),
+                tol);
 
     // increase the mass and make sure that energies depend on mass, but velocities don't
     pdata_5->setMass(4.0);
@@ -798,13 +798,13 @@ void celllist_thermo_basic_test(std::shared_ptr<ExecutionConfiguration> exec_con
         }
 
     // Check the net stats of the system
-    // CHECK_CLOSE(thermo->getNetMomentum().x, 4.0 * 4.0, tol);
-    // CHECK_CLOSE(thermo->getNetMomentum().y, 4.0 * -4.0, tol);
-    // CHECK_CLOSE(thermo->getNetMomentum().z, 4.0 * -1.0, tol);
-    // CHECK_CLOSE(thermo->getNetEnergy(), 4.0 * 28.5, tol);
-    // CHECK_CLOSE(thermo->getTemperature(),
-    //             4.0 * 0.5 * (2.0 * 0.5 * 0.5 / 3.0 + 2.0 * (1.5 * 1.5 + 2.5 * 2.5) / 3.0),
-    //             tol);
+    CHECK_CLOSE(cl->getNetMomentum().x, 4.0 * 4.0, tol);
+    CHECK_CLOSE(cl->getNetMomentum().y, 4.0 * -4.0, tol);
+    CHECK_CLOSE(cl->getNetMomentum().z, 4.0 * -1.0, tol);
+    CHECK_CLOSE(cl->getNetEnergy(), 4.0 * 28.5, tol);
+    CHECK_CLOSE(cl->getTemperature(),
+                4.0 * 0.5 * (2.0 * 0.5 * 0.5 / 3.0 + 2.0 * (1.5 * 1.5 + 2.5 * 2.5) / 3.0),
+                tol);
 
     // switch a particle into a different cell, and make sure the DOF are reduced accordingly
     pdata_5->setMass(1.0);
@@ -861,12 +861,11 @@ void celllist_thermo_basic_test(std::shared_ptr<ExecutionConfiguration> exec_con
         }
 
     // Check the net stats of the system, only average temperature should change now
-    // CHECK_CLOSE(thermo->getNetMomentum().x, 4.0, tol);
-    // CHECK_CLOSE(thermo->getNetMomentum().y, -4.0, tol);
-    // CHECK_CLOSE(thermo->getNetMomentum().z, -1.0, tol);
-    // CHECK_CLOSE(thermo->getNetEnergy(), 28.5, tol);
-    // CHECK_CLOSE(thermo->getTemperature(), (2 * 1.0 * 1.0 + 2 * 1.0 * 1.0 + 2.0 * 2.0) / 6.0,
-    // tol);
+    CHECK_CLOSE(cl->getNetMomentum().x, 4.0, tol);
+    CHECK_CLOSE(cl->getNetMomentum().y, -4.0, tol);
+    CHECK_CLOSE(cl->getNetMomentum().z, -1.0, tol);
+    CHECK_CLOSE(cl->getNetEnergy(), 28.5, tol);
+    CHECK_CLOSE(cl->getTemperature(), (2 * 1.0 * 1.0 + 2 * 1.0 * 1.0 + 2.0 * 2.0) / 6.0, tol);
     }
 
 //! Test for correct calculation of cell thermo properties with embedded particles
@@ -977,11 +976,11 @@ void celllist_thermo_embed_test(std::shared_ptr<ExecutionConfiguration> exec_con
         }
 
     // Check the net stats of the system
-    // CHECK_CLOSE(thermo->getNetMomentum().x, -1.0, tol);
-    // CHECK_CLOSE(thermo->getNetMomentum().y, -15.0, tol);
-    // CHECK_CLOSE(thermo->getNetMomentum().z, -30.0, tol);
-    // CHECK_CLOSE(thermo->getNetEnergy(), 107.0, tol);
-    // CHECK_CLOSE(thermo->getTemperature(), (4.0 + 0.0 + 0.0 + 0.0) / 4., tol);
+    CHECK_CLOSE(cl->getNetMomentum().x, -1.0, tol);
+    CHECK_CLOSE(cl->getNetMomentum().y, -15.0, tol);
+    CHECK_CLOSE(cl->getNetMomentum().z, -30.0, tol);
+    CHECK_CLOSE(cl->getNetEnergy(), 107.0, tol);
+    CHECK_CLOSE(cl->getTemperature(), (4.0 + 0.0 + 0.0 + 0.0) / 4., tol);
     }
 
 //! dimension test case for MPCD CellList class
