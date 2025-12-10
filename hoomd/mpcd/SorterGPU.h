@@ -32,8 +32,10 @@ class PYBIND11_EXPORT SorterGPU : public mpcd::Sorter
     SorterGPU(std::shared_ptr<SystemDefinition> sysdef, std::shared_ptr<Trigger> trigger);
 
     protected:
+    GPUVector<unsigned int> m_cell_id; //!< auxiliary array for sorting cell ids
+
     /// Kernel tuner for filling sentinels in cell list.
-    std::shared_ptr<Autotuner<1>> m_sentinel_tuner;
+    std::shared_ptr<Autotuner<1>> m_compute_order_tuner;
 
     /// Kernel tuner for setting reverse map.
     std::shared_ptr<Autotuner<1>> m_reverse_tuner;
