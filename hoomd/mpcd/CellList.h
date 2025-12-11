@@ -264,6 +264,8 @@ class PYBIND11_EXPORT CellList : public Compute
     //! Get the net momentum of the particles from the last call to compute
     Scalar3 getNetMomentum()
         {
+        if (m_needs_net_reduce)
+            computeNetProperties();
         ArrayHandle<double> h_net_properties(m_net_properties,
                                              access_location::host,
                                              access_mode::read);
@@ -283,7 +285,8 @@ class PYBIND11_EXPORT CellList : public Compute
                 << "Energy requested from CellList, but was not computed." << std::endl;
             throw std::runtime_error("Net cell energy not available");
             }
-
+        if (m_needs_net_reduce)
+            computeNetProperties();
         ArrayHandle<double> h_net_properties(m_net_properties,
                                              access_location::host,
                                              access_mode::read);
@@ -299,7 +302,8 @@ class PYBIND11_EXPORT CellList : public Compute
                 << "Temperature requested from CellList, but was not computed." << std::endl;
             throw std::runtime_error("Net cell temperature not available");
             }
-
+        if (m_needs_net_reduce)
+            computeNetProperties();
         ArrayHandle<double> h_net_properties(m_net_properties,
                                              access_location::host,
                                              access_mode::read);
@@ -378,13 +382,17 @@ class PYBIND11_EXPORT CellList : public Compute
     //! Do final cell property calculation
     void finishComputeProperties();
 
+    //! Compute the net properties of all the cells
+    void computeNetProperties();
+
     //! Callback to sort cell list when particle data is sorted
     virtual void sort(uint64_t timestep,
                       const GPUArray<unsigned int>& order,
                       const GPUArray<unsigned int>& rorder);
 
     private:
-    bool m_property_sum; //!< True if all contributions to cell properties have been accumulated
+    bool m_property_sum;     //!< True if all contributions to cell properties have been accumulated
+    bool m_needs_net_reduce; //!< T
     bool m_needs_compute_dim; //!< True if the dimensions need to be (re-)computed
     //! Slot for box resizing
     void slotBoxChanged()
