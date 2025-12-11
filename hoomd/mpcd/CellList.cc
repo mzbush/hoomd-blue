@@ -591,7 +591,6 @@ void mpcd::CellList::finishComputeProperties()
     unsigned int n_temp_cells = 0;
         {
         const bool need_energy = m_flags[mpcd::detail::thermo_options::energy];
-        ArrayHandle<unsigned int> h_cell_np(m_cell_np, access_location::host, access_mode::read);
         ArrayHandle<double4> h_cell_vel(m_cell_vel, access_location::host, access_mode::readwrite);
         ArrayHandle<double3> h_cell_energy(m_cell_energy,
                                            access_location::host,
@@ -627,7 +626,7 @@ void mpcd::CellList::finishComputeProperties()
                 const double3 cell_energy = h_cell_energy.data[idx];
                 const double ke = cell_energy.x;
                 double temp(0.0);
-                const unsigned int np = h_cell_np.data[idx];
+                const unsigned int np = __double_as_int(cell_energy.z);
                 // temperature is only defined for 2 or more particles
                 if (np > 1)
                     {
