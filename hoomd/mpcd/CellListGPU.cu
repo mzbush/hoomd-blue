@@ -22,7 +22,6 @@ namespace kernel
  * \param d_cell_np Array of number of particles per cell
  * \param d_cell_vel Array of center of mass velocity + cell mass per cell
  * \param d_cell_energy Array of per cell kinetic energy, temperature, and dof
- * \param d_cell_list 2D array of MPCD particles in each cell
  * \param d_conditions Conditions flags for error reporting
  * \param d_vel MPCD particle velocities
  * \param mpcd_mass MPCD particle mass
@@ -39,7 +38,6 @@ namespace kernel
  * \param global_cell_dim Global cell dimensions, no padding
  * \param cell_np_max Maximum number of particles per cell
  * \param cell_indexer 3D indexer for cell id
- * \param cell_list_indexer 2D indexer for particle position in cell
  * \param N_mpcd Number of MPCD particles
  * \param N_tot Total number of particle (MPCD + embedded)
  * \param need_energy True if computing the energy
@@ -55,7 +53,6 @@ namespace kernel
 __global__ void compute_cell_list(unsigned int* d_cell_np,
                                   double4* d_cell_vel,
                                   double3* d_cell_energy,
-                                  unsigned int* d_cell_list,
                                   uint3* d_conditions,
                                   Scalar4* d_vel,
                                   double mpcd_mass,
@@ -72,7 +69,6 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
                                   const uint3 global_cell_dim,
                                   const unsigned int cell_np_max,
                                   const Index3D cell_indexer,
-                                  const Index2D cell_list_indexer,
                                   const unsigned int N_mpcd,
                                   const unsigned int N_tot,
                                   const bool need_energy)
@@ -175,15 +171,6 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
 
     const unsigned int bin_idx = cell_indexer(bin.x, bin.y, bin.z);
     const unsigned int offset = atomicInc(&d_cell_np[bin_idx], 0xffffffff);
-    if (offset < cell_np_max)
-        {
-        d_cell_list[cell_list_indexer(offset, bin_idx)] = idx;
-        }
-    else
-        {
-        // overflow
-        atomicMax(&(*d_conditions).x, offset + 1);
-        }
 
     // stash the current particle bin into the velocity array
     if (idx < N_mpcd)
@@ -362,36 +349,6 @@ __global__ void cell_check_migrate_embed(unsigned int* d_migrate_flag,
         atomicMax(d_migrate_flag, 1);
         }
     }
-
-__global__ void cell_apply_sort(unsigned int* d_cell_list,
-                                const unsigned int* d_rorder,
-                                const unsigned int* d_cell_np,
-                                const Index2D cli,
-                                const unsigned int N_mpcd,
-                                const unsigned int N_cli)
-    {
-    // one thread per cell-list entry
-    const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= N_cli)
-        return;
-
-    // convert the entry 1D index into a 2D index
-    const unsigned int cell = idx / cli.getW();
-    const unsigned int offset = idx - (cell * cli.getW());
-
-    /* here comes some terrible execution divergence */
-    // check if the cell is filled
-    const unsigned int np = d_cell_np[cell];
-    if (offset < np)
-        {
-        // check if this is an MPCD particle
-        const unsigned int pid = d_cell_list[idx];
-        if (pid < N_mpcd)
-            {
-            d_cell_list[idx] = d_rorder[pid];
-            }
-        }
-    }
     } // end namespace kernel
     } // end namespace gpu
     } // end namespace mpcd
@@ -400,7 +357,6 @@ __global__ void cell_apply_sort(unsigned int* d_cell_list,
  * \param d_cell_np Array of number of particles per cell
  * \param d_cell_vel Array of center of mass velocity + cell mass per cell
  * \param d_cell_energy Array of per cell kinetic energy, temperature, and dof
- * \param d_cell_list 2D array of MPCD particles in each cell
  * \param d_conditions Conditions flags for error reporting
  * \param d_vel MPCD particle velocities
  * \param mpcd_mass MPCD particle mass
@@ -417,7 +373,6 @@ __global__ void cell_apply_sort(unsigned int* d_cell_list,
  * \param global_cell_dim Global cell dimensions, no padding
  * \param cell_np_max Maximum number of particles per cell
  * \param cell_indexer 3D indexer for cell id
- * \param cell_list_indexer 2D indexer for particle position in cell
  * \param N_mpcd Number of MPCD particles
  * \param N_tot Total number of particle (MPCD + embedded)
  * \param need_energy True if computing the energy
@@ -428,7 +383,6 @@ __global__ void cell_apply_sort(unsigned int* d_cell_list,
 cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
                                          double4* d_cell_vel,
                                          double3* d_cell_energy,
-                                         unsigned int* d_cell_list,
                                          uint3* d_conditions,
                                          Scalar4* d_vel,
                                          double mpcd_mass,
@@ -445,7 +399,6 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
                                          const uint3& global_cell_dim,
                                          const unsigned int cell_np_max,
                                          const Index3D& cell_indexer,
-                                         const Index2D& cell_list_indexer,
                                          const unsigned int N_mpcd,
                                          const unsigned int N_tot,
                                          const bool need_energy,
@@ -474,7 +427,6 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
     mpcd::gpu::kernel::compute_cell_list<<<grid, run_block_size>>>(d_cell_np,
                                                                    d_cell_vel,
                                                                    d_cell_energy,
-                                                                   d_cell_list,
                                                                    d_conditions,
                                                                    d_vel,
                                                                    mpcd_mass,
@@ -491,7 +443,6 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
                                                                    global_cell_dim,
                                                                    cell_np_max,
                                                                    cell_indexer,
-                                                                   cell_list_indexer,
                                                                    N_mpcd,
                                                                    N_tot,
                                                                    need_energy);
@@ -640,32 +591,6 @@ cudaError_t mpcd::gpu::cell_check_migrate_embed(unsigned int* d_migrate_flag,
                                                                           box,
                                                                           num_dim,
                                                                           N);
-
-    return cudaSuccess;
-    }
-
-cudaError_t mpcd::gpu::cell_apply_sort(unsigned int* d_cell_list,
-                                       const unsigned int* d_rorder,
-                                       const unsigned int* d_cell_np,
-                                       const Index2D& cli,
-                                       const unsigned int N_mpcd,
-                                       const unsigned int block_size)
-    {
-    unsigned int max_block_size;
-    cudaFuncAttributes attr;
-    cudaFuncGetAttributes(&attr, (const void*)mpcd::gpu::kernel::cell_apply_sort);
-    max_block_size = attr.maxThreadsPerBlock;
-
-    const unsigned int N_cli = cli.getNumElements();
-
-    unsigned int run_block_size = min(block_size, max_block_size);
-    dim3 grid(N_cli / run_block_size + 1);
-    mpcd::gpu::kernel::cell_apply_sort<<<grid, run_block_size>>>(d_cell_list,
-                                                                 d_rorder,
-                                                                 d_cell_np,
-                                                                 cli,
-                                                                 N_mpcd,
-                                                                 N_cli);
 
     return cudaSuccess;
     }

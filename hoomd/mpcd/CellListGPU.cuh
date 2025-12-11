@@ -55,7 +55,6 @@ namespace gpu
 cudaError_t compute_cell_list(unsigned int* d_cell_np,
                               double4* d_cell_vel,
                               double3* d_cell_energy,
-                              unsigned int* d_cell_list,
                               uint3* d_conditions,
                               Scalar4* d_vel,
                               double mpcd_mass,
@@ -72,7 +71,6 @@ cudaError_t compute_cell_list(unsigned int* d_cell_np,
                               const uint3& global_cell_dim,
                               const unsigned int cell_np_max,
                               const Index3D& cell_indexer,
-                              const Index2D& cell_list_indexer,
                               const unsigned int N_mpcd,
                               const unsigned int N_tot,
                               const bool need_energy,
@@ -109,14 +107,6 @@ cudaError_t cell_check_migrate_embed(unsigned int* d_migrate_flag,
                                      const unsigned int num_dim,
                                      const unsigned int N,
                                      const unsigned int block_size);
-
-//! Kernel drive to apply sorted order to MPCD particles in cell list
-cudaError_t cell_apply_sort(unsigned int* d_cell_list,
-                            const unsigned int* d_rorder,
-                            const unsigned int* d_cell_np,
-                            const Index2D& cli,
-                            const unsigned int N_mpcd,
-                            const unsigned int block_size);
 
     } // end namespace gpu
     } // end namespace mpcd

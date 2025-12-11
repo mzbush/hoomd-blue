@@ -54,13 +54,6 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
     CHECK_EQUAL_UINT(Nmax,
                      4); // Default is 4 particles per cell, ensure this happens if there's only one
 
-    Index2D cli = cl->getCellListIndexer();
-    CHECK_EQUAL_UINT(cli.getNumElements(),
-                     6 * 8 * 10 * Nmax); // Cell list indexer has Nmax entries per cell
-
-    // Cell list uses amortized sizing, so must only be at least this big
-    UP_ASSERT(cl->getCellList().getNumElements() >= 6 * 8 * 10 * Nmax);
-
     /*******************/
     // Change the cell size, and ensure everything stays up to date
     cl->setGlobalDim(make_uint3(3, 4, 5));
@@ -75,13 +68,6 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
     cell_indexer = cl->getCellIndexer();
     CHECK_EQUAL_UINT(cell_indexer.getNumElements(), 3 * 4 * 5);
     UP_ASSERT(cl->getCellSizeArray().getNumElements() >= 3 * 4 * 5); // Each cell has one number
-
-    cli = cl->getCellListIndexer();
-    CHECK_EQUAL_UINT(cli.getNumElements(),
-                     3 * 4 * 5 * Nmax); // Cell list indexer has Nmax entries per cell
-
-    // Cell list uses amortized sizing, so must only be at least this big
-    UP_ASSERT(cl->getCellList().getNumElements() >= 3 * 4 * 5 * Nmax);
     }
 
 //! Test for correct cell listing of a small system
@@ -121,9 +107,6 @@ void celllist_small_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         ArrayHandle<unsigned int> h_cell_np(cl->getCellSizeArray(),
                                             access_location::host,
                                             access_mode::read);
-        ArrayHandle<unsigned int> h_cell_list(cl->getCellList(),
-                                              access_location::host,
-                                              access_mode::read);
 
         // validate that each cell has the right number
         Index3D ci = cl->getCellIndexer();
@@ -135,19 +118,6 @@ void celllist_small_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         CHECK_EQUAL_UINT(h_cell_np.data[ci(1, 0, 1)], 1);
         CHECK_EQUAL_UINT(h_cell_np.data[ci(1, 1, 0)], 1);
         CHECK_EQUAL_UINT(h_cell_np.data[ci(1, 1, 1)], 1);
-
-        // check the particle ids in each cell
-        Index2D cli = cl->getCellListIndexer();
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(0, 0, 0))], 0);
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(1, ci(0, 0, 0))], 8);
-
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(0, 0, 1))], 4);
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(0, 1, 0))], 2);
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(0, 1, 1))], 6);
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(1, 0, 0))], 1);
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(1, 0, 1))], 5);
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(1, 1, 0))], 3);
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(1, 1, 1))], 7);
 
         ArrayHandle<Scalar4> h_vel(pdata_9->getVelocities(),
                                    access_location::host,
@@ -185,9 +155,6 @@ void celllist_small_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         ArrayHandle<unsigned int> h_cell_np(cl->getCellSizeArray(),
                                             access_location::host,
                                             access_mode::read);
-        ArrayHandle<unsigned int> h_cell_list(cl->getCellList(),
-                                              access_location::host,
-                                              access_mode::read);
 
         // validate that each cell has the right number
         Index3D ci = cl->getCellIndexer();
@@ -200,29 +167,6 @@ void celllist_small_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         CHECK_EQUAL_UINT(h_cell_np.data[ci(1, 0, 0)], 0);
         CHECK_EQUAL_UINT(h_cell_np.data[ci(1, 0, 1)], 0);
         CHECK_EQUAL_UINT(h_cell_np.data[ci(1, 1, 0)], 0);
-
-        // check the particle ids in each cell
-        Index2D cli = cl->getCellListIndexer();
-            {
-            std::vector<unsigned int> pids(5, 0);
-            for (unsigned int i = 0; i < 5; ++i)
-                {
-                pids[i] = h_cell_list.data[cli(i, ci(0, 0, 0))];
-                }
-            sort(pids.begin(), pids.end());
-            unsigned int check_pids[] = {0, 2, 4, 6, 8};
-            UP_ASSERT_EQUAL(pids, check_pids);
-            }
-            {
-            std::vector<unsigned int> pids(4, 0);
-            for (unsigned int i = 0; i < 4; ++i)
-                {
-                pids[i] = h_cell_list.data[cli(i, ci(1, 1, 1))];
-                }
-            sort(pids.begin(), pids.end());
-            unsigned int check_pids[] = {1, 3, 5, 7};
-            UP_ASSERT_EQUAL(pids, check_pids);
-            }
         }
 
         // bring all particles into one box, which triggers a resize, and check that all particles
@@ -425,9 +369,6 @@ void celllist_embed_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         ArrayHandle<unsigned int> h_cell_np(cl->getCellSizeArray(),
                                             access_location::host,
                                             access_mode::read);
-        ArrayHandle<unsigned int> h_cell_list(cl->getCellList(),
-                                              access_location::host,
-                                              access_mode::read);
 
         // validate that each cell has the right number
         Index3D ci = cl->getCellIndexer();
@@ -439,17 +380,6 @@ void celllist_embed_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         CHECK_EQUAL_UINT(h_cell_np.data[ci(1, 0, 1)], 1);
         CHECK_EQUAL_UINT(h_cell_np.data[ci(1, 1, 0)], 1);
         CHECK_EQUAL_UINT(h_cell_np.data[ci(1, 1, 1)], 1);
-
-        // check the particle ids in each cell
-        Index2D cli = cl->getCellListIndexer();
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(0, 0, 0))], 0);
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(0, 0, 1))], 4);
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(0, 1, 0))], 2);
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(0, 1, 1))], 6);
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(1, 0, 0))], 1);
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(1, 0, 1))], 5);
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(1, 1, 0))], 3);
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(1, 1, 1))], 7);
 
         ArrayHandle<Scalar4> h_vel(pdata_8->getVelocities(),
                                    access_location::host,
@@ -477,9 +407,6 @@ void celllist_embed_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         ArrayHandle<unsigned int> h_cell_np(cl->getCellSizeArray(),
                                             access_location::host,
                                             access_mode::read);
-        ArrayHandle<unsigned int> h_cell_list(cl->getCellList(),
-                                              access_location::host,
-                                              access_mode::read);
 
         // validate that each cell has the right number
         Index3D ci = cl->getCellIndexer();
@@ -491,45 +418,6 @@ void celllist_embed_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         CHECK_EQUAL_UINT(h_cell_np.data[ci(1, 0, 1)], 2);
         CHECK_EQUAL_UINT(h_cell_np.data[ci(1, 1, 0)], 2);
         CHECK_EQUAL_UINT(h_cell_np.data[ci(1, 1, 1)], 2);
-
-        // check the particle ids in each cell
-        Index2D cli = cl->getCellListIndexer();
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(0, 0, 0))], 0);
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(0, 0, 1))], 4);
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(0, 1, 0))], 2);
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(0, 1, 1))], 6);
-            // check two particles in cell (1,0,0)
-            {
-            std::vector<unsigned int> result(2);
-            result[0] = h_cell_list.data[cli(0, ci(1, 0, 0))];
-            result[1] = h_cell_list.data[cli(1, ci(1, 0, 0))];
-            sort(result.begin(), result.end());
-            UP_ASSERT_EQUAL(result, std::vector<unsigned int> {1, 8});
-            }
-            // check two particles in cell (1,0,1)
-            {
-            std::vector<unsigned int> result(2);
-            result[0] = h_cell_list.data[cli(0, ci(1, 0, 1))];
-            result[1] = h_cell_list.data[cli(1, ci(1, 0, 1))];
-            sort(result.begin(), result.end());
-            UP_ASSERT_EQUAL(result, std::vector<unsigned int> {5, 10});
-            }
-            // check two particles in cell (1,1,0)
-            {
-            std::vector<unsigned int> result(2);
-            result[0] = h_cell_list.data[cli(0, ci(1, 1, 0))];
-            result[1] = h_cell_list.data[cli(1, ci(1, 1, 0))];
-            sort(result.begin(), result.end());
-            UP_ASSERT_EQUAL(result, std::vector<unsigned int> {3, 9});
-            }
-            // check two particles in cell (1,1,1)
-            {
-            std::vector<unsigned int> result(2);
-            result[0] = h_cell_list.data[cli(0, ci(1, 1, 1))];
-            result[1] = h_cell_list.data[cli(1, ci(1, 1, 1))];
-            sort(result.begin(), result.end());
-            UP_ASSERT_EQUAL(result, std::vector<unsigned int> {7, 11});
-            }
 
         ArrayHandle<Scalar4> h_vel(pdata_8->getVelocities(),
                                    access_location::host,
@@ -579,9 +467,6 @@ void celllist_embed_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         ArrayHandle<unsigned int> h_cell_np(cl->getCellSizeArray(),
                                             access_location::host,
                                             access_mode::read);
-        ArrayHandle<unsigned int> h_cell_list(cl->getCellList(),
-                                              access_location::host,
-                                              access_mode::read);
 
         // validate that each cell has the right number
         Index3D ci = cl->getCellIndexer();
@@ -593,39 +478,6 @@ void celllist_embed_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         CHECK_EQUAL_UINT(h_cell_np.data[ci(1, 0, 1)], 2);
         CHECK_EQUAL_UINT(h_cell_np.data[ci(1, 1, 0)], 3);
         CHECK_EQUAL_UINT(h_cell_np.data[ci(1, 1, 1)], 2);
-
-        // check the particle ids in each cell
-        Index2D cli = cl->getCellListIndexer();
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(0, 0, 0))], 0);
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(0, 0, 1))], 4);
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(0, 1, 0))], 2);
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(1, 0, 0))], 1);
-        CHECK_EQUAL_UINT(h_cell_list.data[cli(0, ci(0, 1, 1))], 6);
-            // check two particles in cell (1,0,1)
-            {
-            std::vector<unsigned int> result(2);
-            result[0] = h_cell_list.data[cli(0, ci(1, 0, 1))];
-            result[1] = h_cell_list.data[cli(1, ci(1, 0, 1))];
-            sort(result.begin(), result.end());
-            UP_ASSERT_EQUAL(result, std::vector<unsigned int> {5, 10});
-            }
-            // check two particles in cell (1,1,0)
-            {
-            std::vector<unsigned int> result(3);
-            result[0] = h_cell_list.data[cli(0, ci(1, 1, 0))];
-            result[1] = h_cell_list.data[cli(1, ci(1, 1, 0))];
-            result[2] = h_cell_list.data[cli(2, ci(1, 1, 0))];
-            sort(result.begin(), result.end());
-            UP_ASSERT_EQUAL(result, std::vector<unsigned int> {3, 8, 9});
-            }
-            // check two particles in cell (1,1,1)
-            {
-            std::vector<unsigned int> result(2);
-            result[0] = h_cell_list.data[cli(0, ci(1, 1, 1))];
-            result[1] = h_cell_list.data[cli(1, ci(1, 1, 1))];
-            sort(result.begin(), result.end());
-            UP_ASSERT_EQUAL(result, std::vector<unsigned int> {7, 11});
-            }
 
         ArrayHandle<Scalar4> h_vel(pdata_8->getVelocities(),
                                    access_location::host,

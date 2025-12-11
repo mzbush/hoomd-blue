@@ -43,11 +43,6 @@ class PYBIND11_EXPORT CellListGPU : public mpcd::CellList
     //! Compute the net properties of all the cells
     void computeNetProperties() override;
 
-    //! Callback to sort cell list on the GPU when particle data is sorted
-    virtual void sort(uint64_t timestep,
-                      const GPUArray<unsigned int>& order,
-                      const GPUArray<unsigned int>& rorder);
-
 #ifdef ENABLE_MPI
     //! Determine if embedded particles require migration on the gpu
     virtual bool needsEmbedMigrate(uint64_t timestep);
@@ -68,8 +63,6 @@ class PYBIND11_EXPORT CellListGPU : public mpcd::CellList
     /// Autotuner for the net property calculation.
     std::shared_ptr<Autotuner<1>> m_tuner_net;
 
-    /// Autotuner for sorting the cell list.
-    std::shared_ptr<Autotuner<1>> m_tuner_sort;
 #ifdef ENABLE_MPI
     /// Autotuner for checking embedded migration.
     std::shared_ptr<Autotuner<1>> m_tuner_embed_migrate;

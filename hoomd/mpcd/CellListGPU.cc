@@ -25,11 +25,7 @@ mpcd::CellListGPU::CellListGPU(std::shared_ptr<SystemDefinition> sysdef,
     m_tuner_net.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
                                        m_exec_conf,
                                        "mpcd_cell_net_property"));
-    m_tuner_sort.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
-                                        m_exec_conf,
-                                        "mpcd_cell_sort"));
-    m_autotuners.insert(m_autotuners.end(),
-                        {m_tuner_cell, m_tuner_property, m_tuner_net, m_tuner_sort});
+    m_autotuners.insert(m_autotuners.end(), {m_tuner_cell, m_tuner_property, m_tuner_net});
 
 #ifdef ENABLE_MPI
     m_tuner_embed_migrate.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
@@ -57,11 +53,7 @@ mpcd::CellListGPU::CellListGPU(std::shared_ptr<SystemDefinition> sysdef,
     m_tuner_net.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
                                        m_exec_conf,
                                        "mpcd_cell_net_property"));
-    m_tuner_sort.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
-                                        m_exec_conf,
-                                        "mpcd_cell_sort"));
-    m_autotuners.insert(m_autotuners.end(),
-                        {m_tuner_cell, m_tuner_property, m_tuner_net, m_tuner_sort});
+    m_autotuners.insert(m_autotuners.end(), {m_tuner_cell, m_tuner_property, m_tuner_net});
 
 #ifdef ENABLE_MPI
     m_tuner_embed_migrate.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
@@ -78,9 +70,6 @@ mpcd::CellListGPU::~CellListGPU() { }
 
 void mpcd::CellListGPU::buildCellList()
     {
-    ArrayHandle<unsigned int> d_cell_list(m_cell_list,
-                                          access_location::device,
-                                          access_mode::overwrite);
     ArrayHandle<unsigned int> d_cell_np(m_cell_np, access_location::device, access_mode::overwrite);
     ArrayHandle<double4> d_cell_vel(m_cell_vel, access_location::device, access_mode::overwrite);
     ArrayHandle<double3> d_cell_energy(m_cell_energy,
@@ -128,7 +117,6 @@ void mpcd::CellListGPU::buildCellList()
         mpcd::gpu::compute_cell_list(d_cell_np.data,
                                      d_cell_vel.data,
                                      d_cell_energy.data,
-                                     d_cell_list.data,
                                      m_conditions.getDeviceFlags(),
                                      d_vel.data,
                                      m_mpcd_pdata->getMass(),
@@ -145,7 +133,6 @@ void mpcd::CellListGPU::buildCellList()
                                      m_global_cell_dim,
                                      m_cell_np_max,
                                      m_cell_indexer,
-                                     m_cell_list_indexer,
                                      N_mpcd,
                                      N_tot,
                                      m_flags[mpcd::detail::thermo_options::energy],
@@ -160,7 +147,6 @@ void mpcd::CellListGPU::buildCellList()
         mpcd::gpu::compute_cell_list(d_cell_np.data,
                                      d_cell_vel.data,
                                      d_cell_energy.data,
-                                     d_cell_list.data,
                                      m_conditions.getDeviceFlags(),
                                      d_vel.data,
                                      m_mpcd_pdata->getMass(),
@@ -177,7 +163,6 @@ void mpcd::CellListGPU::buildCellList()
                                      m_global_cell_dim,
                                      m_cell_np_max,
                                      m_cell_indexer,
-                                     m_cell_list_indexer,
                                      N_mpcd,
                                      N_tot,
                                      m_flags[mpcd::detail::thermo_options::energy],
@@ -310,45 +295,6 @@ void mpcd::CellListGPU::computeNetProperties()
         h_net_properties.data[mpcd::detail::thermo_index::temperature] /= (double)n_temp_cells;
         }
     m_needs_net_reduce = false;
-    }
-
-/*!
- * \param timestep Timestep that the sorting occurred
- * \param order Mapping of sorted particle indexes onto old particle indexes
- * \param rorder Mapping of old particle indexes onto sorted particle indexes
- */
-void mpcd::CellListGPU::sort(uint64_t timestep,
-                             const GPUArray<unsigned int>& order,
-                             const GPUArray<unsigned int>& rorder)
-    {
-    // no need to do any sorting if we can still be called at the current timestep
-    if (peekCompute(timestep))
-        return;
-
-    // force a recompute if mapping is invalid
-    if (rorder.isNull())
-        {
-        m_force_compute = true;
-        return;
-        }
-
-    // iterate through particles in cell list, and update their indexes using reverse mapping
-    ArrayHandle<unsigned int> d_cell_list(m_cell_list,
-                                          access_location::device,
-                                          access_mode::readwrite);
-    ArrayHandle<unsigned int> d_rorder(rorder, access_location::device, access_mode::read);
-    ArrayHandle<unsigned int> d_cell_np(m_cell_np, access_location::device, access_mode::read);
-
-    m_tuner_sort->begin();
-    mpcd::gpu::cell_apply_sort(d_cell_list.data,
-                               d_rorder.data,
-                               d_cell_np.data,
-                               m_cell_list_indexer,
-                               m_mpcd_pdata->getN(),
-                               m_tuner_sort->getParam()[0]);
-    if (m_exec_conf->isCUDAErrorCheckingEnabled())
-        CHECK_CUDA_ERROR();
-    m_tuner_sort->end();
     }
 
 #ifdef ENABLE_MPI

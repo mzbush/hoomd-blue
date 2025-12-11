@@ -55,12 +55,6 @@ class PYBIND11_EXPORT CellList : public Compute
     //! Check if kernel autotuning is complete
     bool isAutotuningComplete() override;
 
-    //! Get the cell list data
-    const GPUArray<unsigned int>& getCellList() const
-        {
-        return m_cell_list;
-        }
-
     //! Get the number of particles per cell
     const GPUArray<unsigned int>& getCellSizeArray() const
         {
@@ -95,12 +89,6 @@ class PYBIND11_EXPORT CellList : public Compute
     const Index3D& getGlobalCellIndexer() const
         {
         return m_global_cell_indexer;
-        }
-
-    //! Get the cell list indexer
-    const Index2D& getCellListIndexer() const
-        {
-        return m_cell_list_indexer;
         }
 
     //! Get the number of cells in each dimension
@@ -166,8 +154,7 @@ class PYBIND11_EXPORT CellList : public Compute
         m_needs_compute_dim = true;
         }
 
-    //! Get the number of extra communication cells
-    unsigned int getNExtraCells() const
+    !Get the number of extra communication cells unsigned int getNExtraCells() const
         {
         return m_num_extra;
         }
@@ -231,10 +218,10 @@ class PYBIND11_EXPORT CellList : public Compute
     void drawGridShift(uint64_t timestep);
 
     //! Gets the group of particles that is coupled to the MPCD solvent through the collision step
-    std::shared_ptr<ParticleGroup> getEmbeddedGroup() const
-        {
-        return m_embed_group;
-        }
+    // std::shared_ptr<ParticleGroup> getEmbeddedGroup() const
+    //     {
+    //     return m_embed_group;
+    //     }
 
     //! Sets a group of particles that is coupled to the MPCD solvent through the collision step
     void setEmbeddedGroup(std::shared_ptr<ParticleGroup> embed_group)
@@ -343,10 +330,8 @@ class PYBIND11_EXPORT CellList : public Compute
     Scalar3 m_global_cell_dim_inv; //!< Inverse of number of cells in each direction of global box
     Index3D m_cell_indexer;        //!< Indexer from 3D into cell list 1D
     Index3D m_global_cell_indexer; //!< Indexer from 3D into 1D for global cell indexes
-    Index2D m_cell_list_indexer;   //!< Indexer into cell list members
     unsigned int m_cell_np_max;    //!< Maximum number of particles per cell
     GPUVector<unsigned int> m_cell_np;        //!< Number of particles per cell
-    GPUVector<unsigned int> m_cell_list;      //!< Cell list of particles
     GPUVector<unsigned int> m_embed_cell_ids; //!< Cell ids of the embedded particles
     GPUFlags<uint3> m_conditions; //!< Detect conditions that might fail building cell list
 
@@ -386,11 +371,6 @@ class PYBIND11_EXPORT CellList : public Compute
 
     //! Compute the net properties of all the cells
     virtual void computeNetProperties();
-
-    //! Callback to sort cell list when particle data is sorted
-    virtual void sort(uint64_t timestep,
-                      const GPUArray<unsigned int>& order,
-                      const GPUArray<unsigned int>& rorder);
 
     private:
     bool m_needs_compute_dim; //!< True if the dimensions need to be (re-)computed
