@@ -50,10 +50,6 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
     CHECK_EQUAL_UINT(cell_indexer.getNumElements(), 6 * 8 * 10);
     UP_ASSERT(cl->getCellSizeArray().getNumElements() >= 6 * 8 * 10); // Each cell has one number
 
-    unsigned int Nmax = cl->getNmax();
-    CHECK_EQUAL_UINT(Nmax,
-                     4); // Default is 4 particles per cell, ensure this happens if there's only one
-
     /*******************/
     // Change the cell size, and ensure everything stays up to date
     cl->setGlobalDim(make_uint3(3, 4, 5));

@@ -18,11 +18,10 @@
 namespace hoomd
     {
 mpcd::CellList::CellList(std::shared_ptr<SystemDefinition> sysdef, Scalar cell_size, bool shift)
-    : Compute(sysdef), m_mpcd_pdata(m_sysdef->getMPCDParticleData()), m_cell_np_max(4),
-      m_cell_np(m_exec_conf), m_embed_cell_ids(m_exec_conf), m_conditions(m_exec_conf),
-      m_cell_vel(m_exec_conf), m_cell_energy(m_exec_conf), m_property_sum(false),
-      m_needs_net_reduce(true), m_needs_compute_dim(true), m_particles_sorted(false),
-      m_virtual_change(false)
+    : Compute(sysdef), m_mpcd_pdata(m_sysdef->getMPCDParticleData()), m_cell_np(m_exec_conf),
+      m_embed_cell_ids(m_exec_conf), m_conditions(m_exec_conf), m_cell_vel(m_exec_conf),
+      m_cell_energy(m_exec_conf), m_property_sum(false), m_needs_net_reduce(true),
+      m_needs_compute_dim(true), m_particles_sorted(false), m_virtual_change(false)
     {
     assert(m_mpcd_pdata);
     m_exec_conf->msg->notice(5) << "Constructing MPCD CellList" << std::endl;
@@ -54,10 +53,10 @@ mpcd::CellList::CellList(std::shared_ptr<SystemDefinition> sysdef, Scalar cell_s
 mpcd::CellList::CellList(std::shared_ptr<SystemDefinition> sysdef,
                          const uint3& global_cell_dim,
                          bool shift)
-    : Compute(sysdef), m_mpcd_pdata(m_sysdef->getMPCDParticleData()), m_cell_np_max(4),
-      m_cell_np(m_exec_conf), m_embed_cell_ids(m_exec_conf), m_conditions(m_exec_conf),
-      m_cell_vel(m_exec_conf), m_cell_energy(m_exec_conf), m_property_sum(false),
-      m_needs_compute_dim(true), m_particles_sorted(false), m_virtual_change(false)
+    : Compute(sysdef), m_mpcd_pdata(m_sysdef->getMPCDParticleData()), m_cell_np(m_exec_conf),
+      m_embed_cell_ids(m_exec_conf), m_conditions(m_exec_conf), m_cell_vel(m_exec_conf),
+      m_cell_energy(m_exec_conf), m_property_sum(false), m_needs_compute_dim(true),
+      m_particles_sorted(false), m_virtual_change(false)
     {
     assert(m_mpcd_pdata);
     m_exec_conf->msg->notice(5) << "Constructing MPCD CellList" << std::endl;
@@ -746,11 +745,6 @@ bool mpcd::CellList::checkConditions()
 
     uint3 conditions = m_conditions.readFlags();
 
-    if (conditions.x > m_cell_np_max)
-        {
-        m_cell_np_max = conditions.x;
-        result = true;
-        }
     if (conditions.y)
         {
         unsigned int n = conditions.y - 1;

@@ -36,7 +36,6 @@ namespace kernel
  * \param global_box Global simulation box
  * \param n_global_cell Global dimensions of the cell list, including padding
  * \param global_cell_dim Global cell dimensions, no padding
- * \param cell_np_max Maximum number of particles per cell
  * \param cell_indexer 3D indexer for cell id
  * \param N_mpcd Number of MPCD particles
  * \param N_tot Total number of particle (MPCD + embedded)
@@ -67,7 +66,6 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
                                   const BoxDim global_box,
                                   const uint3 n_global_cell,
                                   const uint3 global_cell_dim,
-                                  const unsigned int cell_np_max,
                                   const Index3D cell_indexer,
                                   const unsigned int N_mpcd,
                                   const unsigned int N_tot,
@@ -371,7 +369,6 @@ __global__ void cell_check_migrate_embed(unsigned int* d_migrate_flag,
  * \param global_box Global simulation box
  * \param n_global_cell Global dimensions of the cell list, including padding
  * \param global_cell_dim Global cell dimensions, no padding
- * \param cell_np_max Maximum number of particles per cell
  * \param cell_indexer 3D indexer for cell id
  * \param N_mpcd Number of MPCD particles
  * \param N_tot Total number of particle (MPCD + embedded)
@@ -397,7 +394,6 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
                                          const BoxDim& global_box,
                                          const uint3& n_global_cell,
                                          const uint3& global_cell_dim,
-                                         const unsigned int cell_np_max,
                                          const Index3D& cell_indexer,
                                          const unsigned int N_mpcd,
                                          const unsigned int N_tot,
@@ -441,7 +437,6 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
                                                                    global_box,
                                                                    n_global_cell,
                                                                    global_cell_dim,
-                                                                   cell_np_max,
                                                                    cell_indexer,
                                                                    N_mpcd,
                                                                    N_tot,

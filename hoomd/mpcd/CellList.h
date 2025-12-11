@@ -119,12 +119,6 @@ class PYBIND11_EXPORT CellList : public Compute
     //! Wrap a cell into a global cell
     const int3 wrapGlobalCell(const int3& cell);
 
-    //! Get the maximum number of particles in a cell
-    const unsigned int getNmax() const
-        {
-        return m_cell_np_max;
-        }
-
     //! Get the MPCD cell size (deprecated)
     Scalar3 getCellSize();
 
@@ -330,7 +324,6 @@ class PYBIND11_EXPORT CellList : public Compute
     Scalar3 m_global_cell_dim_inv; //!< Inverse of number of cells in each direction of global box
     Index3D m_cell_indexer;        //!< Indexer from 3D into cell list 1D
     Index3D m_global_cell_indexer; //!< Indexer from 3D into 1D for global cell indexes
-    unsigned int m_cell_np_max;    //!< Maximum number of particles per cell
     GPUVector<unsigned int> m_cell_np;        //!< Number of particles per cell
     GPUVector<unsigned int> m_embed_cell_ids; //!< Cell ids of the embedded particles
     GPUFlags<uint3> m_conditions; //!< Detect conditions that might fail building cell list
