@@ -5,6 +5,7 @@
  * \file mpcd/CellListGPU.cu
  * \brief Defines GPU functions and kernels used by mpcd::CellListGPU
  */
+#include <hipcub/hipcub.hpp>
 
 #include "CellListGPU.cuh"
 
@@ -209,6 +210,119 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
     }
 
 /*!
+ * \param d_cell_vel Cell velocity to finish computing
+ * \param d_cell_energy Cell energy to finish computing
+ * \param N_cells Number of cells
+ * \param N_dim Number of dimensions
+ * \param need_energy If true, compute the cell-level energy properties.
+ *
+ * \b Implementation details:
+ * Using one thread per cell, the cell properties are normalized from the
+ * additive contributions of the particles to their final values, e.g. the cell
+ * velocities are computed from the net momentum of the cell divided by the final
+ * mass. The temperature of each cell is calculated.
+ */
+__global__ void finish_cell_properties(double4* d_cell_vel,
+                                       double3* d_cell_energy,
+                                       const unsigned int N_cells,
+                                       const unsigned int N_dim,
+                                       const bool need_energy)
+    {
+    // one thread per cell
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= N_cells)
+        return;
+
+    const double4 vel_cell = d_cell_vel[idx];
+    double3 vel_cm = make_double3(vel_cell.x, vel_cell.y, vel_cell.z);
+    const double mass = vel_cell.w;
+
+    // get center of mass velocity from momentum
+    if (mass > 0.)
+        {
+        // average velocity is only defined when there is some mass in the cell
+        vel_cm.x /= mass;
+        vel_cm.y /= mass;
+        vel_cm.z /= mass;
+        }
+    d_cell_vel[idx] = make_double4(vel_cm.x, vel_cm.y, vel_cm.z, mass);
+
+    if (need_energy)
+        {
+        const double3 cell_energy = d_cell_energy[idx];
+        const double ke = cell_energy.x;
+        double temp(0.0);
+        const unsigned int np = __double_as_int(cell_energy.z);
+
+        if (np > 1)
+            {
+            const double ke_cm
+                = 0.5 * mass * (vel_cm.x * vel_cm.x + vel_cm.y * vel_cm.y + vel_cm.z * vel_cm.z);
+            temp = 2. * (ke - ke_cm) / (N_dim * (np - 1));
+            }
+        d_cell_energy[idx] = make_double3(ke, temp, __int_as_double(np));
+        }
+    }
+
+/*!
+ * \param d_tmp_thermo Temporary cell packed thermo element
+ * \param d_cell_vel Cell velocity to reduce
+ * \param d_cell_energy Cell energy to reduce
+ * \param N_cells Number of cells
+ * \tparam need_energy If true, compute the cell-level energy properties.
+ *
+ * \b Implementation details:
+ * Using one thread per \a temporary cell, the cell properties are normalized
+ * in a way suitable for reduction of net properties, e.g. the cell velocities
+ * are converted to momentum. The temperature is set to the cell energy, and a
+ * flag is set to 1 or 0 to indicate whether this cell has an energy that should
+ * be used in averaging the total temperature.
+ */
+template<bool need_energy>
+__global__ void stage_net_cell_thermo(mpcd::detail::cell_thermo_element* d_tmp_thermo,
+                                      const double4* d_cell_vel,
+                                      const double3* d_cell_energy,
+                                      const unsigned int N_cells)
+    {
+    // one thread per cell
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= N_cells)
+        return;
+
+    const double4 vel_cell = d_cell_vel[idx];
+    const double mass = vel_cell.w;
+
+    // add accumulated momentum to net momentum
+    mpcd::detail::cell_thermo_element thermo;
+    thermo.momentum = make_double3(vel_cell.x * mass, vel_cell.y * mass, vel_cell.z * mass);
+
+    if (need_energy)
+        {
+        const double3 cell_energy = d_cell_energy[idx];
+
+        if (__double_as_int(cell_energy.z) > 1)
+            {
+            thermo.temperature = cell_energy.y;
+            thermo.flag = 1;
+            }
+        else
+            {
+            thermo.temperature = 0.;
+            thermo.flag = 0;
+            }
+        thermo.energy = cell_energy.x;
+        }
+    else
+        {
+        thermo.energy = 0.;
+        thermo.temperature = 0.;
+        thermo.flag = 0;
+        }
+
+    d_tmp_thermo[idx] = thermo;
+    }
+
+/*!
  * \param d_migrate_flag Flag signaling migration is required (output)
  * \param d_pos Embedded particle positions
  * \param d_group Indexes into \a d_pos for particles in embedded group
@@ -382,6 +496,113 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
                                                                    N_tot,
                                                                    need_energy);
 
+    return cudaSuccess;
+    }
+
+/*!
+ * \param d_cell_vel Cell velocity to reduce
+ * \param d_cell_energy Cell energy to reduce
+ * \param N_cells Number of total cells
+ * \param N_dim Number of dimensions
+ * \param need_energy If true, compute the cell-level energy properties
+ * \param block_size Number of threads per block
+ *
+ * \returns cudaSuccess on completion
+ *
+ * \sa mpcd::gpu::kernel::finish_cell_properties
+ */
+cudaError_t mpcd::gpu::finish_cell_properties(double4* d_cell_vel,
+                                              double3* d_cell_energy,
+                                              const unsigned int N_cells,
+                                              const unsigned int N_dim,
+                                              const bool need_energy,
+                                              const unsigned int block_size)
+    {
+    unsigned int max_block_size;
+    cudaFuncAttributes attr;
+    cudaFuncGetAttributes(&attr, (const void*)mpcd::gpu::kernel::finish_cell_properties);
+    max_block_size = attr.maxThreadsPerBlock;
+
+    unsigned int run_block_size = min(block_size, max_block_size);
+    dim3 grid(N_cells / run_block_size + 1);
+    mpcd::gpu::kernel::finish_cell_properties<<<grid, run_block_size>>>(d_cell_vel,
+                                                                        d_cell_energy,
+                                                                        N_cells,
+                                                                        N_dim,
+                                                                        need_energy);
+
+    return cudaSuccess;
+    }
+
+/*!
+ * \param d_tmp_thermo Temporary cell packed thermo element
+ * \param d_cell_vel Cell velocity to reduce
+ * \param d_cell_energy Cell energy to reduce
+ * \param N_cells Number of total cells
+ * \param need_energy If true, compute the cell-level energy properties
+ * \param block_size Number of threads per block
+ *
+ * \returns cudaSuccess on completion
+ *
+ * \sa mpcd::gpu::kernel::stage_net_cell_thermo
+ */
+cudaError_t mpcd::gpu::stage_net_cell_thermo(mpcd::detail::cell_thermo_element* d_tmp_thermo,
+                                             const double4* d_cell_vel,
+                                             const double3* d_cell_energy,
+                                             const unsigned int N_cells,
+                                             const bool need_energy,
+                                             const unsigned int block_size)
+    {
+    if (need_energy)
+        {
+        unsigned int max_block_size_energy;
+        cudaFuncAttributes attr;
+        cudaFuncGetAttributes(&attr, (const void*)mpcd::gpu::kernel::stage_net_cell_thermo<true>);
+        max_block_size_energy = attr.maxThreadsPerBlock;
+
+        unsigned int run_block_size = min(block_size, max_block_size_energy);
+        dim3 grid(N_cells / run_block_size + 1);
+        mpcd::gpu::kernel::stage_net_cell_thermo<true>
+            <<<grid, run_block_size>>>(d_tmp_thermo, d_cell_vel, d_cell_energy, N_cells);
+        }
+    else
+        {
+        unsigned int max_block_size_noenergy;
+        cudaFuncAttributes attr;
+        cudaFuncGetAttributes(&attr, (const void*)mpcd::gpu::kernel::stage_net_cell_thermo<false>);
+        max_block_size_noenergy = attr.maxThreadsPerBlock;
+
+        unsigned int run_block_size = min(block_size, max_block_size_noenergy);
+        dim3 grid(N_cells / run_block_size + 1);
+        mpcd::gpu::kernel::stage_net_cell_thermo<false>
+            <<<grid, run_block_size>>>(d_tmp_thermo, d_cell_vel, d_cell_energy, N_cells);
+        }
+    return cudaSuccess;
+    }
+
+/*!
+ * \param d_reduced Cell thermo properties reduced across all cells (output on second call)
+ * \param d_tmp Temporary storage for reduction (output on first call)
+ * \param tmp_bytes Number of bytes allocated for temporary storage (output on first call)
+ * \param d_tmp_thermo Cell thermo properties to reduce
+ * \param N_cells The number of cells to reduce across
+ *
+ * \returns cudaSuccess on completion
+ *
+ * \b Implementation details:
+ * CUB DeviceReduce is used to perform the reduction. Hence, this function requires
+ * two calls to perform the reduction. The first call sizes the temporary storage,
+ * which is returned in \a d_tmp and \a tmp_bytes. The caller must then allocate
+ * the required bytes, and call the function a second time. This performs the
+ * reduction and returns the result in \a d_reduced.
+ */
+cudaError_t mpcd::gpu::reduce_net_cell_thermo(mpcd::detail::cell_thermo_element* d_reduced,
+                                              void* d_tmp,
+                                              size_t& tmp_bytes,
+                                              const mpcd::detail::cell_thermo_element* d_tmp_thermo,
+                                              const size_t N_cells)
+    {
+    cub::DeviceReduce::Sum(d_tmp, tmp_bytes, d_tmp_thermo, d_reduced, (unsigned int)N_cells);
     return cudaSuccess;
     }
 

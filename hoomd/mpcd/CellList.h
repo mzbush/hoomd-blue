@@ -355,6 +355,8 @@ class PYBIND11_EXPORT CellList : public Compute
     GPUVector<double4> m_cell_vel;     //!< Average velocity of a cell + cell mass
     GPUVector<double3> m_cell_energy;  //!< Kinetic energy, unscaled temperature, dof in each cell
     GPUArray<double> m_net_properties; //!< Scalar properties of the system
+    bool m_property_sum;     //!< True if contributions to cell properties have been accumulated
+    bool m_needs_net_reduce; //!< Flag if a net reduction is necessary
 
     Nano::Signal<mpcd::detail::ThermoFlags()> m_flag_signal; //!< Signal for requested flags
     mpcd::detail::ThermoFlags m_flags;                       //!< Requested thermo flags
@@ -380,10 +382,10 @@ class PYBIND11_EXPORT CellList : public Compute
     virtual void buildCellList();
 
     //! Do final cell property calculation
-    void finishComputeProperties();
+    virtual void finishComputeProperties();
 
     //! Compute the net properties of all the cells
-    void computeNetProperties();
+    virtual void computeNetProperties();
 
     //! Callback to sort cell list when particle data is sorted
     virtual void sort(uint64_t timestep,
@@ -391,8 +393,6 @@ class PYBIND11_EXPORT CellList : public Compute
                       const GPUArray<unsigned int>& rorder);
 
     private:
-    bool m_property_sum;     //!< True if all contributions to cell properties have been accumulated
-    bool m_needs_net_reduce; //!< T
     bool m_needs_compute_dim; //!< True if the dimensions need to be (re-)computed
     //! Slot for box resizing
     void slotBoxChanged()
