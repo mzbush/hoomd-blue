@@ -58,6 +58,7 @@ The following people have contributed to HOOMD-blue:
 * James Antonaglia, University of Michigan
 * James Proctor, University of Michigan
 * James W. Swan, Massachusetts Institute of Technology
+* Jared Shi, University of Michigan
 * Jen Bradley, University of Michigan
 * Jenny Fothergill, Boise State University
 * Jens Glaser, Oak Ridge National Laboratory
@@ -89,6 +90,7 @@ The following people have contributed to HOOMD-blue:
 * Michael Howard, Auburn University
 * Michaela Bush, Auburn University
 * Mike Henry, Boise State University
+* Ming Zhu, Wuhan University
 * Nathan Horst
 * Nipuli Gunaratne, University of Michigan
 * Nicholas Cal Craven, Vanderbilt University
@@ -134,3 +136,5 @@ The following people have contributed to HOOMD-blue:
 * Nathan Barrett, Pritzker School of Molecular Engineering
 * Domagoj Fijan, University of Michigan
 * Cristina Butu, Columbia University
+* Kay Hofmann, Johannes Gutenberg University Mainz
+* Shuo-Lin Weng, Texas A&M University
