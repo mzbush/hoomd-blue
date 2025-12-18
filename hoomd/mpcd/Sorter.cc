@@ -61,23 +61,17 @@ void mpcd::Sorter::update(uint64_t timestep)
 void mpcd::Sorter::computeOrder(uint64_t timestep)
     {
     ArrayHandle<unsigned int> h_order(m_order, access_location::host, access_mode::overwrite);
-
-    // sort indices
-    std::vector<unsigned int> indexes(m_mpcd_pdata->getN());
-    std::iota(indexes.begin(), indexes.end(), 0);
     ArrayHandle<Scalar4> h_vel(m_mpcd_pdata->getVelocities(),
                                access_location::host,
                                access_mode::read);
-    std::sort(indexes.begin(),
-              indexes.end(),
+    unsigned int mpcd_N = m_mpcd_pdata->getN();
+    // sort indices
+    std::iota(h_order.data, h_order.data + mpcd_N, 0);
+
+    std::sort(h_order.data,
+              h_order.data + mpcd_N,
               [&h_vel](unsigned int i, unsigned int j)
               { return __scalar_as_int(h_vel.data[i].w) < __scalar_as_int(h_vel.data[j].w); });
-
-    // assign the order
-    for (unsigned int idx = 0; idx < m_mpcd_pdata->getN(); ++idx)
-        {
-        h_order.data[idx] = indexes[idx];
-        }
     }
 
 /*!
