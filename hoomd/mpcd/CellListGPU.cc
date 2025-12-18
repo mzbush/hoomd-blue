@@ -7,7 +7,6 @@
  */
 
 #include "CellListGPU.h"
-#include "ReductionOperators.h"
 
 namespace hoomd
     {
