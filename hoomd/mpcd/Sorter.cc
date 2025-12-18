@@ -118,7 +118,6 @@ void mpcd::Sorter::applySortOrder() const
         for (unsigned int idx = 0; idx < m_mpcd_pdata->getN(); ++idx)
             {
             const unsigned int old_idx = h_order.data[idx];
-            // std::cout << old_idx << std::endl;
             h_pos_alt.data[idx] = h_pos.data[old_idx];
             h_vel_alt.data[idx] = h_vel.data[old_idx];
             h_tag_alt.data[idx] = h_tag.data[old_idx];
