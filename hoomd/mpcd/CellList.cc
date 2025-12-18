@@ -533,11 +533,8 @@ void mpcd::CellList::buildCellList()
         // compute optional cell properties
         if (m_flags[mpcd::detail::thermo_options::energy])
             {
-            double3 cell_energy = h_cell_energy.data[bin_idx];
-            cell_energy.x
+            h_cell_energy.data[bin_idx].x
                 += 0.5 * mass_i * (vel_i.x * vel_i.x + vel_i.y * vel_i.y + vel_i.z * vel_i.z);
-            cell_energy.z += __int_as_double(1);
-            h_cell_energy.data[bin_idx] = make_double3(cell_energy.x, 0.0, cell_energy.z);
             }
         // increment the counter always
         ++h_cell_np.data[bin_idx];
@@ -550,6 +547,7 @@ void mpcd::CellList::buildCellList()
 void mpcd::CellList::finishComputeProperties()
     {
     const bool need_energy = m_flags[mpcd::detail::thermo_options::energy];
+    ArrayHandle<unsigned int> h_cell_np(m_cell_np, access_location::host, access_mode::read);
     ArrayHandle<double4> h_cell_vel(m_cell_vel, access_location::host, access_mode::readwrite);
     ArrayHandle<double3> h_cell_energy(m_cell_energy,
                                        access_location::host,
@@ -578,7 +576,7 @@ void mpcd::CellList::finishComputeProperties()
             const double3 cell_energy = h_cell_energy.data[idx];
             const double ke = cell_energy.x;
             double temp(0.0);
-            const unsigned int np = __double_as_int(cell_energy.z);
+            const unsigned int np = h_cell_np.data[idx];
             // temperature is only defined for 2 or more particles
             if (np > 1)
                 {

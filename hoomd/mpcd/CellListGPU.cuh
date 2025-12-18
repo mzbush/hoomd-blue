@@ -76,7 +76,8 @@ cudaError_t compute_cell_list(unsigned int* d_cell_np,
                               const unsigned int block_size);
 
 //! Kernel driver to finalize cell property calculation
-cudaError_t finish_cell_properties(double4* d_cell_vel,
+cudaError_t finish_cell_properties(const unsigned int* d_cell_np,
+                                   double4* d_cell_vel,
                                    double3* d_cell_energy,
                                    const unsigned int N_cells,
                                    const unsigned int N_dim,

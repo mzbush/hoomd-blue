@@ -172,13 +172,15 @@ void mpcd::CellListGPU::buildCellList()
 
 void mpcd::CellListGPU::finishComputeProperties()
     {
+    ArrayHandle<unsigned int> d_cell_np(m_cell_np, access_location::device, access_mode::read);
     ArrayHandle<double4> d_cell_vel(m_cell_vel, access_location::device, access_mode::readwrite);
     ArrayHandle<double3> d_cell_energy(m_cell_energy,
                                        access_location::device,
                                        access_mode::readwrite);
 
     m_tuner_property->begin();
-    mpcd::gpu::finish_cell_properties(d_cell_vel.data,
+    mpcd::gpu::finish_cell_properties(d_cell_np.data,
+                                      d_cell_vel.data,
                                       d_cell_energy.data,
                                       getNCells(),
                                       m_sysdef->getNDimensions(),

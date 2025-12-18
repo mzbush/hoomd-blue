@@ -190,11 +190,11 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
         {
         double ke = 0.5 * mass_i * (vel_i.x * vel_i.x + vel_i.y * vel_i.y + vel_i.z * vel_i.z);
         atomicAdd(&d_cell_energy[bin_idx].x, ke);
-        atomicAdd(&d_cell_energy[bin_idx].z, __int_as_double(1));
         }
     }
 
 /*!
+ * \param d_cell_np Array of number of particles per cell
  * \param d_cell_vel Cell velocity to finish computing
  * \param d_cell_energy Cell energy to finish computing
  * \param N_cells Number of cells
@@ -207,7 +207,8 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
  * velocities are computed from the net momentum of the cell divided by the final
  * mass. The temperature of each cell is calculated.
  */
-__global__ void finish_cell_properties(double4* d_cell_vel,
+__global__ void finish_cell_properties(const unsigned int* d_cell_np,
+                                       double4* d_cell_vel,
                                        double3* d_cell_energy,
                                        const unsigned int N_cells,
                                        const unsigned int N_dim,
@@ -237,7 +238,7 @@ __global__ void finish_cell_properties(double4* d_cell_vel,
         const double3 cell_energy = d_cell_energy[idx];
         const double ke = cell_energy.x;
         double temp(0.0);
-        const unsigned int np = __double_as_int(cell_energy.z);
+        const unsigned int np = d_cell_np[idx];
 
         if (np > 1)
             {
@@ -446,6 +447,7 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
     }
 
 /*!
+ * \param d_cell_np Number of particles in cells
  * \param d_cell_vel Cell velocity to reduce
  * \param d_cell_energy Cell energy to reduce
  * \param N_cells Number of total cells
@@ -457,7 +459,8 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
  *
  * \sa mpcd::gpu::kernel::finish_cell_properties
  */
-cudaError_t mpcd::gpu::finish_cell_properties(double4* d_cell_vel,
+cudaError_t mpcd::gpu::finish_cell_properties(const unsigned int* d_cell_np,
+                                              double4* d_cell_vel,
                                               double3* d_cell_energy,
                                               const unsigned int N_cells,
                                               const unsigned int N_dim,
@@ -471,7 +474,8 @@ cudaError_t mpcd::gpu::finish_cell_properties(double4* d_cell_vel,
 
     unsigned int run_block_size = min(block_size, max_block_size);
     dim3 grid(N_cells / run_block_size + 1);
-    mpcd::gpu::kernel::finish_cell_properties<<<grid, run_block_size>>>(d_cell_vel,
+    mpcd::gpu::kernel::finish_cell_properties<<<grid, run_block_size>>>(d_cell_np,
+                                                                        d_cell_vel,
                                                                         d_cell_energy,
                                                                         N_cells,
                                                                         N_dim,
