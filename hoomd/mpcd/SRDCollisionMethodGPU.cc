@@ -7,7 +7,6 @@
  */
 
 #include "SRDCollisionMethodGPU.h"
-#include "CellThermoComputeGPU.h"
 #include "SRDCollisionMethodGPU.cuh"
 
 namespace hoomd
