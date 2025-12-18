@@ -212,10 +212,10 @@ class PYBIND11_EXPORT CellList : public Compute
     void drawGridShift(uint64_t timestep);
 
     //! Gets the group of particles that is coupled to the MPCD solvent through the collision step
-    // std::shared_ptr<ParticleGroup> getEmbeddedGroup() const
-    //     {
-    //     return m_embed_group;
-    //     }
+    std::shared_ptr<ParticleGroup> getEmbeddedGroup() const
+        {
+        return m_embed_group;
+        }
 
     //! Sets a group of particles that is coupled to the MPCD solvent through the collision step
     void setEmbeddedGroup(std::shared_ptr<ParticleGroup> embed_group)
