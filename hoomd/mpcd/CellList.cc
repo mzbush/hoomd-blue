@@ -527,12 +527,11 @@ void mpcd::CellList::buildCellList()
             }
 
         // compute the contribution of the particle to cell velocity
-        double4 cell_vel = h_cell_vel.data[bin_idx];
+        double4& cell_vel = h_cell_vel.data[bin_idx];
         cell_vel.x += mass_i * vel_i.x;
         cell_vel.y += mass_i * vel_i.y;
         cell_vel.z += mass_i * vel_i.z;
         cell_vel.w += mass_i;
-        h_cell_vel.data[bin_idx] = make_double4(cell_vel.x, cell_vel.y, cell_vel.z, cell_vel.w);
         // compute optional cell properties
         if (m_flags[mpcd::detail::thermo_options::energy])
             {
