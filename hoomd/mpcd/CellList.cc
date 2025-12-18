@@ -363,16 +363,16 @@ void mpcd::CellList::buildCellList()
     const BoxDim& box = m_pdata->getBox();
     const uchar3 periodic = box.getPeriodic();
 
-    ArrayHandle<unsigned int> h_cell_np(m_cell_np, access_location::host, access_mode::overwrite);
-    ArrayHandle<double4> h_cell_vel(m_cell_vel, access_location::host, access_mode::overwrite);
-    ArrayHandle<double3> h_cell_energy(m_cell_energy,
-                                       access_location::host,
-                                       access_mode::overwrite);
-
     // zero the cell counter
     m_cell_np.zeroFill();
     m_cell_vel.zeroFill();
     m_cell_energy.zeroFill();
+
+    ArrayHandle<unsigned int> h_cell_np(m_cell_np, access_location::host, access_mode::readwrite);
+    ArrayHandle<double4> h_cell_vel(m_cell_vel, access_location::host, access_mode::readwrite);
+    ArrayHandle<double3> h_cell_energy(m_cell_energy,
+                                       access_location::host,
+                                       access_mode::readwrite);
     m_property_sum = false;
 
     uint3 conditions = make_uint3(0, 0, 0);
