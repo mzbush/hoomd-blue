@@ -528,9 +528,6 @@ void mpcd::CellList::buildCellList()
         double4& cell_vel = h_cell_vel.data[bin_idx];
         cell_vel.x += mass_i * vel_i.x;
         cell_vel.y += mass_i * vel_i.y;
-        cell_vel.z += mass_i * vel_i.z;
-        cell_vel.w += mass_i;
-        // compute optional cell properties
         if (m_flags[mpcd::detail::thermo_options::energy])
             {
             h_cell_energy.data[bin_idx].x
