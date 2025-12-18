@@ -148,7 +148,8 @@ class PYBIND11_EXPORT CellList : public Compute
         m_needs_compute_dim = true;
         }
 
-    !Get the number of extra communication cells unsigned int getNExtraCells() const
+    //! Get the number of extra communication cells
+    unsigned int getNExtraCells() const
         {
         return m_num_extra;
         }
