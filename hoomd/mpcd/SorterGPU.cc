@@ -40,7 +40,7 @@ mpcd::SorterGPU::SorterGPU(std::shared_ptr<SystemDefinition> sysdef,
  */
 void mpcd::SorterGPU::computeOrder(uint64_t timestep)
     {
-    // ensure auxillary array is correct size
+    // ensure auxiliary array is correct size
     const unsigned int mpcd_N = m_mpcd_pdata->getN();
     if (mpcd_N > m_cell_id.getNumElements())
         {

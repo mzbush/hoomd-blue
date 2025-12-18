@@ -62,12 +62,12 @@ __global__ void sort_apply(Scalar4* d_pos_alt,
 //! Kernel to set the empty-cell-entry sentinel
 /*!
  * \param d_order Particle order to fill with indices
- * \param d_cell_id auxillary array to sort cell id of each mpcd particles
+ * \param d_cell_id auxiliary array to sort cell id of each mpcd particles
  * \param d_vel velocities and cell ids of mpcd particles
  * \param N Number of particles
  *
  * \b Implementation
- * Fills order with indices 0 to N and the auxillary array d_cell_id with
+ * Fills order with indices 0 to N and the auxiliary array d_cell_id with
  * the cell ids of the mpcd particles in preparation to sort the values
  * in d_order by the cell ids.
  */
@@ -159,7 +159,7 @@ cudaError_t sort_apply(Scalar4* d_pos_alt,
 
 /*!
  * \param d_order Compacted MPCD particle indexes in cell-list order (output)
- * \param d_cell_id auxillary array to sort cell id of each mpcd particles
+ * \param d_cell_id auxiliary array to sort cell id of each mpcd particles
  * \param d_vel Cell indexes of the MPCD particles
  * \param N Number of particles
  * \param block_size Number of threads per block
@@ -187,7 +187,7 @@ cudaError_t set_order(unsigned int* d_order,
 
 /*!
  * \param d_order Compacted MPCD particle indexes in cell-list order (output)
- * \param d_cell_id auxillary array to sort cell id of each mpcd particles
+ * \param d_cell_id auxiliary array to sort cell id of each mpcd particles
  * \param N Number of particles
 
  * \returns cudaSuccess on completion
