@@ -137,9 +137,6 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
             }
         }
 
-    // set random grid shift
-    m_cl->drawGridShift(timestep);
-
     // update cell list
     m_cl->compute(timestep);
     // apply collisions
