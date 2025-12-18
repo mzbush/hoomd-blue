@@ -36,6 +36,8 @@ void mpcd::Sorter::update(uint64_t timestep)
         {
         throw std::runtime_error("Cell list has not been set");
         }
+    // ensure that the cell list is built
+    m_cl->compute(timestep);
 
     // resize the sorted order vector to the current number of particles
     m_order.resize(m_mpcd_pdata->getN());
@@ -58,8 +60,6 @@ void mpcd::Sorter::update(uint64_t timestep)
  */
 void mpcd::Sorter::computeOrder(uint64_t timestep)
     {
-    m_cl->compute(timestep);
-    m_order.resize(m_mpcd_pdata->getN());
     ArrayHandle<unsigned int> h_order(m_order, access_location::host, access_mode::overwrite);
 
     // sort indices
