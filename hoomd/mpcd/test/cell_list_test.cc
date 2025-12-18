@@ -613,7 +613,6 @@ void celllist_thermo_basic_test(std::shared_ptr<ExecutionConfiguration> exec_con
         CHECK_CLOSE(h_avg_vel.data[ci(0, 0, 0)].x, 1.5, tol);
         CHECK_CLOSE(h_avg_vel.data[ci(0, 0, 0)].y, 0.0, tol);
         CHECK_CLOSE(h_avg_vel.data[ci(0, 0, 0)].z, 0.0, tol);
-        std::cout << h_avg_vel.data[ci(0, 0, 0)].w << std::endl;
         CHECK_CLOSE(h_avg_vel.data[ci(0, 0, 0)].w, 8.0, tol);
         // energy, temperature (relative to COM), np, flag
         CHECK_CLOSE(h_cell_energy.data[ci(0, 0, 0)].x, 4.0 * 2.5, tol);
