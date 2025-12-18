@@ -20,8 +20,8 @@ namespace hoomd
 mpcd::CellList::CellList(std::shared_ptr<SystemDefinition> sysdef, Scalar cell_size, bool shift)
     : Compute(sysdef), m_mpcd_pdata(m_sysdef->getMPCDParticleData()), m_cell_np(m_exec_conf),
       m_embed_cell_ids(m_exec_conf), m_conditions(m_exec_conf), m_cell_vel(m_exec_conf),
-      m_cell_energy(m_exec_conf), m_needs_net_reduce(true), m_needs_compute_dim(true),
-      m_particles_sorted(false), m_virtual_change(false)
+      m_cell_energy(m_exec_conf), m_cell_temp(m_exec_conf), m_needs_net_reduce(true),
+      m_needs_compute_dim(true), m_particles_sorted(false), m_virtual_change(false)
     {
     assert(m_mpcd_pdata);
     m_exec_conf->msg->notice(5) << "Constructing MPCD CellList" << std::endl;
@@ -55,8 +55,8 @@ mpcd::CellList::CellList(std::shared_ptr<SystemDefinition> sysdef,
                          bool shift)
     : Compute(sysdef), m_mpcd_pdata(m_sysdef->getMPCDParticleData()), m_cell_np(m_exec_conf),
       m_embed_cell_ids(m_exec_conf), m_conditions(m_exec_conf), m_cell_vel(m_exec_conf),
-      m_cell_energy(m_exec_conf), m_needs_compute_dim(true), m_particles_sorted(false),
-      m_virtual_change(false)
+      m_cell_energy(m_exec_conf), m_cell_temp(m_exec_conf), m_needs_compute_dim(true),
+      m_particles_sorted(false), m_virtual_change(false)
     {
     assert(m_mpcd_pdata);
     m_exec_conf->msg->notice(5) << "Constructing MPCD CellList" << std::endl;
@@ -164,6 +164,7 @@ void mpcd::CellList::reallocate()
     {
     m_cell_vel.resize(m_cell_indexer.getNumElements());
     m_cell_energy.resize(m_cell_indexer.getNumElements());
+    m_cell_temp.resize(m_cell_indexer.getNumElements());
     }
 
 void mpcd::CellList::computeDimensions()
@@ -369,9 +370,7 @@ void mpcd::CellList::buildCellList()
 
     ArrayHandle<unsigned int> h_cell_np(m_cell_np, access_location::host, access_mode::readwrite);
     ArrayHandle<double4> h_cell_vel(m_cell_vel, access_location::host, access_mode::readwrite);
-    ArrayHandle<double3> h_cell_energy(m_cell_energy,
-                                       access_location::host,
-                                       access_mode::readwrite);
+    ArrayHandle<double> h_cell_energy(m_cell_energy, access_location::host, access_mode::readwrite);
 
     uint3 conditions = make_uint3(0, 0, 0);
 
@@ -533,7 +532,7 @@ void mpcd::CellList::buildCellList()
         // compute optional cell properties
         if (m_flags[mpcd::detail::thermo_options::energy])
             {
-            h_cell_energy.data[bin_idx].x
+            h_cell_energy.data[bin_idx]
                 += 0.5 * mass_i * (vel_i.x * vel_i.x + vel_i.y * vel_i.y + vel_i.z * vel_i.z);
             }
         // increment the counter always
@@ -546,13 +545,12 @@ void mpcd::CellList::buildCellList()
 
 void mpcd::CellList::finishComputeProperties()
     {
+    m_cell_temp.zeroFill();
     const bool need_energy = m_flags[mpcd::detail::thermo_options::energy];
     ArrayHandle<unsigned int> h_cell_np(m_cell_np, access_location::host, access_mode::read);
     ArrayHandle<double4> h_cell_vel(m_cell_vel, access_location::host, access_mode::readwrite);
-    ArrayHandle<double3> h_cell_energy(m_cell_energy,
-                                       access_location::host,
-                                       access_mode::readwrite);
-
+    ArrayHandle<double> h_cell_energy(m_cell_energy, access_location::host, access_mode::read);
+    ArrayHandle<double> h_cell_temp(m_cell_temp, access_location::host, access_mode::overwrite);
     // iterate over all cells and compute average velocity, energy, temperature
     for (unsigned int idx = 0; idx < getNCells(); ++idx)
         {
@@ -573,8 +571,7 @@ void mpcd::CellList::finishComputeProperties()
 
         if (need_energy)
             {
-            const double3 cell_energy = h_cell_energy.data[idx];
-            const double ke = cell_energy.x;
+            const double cell_energy = h_cell_energy.data[idx];
             double temp(0.0);
             const unsigned int np = h_cell_np.data[idx];
             // temperature is only defined for 2 or more particles
@@ -583,9 +580,9 @@ void mpcd::CellList::finishComputeProperties()
                 const double ke_cm
                     = 0.5 * mass
                       * (vel_cm.x * vel_cm.x + vel_cm.y * vel_cm.y + vel_cm.z * vel_cm.z);
-                temp = 2. * (ke - ke_cm) / (m_sysdef->getNDimensions() * (np - 1));
+                temp = 2. * (cell_energy - ke_cm) / (m_sysdef->getNDimensions() * (np - 1));
                 }
-            h_cell_energy.data[idx] = make_double3(ke, temp, __int_as_double(np));
+            h_cell_temp.data[idx] = temp;
             }
         }
     }
@@ -595,8 +592,10 @@ void mpcd::CellList::computeNetProperties()
     unsigned int n_temp_cells = 0;
         {
         const bool need_energy = m_flags[mpcd::detail::thermo_options::energy];
+        ArrayHandle<unsigned int> h_cell_np(m_cell_np, access_location::host, access_mode::read);
         ArrayHandle<double4> h_cell_vel(m_cell_vel, access_location::host, access_mode::read);
-        ArrayHandle<double3> h_cell_energy(m_cell_energy, access_location::host, access_mode::read);
+        ArrayHandle<double> h_cell_energy(m_cell_energy, access_location::host, access_mode::read);
+        ArrayHandle<double> h_cell_temp(m_cell_temp, access_location::host, access_mode::read);
         double3 net_momentum = make_double3(0, 0, 0);
         double net_energy(0.0), net_temp(0.0);
 
@@ -615,15 +614,16 @@ void mpcd::CellList::computeNetProperties()
 
             if (need_energy)
                 {
-                const double3 cell_energy = h_cell_energy.data[idx];
+                const double cell_energy = h_cell_energy.data[idx];
+                const double cell_temp = h_cell_temp.data[idx];
                 // temperature is only defined for 2 or more particles
-                if (__double_as_int(cell_energy.z) > 1)
+                if (h_cell_np.data[idx] > 1)
                     {
                     ++n_temp_cells;
                     }
                 // accumulate
-                net_energy += cell_energy.x;
-                net_temp += cell_energy.y;
+                net_energy += cell_energy;
+                net_temp += cell_temp;
                 }
             }
         ArrayHandle<double> h_net_properties(m_net_properties,

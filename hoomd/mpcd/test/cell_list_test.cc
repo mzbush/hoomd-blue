@@ -546,23 +546,28 @@ void celllist_thermo_basic_test(std::shared_ptr<ExecutionConfiguration> exec_con
     cl->compute(0);
         {
         const Index3D ci = cl->getCellIndexer();
+        ArrayHandle<unsigned int> h_cell_np(cl->getCellSizeArray(),
+                                            access_location::host,
+                                            access_mode::read);
         ArrayHandle<double4> h_avg_vel(cl->getCellVelocities(),
                                        access_location::host,
                                        access_mode::read);
-        ArrayHandle<double3> h_cell_energy(cl->getCellEnergies(),
-                                           access_location::host,
-                                           access_mode::read);
-
+        ArrayHandle<double> h_cell_energy(cl->getCellEnergies(),
+                                          access_location::host,
+                                          access_mode::read);
+        ArrayHandle<double> h_cell_temp(cl->getCellTemperature(),
+                                        access_location::host,
+                                        access_mode::read);
         // Two particle cell (0,0,0)
         // Average velocity, mass
         CHECK_CLOSE(h_avg_vel.data[ci(0, 0, 0)].x, 1.5, tol);
         CHECK_CLOSE(h_avg_vel.data[ci(0, 0, 0)].y, 0.0, tol);
         CHECK_CLOSE(h_avg_vel.data[ci(0, 0, 0)].z, 0.0, tol);
         CHECK_CLOSE(h_avg_vel.data[ci(0, 0, 0)].w, 2.0, tol);
-        // energy, temperature (relative to COM), np, flag
-        CHECK_CLOSE(h_cell_energy.data[ci(0, 0, 0)].x, 2.5, tol);
-        CHECK_CLOSE(h_cell_energy.data[ci(0, 0, 0)].y, 2.0 * 0.5 * 0.5 / 3.0, tol);
-        UP_ASSERT_EQUAL(__double_as_int(h_cell_energy.data[ci(0, 0, 0)].z), 2);
+        // energy, temperature (relative to COM), np
+        CHECK_CLOSE(h_cell_energy.data[ci(0, 0, 0)], 2.5, tol);
+        CHECK_CLOSE(h_cell_temp.data[ci(0, 0, 0)], 2.0 * 0.5 * 0.5 / 3.0, tol);
+        UP_ASSERT_EQUAL(h_cell_np.data[ci(0, 0, 0)], 2);
 
         // Two particle cell (1,1,1)
         // Average velocity, mass
@@ -570,10 +575,10 @@ void celllist_thermo_basic_test(std::shared_ptr<ExecutionConfiguration> exec_con
         CHECK_CLOSE(h_avg_vel.data[ci(1, 1, 1)].y, -1.5, tol);
         CHECK_CLOSE(h_avg_vel.data[ci(1, 1, 1)].z, -2.5, tol);
         CHECK_CLOSE(h_avg_vel.data[ci(1, 1, 1)].w, 2.0, tol);
-        // energy, temperature (relative to COM), np, flag
-        CHECK_CLOSE(h_cell_energy.data[ci(1, 1, 1)].x, 17.0, tol);
-        CHECK_CLOSE(h_cell_energy.data[ci(1, 1, 1)].y, 2.0 * (1.5 * 1.5 + 2.5 * 2.5) / 3.0, tol);
-        UP_ASSERT_EQUAL(__double_as_int(h_cell_energy.data[ci(1, 1, 1)].z), 2);
+        // energy, temperature (relative to COM), np
+        CHECK_CLOSE(h_cell_energy.data[ci(1, 1, 1)], 17.0, tol);
+        CHECK_CLOSE(h_cell_temp.data[ci(1, 1, 1)], 2.0 * (1.5 * 1.5 + 2.5 * 2.5) / 3.0, tol);
+        UP_ASSERT_EQUAL(h_cell_np.data[ci(1, 1, 1)], 2);
 
         // One particle cell (0,1,1)
         // Average velocity, mass
@@ -582,9 +587,9 @@ void celllist_thermo_basic_test(std::shared_ptr<ExecutionConfiguration> exec_con
         CHECK_CLOSE(h_avg_vel.data[ci(0, 1, 1)].z, 4.0, tol);
         CHECK_CLOSE(h_avg_vel.data[ci(0, 1, 1)].w, 1.0, tol);
         // Has kinetic energy, but temperature should be zero
-        CHECK_CLOSE(h_cell_energy.data[ci(0, 1, 1)].x, 9.0, tol);
-        CHECK_CLOSE(h_cell_energy.data[ci(0, 1, 1)].y, 0.0, tol);
-        UP_ASSERT_EQUAL(__double_as_int(h_cell_energy.data[ci(0, 1, 1)].z), 1);
+        CHECK_CLOSE(h_cell_energy.data[ci(0, 1, 1)], 9.0, tol);
+        CHECK_CLOSE(h_cell_temp.data[ci(0, 1, 1)], 0.0, tol);
+        UP_ASSERT_EQUAL(h_cell_np.data[ci(0, 1, 1)], 1);
         }
 
     // Check the net stats of the system
@@ -601,12 +606,18 @@ void celllist_thermo_basic_test(std::shared_ptr<ExecutionConfiguration> exec_con
     cl->compute(1);
         {
         const Index3D ci = cl->getCellIndexer();
+        ArrayHandle<unsigned int> h_cell_np(cl->getCellSizeArray(),
+                                            access_location::host,
+                                            access_mode::read);
         ArrayHandle<double4> h_avg_vel(cl->getCellVelocities(),
                                        access_location::host,
                                        access_mode::read);
-        ArrayHandle<double3> h_cell_energy(cl->getCellEnergies(),
-                                           access_location::host,
-                                           access_mode::read);
+        ArrayHandle<double> h_cell_energy(cl->getCellEnergies(),
+                                          access_location::host,
+                                          access_mode::read);
+        ArrayHandle<double> h_cell_temp(cl->getCellTemperature(),
+                                        access_location::host,
+                                        access_mode::read);
 
         // Two particle cell (0,0,0)
         // Average velocity, mass
@@ -615,9 +626,9 @@ void celllist_thermo_basic_test(std::shared_ptr<ExecutionConfiguration> exec_con
         CHECK_CLOSE(h_avg_vel.data[ci(0, 0, 0)].z, 0.0, tol);
         CHECK_CLOSE(h_avg_vel.data[ci(0, 0, 0)].w, 8.0, tol);
         // energy, temperature (relative to COM), np, flag
-        CHECK_CLOSE(h_cell_energy.data[ci(0, 0, 0)].x, 4.0 * 2.5, tol);
-        CHECK_CLOSE(h_cell_energy.data[ci(0, 0, 0)].y, 4.0 * 2.0 * 0.5 * 0.5 / 3.0, tol);
-        UP_ASSERT_EQUAL(__double_as_int(h_cell_energy.data[ci(0, 0, 0)].z), 2);
+        CHECK_CLOSE(h_cell_energy.data[ci(0, 0, 0)], 4.0 * 2.5, tol);
+        CHECK_CLOSE(h_cell_temp.data[ci(0, 0, 0)], 4.0 * 2.0 * 0.5 * 0.5 / 3.0, tol);
+        UP_ASSERT_EQUAL(h_cell_np.data[ci(0, 0, 0)], 2);
 
         // Two particle cell (1,1,1)
         // Average velocity, mass
@@ -626,11 +637,9 @@ void celllist_thermo_basic_test(std::shared_ptr<ExecutionConfiguration> exec_con
         CHECK_CLOSE(h_avg_vel.data[ci(1, 1, 1)].z, -2.5, tol);
         CHECK_CLOSE(h_avg_vel.data[ci(1, 1, 1)].w, 8.0, tol);
         // energy, temperature (relative to COM), np, flag
-        CHECK_CLOSE(h_cell_energy.data[ci(1, 1, 1)].x, 4.0 * 17.0, tol);
-        CHECK_CLOSE(h_cell_energy.data[ci(1, 1, 1)].y,
-                    4.0 * 2.0 * (1.5 * 1.5 + 2.5 * 2.5) / 3.0,
-                    tol);
-        UP_ASSERT_EQUAL(__double_as_int(h_cell_energy.data[ci(1, 1, 1)].z), 2);
+        CHECK_CLOSE(h_cell_energy.data[ci(1, 1, 1)], 4.0 * 17.0, tol);
+        CHECK_CLOSE(h_cell_temp.data[ci(1, 1, 1)], 4.0 * 2.0 * (1.5 * 1.5 + 2.5 * 2.5) / 3.0, tol);
+        UP_ASSERT_EQUAL(h_cell_np.data[ci(1, 1, 1)], 2);
 
         // One particle cell (0,1,1)
         // Average velocity, mass
@@ -639,9 +648,9 @@ void celllist_thermo_basic_test(std::shared_ptr<ExecutionConfiguration> exec_con
         CHECK_CLOSE(h_avg_vel.data[ci(0, 1, 1)].z, 4.0, tol);
         CHECK_CLOSE(h_avg_vel.data[ci(0, 1, 1)].w, 4.0, tol);
         // Has kinetic energy, but temperature should be zero
-        CHECK_CLOSE(h_cell_energy.data[ci(0, 1, 1)].x, 4.0 * 9.0, tol);
-        CHECK_CLOSE(h_cell_energy.data[ci(0, 1, 1)].y, 0.0, tol);
-        UP_ASSERT_EQUAL(__double_as_int(h_cell_energy.data[ci(0, 1, 1)].z), 1);
+        CHECK_CLOSE(h_cell_energy.data[ci(0, 1, 1)], 4.0 * 9.0, tol);
+        CHECK_CLOSE(h_cell_temp.data[ci(0, 1, 1)], 0.0, tol);
+        UP_ASSERT_EQUAL(h_cell_np.data[ci(0, 1, 1)], 1);
         }
 
     // Check the net stats of the system
@@ -664,12 +673,18 @@ void celllist_thermo_basic_test(std::shared_ptr<ExecutionConfiguration> exec_con
     cl->compute(2);
         {
         const Index3D ci = cl->getCellIndexer();
+        ArrayHandle<unsigned int> h_cell_np(cl->getCellSizeArray(),
+                                            access_location::host,
+                                            access_mode::read);
         ArrayHandle<double4> h_avg_vel(cl->getCellVelocities(),
                                        access_location::host,
                                        access_mode::read);
-        ArrayHandle<double3> h_cell_energy(cl->getCellEnergies(),
-                                           access_location::host,
-                                           access_mode::read);
+        ArrayHandle<double> h_cell_energy(cl->getCellEnergies(),
+                                          access_location::host,
+                                          access_mode::read);
+        ArrayHandle<double> h_cell_temp(cl->getCellTemperature(),
+                                        access_location::host,
+                                        access_mode::read);
 
         // Three particle cell (0,0,0)
         // Average velocity, mass
@@ -678,11 +693,11 @@ void celllist_thermo_basic_test(std::shared_ptr<ExecutionConfiguration> exec_con
         CHECK_CLOSE(h_avg_vel.data[ci(0, 0, 0)].z, 0.0, tol);
         CHECK_CLOSE(h_avg_vel.data[ci(0, 0, 0)].w, 3.0, tol);
         // energy, temperature (relative to COM), np, flag
-        CHECK_CLOSE(h_cell_energy.data[ci(0, 0, 0)].x, 7.0, tol);
-        CHECK_CLOSE(h_cell_energy.data[ci(0, 0, 0)].y,
+        CHECK_CLOSE(h_cell_energy.data[ci(0, 0, 0)], 7.0, tol);
+        CHECK_CLOSE(h_cell_temp.data[ci(0, 0, 0)],
                     (2 * 1.0 * 1.0 + 2 * 1.0 * 1.0 + 2.0 * 2.0) / 6.0,
                     tol);
-        UP_ASSERT_EQUAL(__double_as_int(h_cell_energy.data[ci(0, 0, 0)].z), 3);
+        UP_ASSERT_EQUAL(h_cell_np.data[ci(0, 0, 0)], 3);
 
         // One particle cell (1,1,1)
         // Average velocity, mass
@@ -691,9 +706,9 @@ void celllist_thermo_basic_test(std::shared_ptr<ExecutionConfiguration> exec_con
         CHECK_CLOSE(h_avg_vel.data[ci(1, 1, 1)].z, -5.0, tol);
         CHECK_CLOSE(h_avg_vel.data[ci(1, 1, 1)].w, 1.0, tol);
         // energy, temperature (relative to COM), np, flag
-        CHECK_CLOSE(h_cell_energy.data[ci(1, 1, 1)].x, 12.5, tol);
-        CHECK_CLOSE(h_cell_energy.data[ci(1, 1, 1)].y, 0.0, tol);
-        UP_ASSERT_EQUAL(__double_as_int(h_cell_energy.data[ci(1, 1, 1)].z), 1);
+        CHECK_CLOSE(h_cell_energy.data[ci(1, 1, 1)], 12.5, tol);
+        CHECK_CLOSE(h_cell_temp.data[ci(1, 1, 1)], 0.0, tol);
+        UP_ASSERT_EQUAL(h_cell_np.data[ci(1, 1, 1)], 1);
 
         // One particle cell (0,1,1)
         // Average velocity, mass
@@ -702,9 +717,9 @@ void celllist_thermo_basic_test(std::shared_ptr<ExecutionConfiguration> exec_con
         CHECK_CLOSE(h_avg_vel.data[ci(0, 1, 1)].z, 4.0, tol);
         CHECK_CLOSE(h_avg_vel.data[ci(0, 1, 1)].w, 1.0, tol);
         // Has kinetic energy, but temperature should be zero
-        CHECK_CLOSE(h_cell_energy.data[ci(0, 1, 1)].x, 9.0, tol);
-        CHECK_CLOSE(h_cell_energy.data[ci(0, 1, 1)].y, 0.0, tol);
-        UP_ASSERT_EQUAL(__double_as_int(h_cell_energy.data[ci(0, 1, 1)].z), 1);
+        CHECK_CLOSE(h_cell_energy.data[ci(0, 1, 1)], 9.0, tol);
+        CHECK_CLOSE(h_cell_temp.data[ci(0, 1, 1)], 0.0, tol);
+        UP_ASSERT_EQUAL(h_cell_np.data[ci(0, 1, 1)], 1);
         }
 
     // Check the net stats of the system, only average temperature should change now
@@ -770,12 +785,18 @@ void celllist_thermo_embed_test(std::shared_ptr<ExecutionConfiguration> exec_con
     cl->compute(0);
         {
         const Index3D ci = cl->getCellIndexer();
+        ArrayHandle<unsigned int> h_cell_np(cl->getCellSizeArray(),
+                                            access_location::host,
+                                            access_mode::read);
         ArrayHandle<double4> h_avg_vel(cl->getCellVelocities(),
                                        access_location::host,
                                        access_mode::read);
-        ArrayHandle<double3> h_cell_energy(cl->getCellEnergies(),
-                                           access_location::host,
-                                           access_mode::read);
+        ArrayHandle<double> h_cell_energy(cl->getCellEnergies(),
+                                          access_location::host,
+                                          access_mode::read);
+        ArrayHandle<double> h_cell_temp(cl->getCellTemperature(),
+                                        access_location::host,
+                                        access_mode::read);
 
         // Cell (0,0,0)
         // Average velocity, mass
@@ -784,9 +805,9 @@ void celllist_thermo_embed_test(std::shared_ptr<ExecutionConfiguration> exec_con
         CHECK_CLOSE(h_avg_vel.data[ci(0, 0, 0)].z, 0.0, tol);
         CHECK_CLOSE(h_avg_vel.data[ci(0, 0, 0)].w, 4.0, tol);
         // energy, temperature (relative to COM), np, flag
-        CHECK_CLOSE(h_cell_energy.data[ci(0, 0, 0)].x, 8.0, tol);
-        CHECK_CLOSE(h_cell_energy.data[ci(0, 0, 0)].y, 4.0, tol);
-        UP_ASSERT_EQUAL(__double_as_int(h_cell_energy.data[ci(0, 0, 0)].z), 2);
+        CHECK_CLOSE(h_cell_energy.data[ci(0, 0, 0)], 8.0, tol);
+        CHECK_CLOSE(h_cell_temp.data[ci(0, 0, 0)], 4.0, tol);
+        UP_ASSERT_EQUAL(h_cell_np.data[ci(0, 0, 0)], 2);
 
         // Cell (0,0,1)
         // Average velocity, mass
@@ -795,9 +816,9 @@ void celllist_thermo_embed_test(std::shared_ptr<ExecutionConfiguration> exec_con
         CHECK_CLOSE(h_avg_vel.data[ci(0, 0, 1)].z, 0.0, tol);
         CHECK_CLOSE(h_avg_vel.data[ci(0, 0, 1)].w, 3.0, tol);
         // energy, temperature (relative to COM), np, flag
-        CHECK_CLOSE(h_cell_energy.data[ci(0, 0, 1)].x, 1.5, tol);
-        CHECK_CLOSE(h_cell_energy.data[ci(0, 0, 1)].y, 0.0, tol);
-        UP_ASSERT_EQUAL(__double_as_int(h_cell_energy.data[ci(0, 0, 1)].z), 2);
+        CHECK_CLOSE(h_cell_energy.data[ci(0, 0, 1)], 1.5, tol);
+        CHECK_CLOSE(h_cell_temp.data[ci(0, 0, 1)], 0.0, tol);
+        UP_ASSERT_EQUAL(h_cell_np.data[ci(0, 0, 1)], 2);
 
         // Cell (1,0,1)
         // Average velocity, mass
@@ -806,9 +827,9 @@ void celllist_thermo_embed_test(std::shared_ptr<ExecutionConfiguration> exec_con
         CHECK_CLOSE(h_avg_vel.data[ci(1, 0, 1)].z, 0.0, tol);
         CHECK_CLOSE(h_avg_vel.data[ci(1, 0, 1)].w, 5.0, tol);
         // Has kinetic energy, but temperature should be zero
-        CHECK_CLOSE(h_cell_energy.data[ci(1, 0, 1)].x, 22.5, tol);
-        CHECK_CLOSE(h_cell_energy.data[ci(1, 0, 1)].y, 0.0, tol);
-        UP_ASSERT_EQUAL(__double_as_int(h_cell_energy.data[ci(1, 0, 1)].z), 2);
+        CHECK_CLOSE(h_cell_energy.data[ci(1, 0, 1)], 22.5, tol);
+        CHECK_CLOSE(h_cell_temp.data[ci(1, 0, 1)], 0.0, tol);
+        UP_ASSERT_EQUAL(h_cell_np.data[ci(1, 0, 1)], 2);
 
         // Cell (1,1,1)
         // Average velocity, mass
@@ -817,9 +838,9 @@ void celllist_thermo_embed_test(std::shared_ptr<ExecutionConfiguration> exec_con
         CHECK_CLOSE(h_avg_vel.data[ci(1, 1, 1)].z, -5.0, tol);
         CHECK_CLOSE(h_avg_vel.data[ci(1, 1, 1)].w, 6.0, tol);
         // energy, temperature (relative to COM), np, flag
-        CHECK_CLOSE(h_cell_energy.data[ci(1, 1, 1)].x, 75.0, tol);
-        CHECK_CLOSE(h_cell_energy.data[ci(1, 1, 1)].y, 0.0, tol);
-        UP_ASSERT_EQUAL(__double_as_int(h_cell_energy.data[ci(1, 1, 1)].z), 2);
+        CHECK_CLOSE(h_cell_energy.data[ci(1, 1, 1)], 75.0, tol);
+        CHECK_CLOSE(h_cell_temp.data[ci(1, 1, 1)], 0.0, tol);
+        UP_ASSERT_EQUAL(h_cell_np.data[ci(1, 1, 1)], 2);
         }
 
     // Check the net stats of the system

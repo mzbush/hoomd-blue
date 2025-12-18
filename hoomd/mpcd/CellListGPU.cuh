@@ -54,7 +54,7 @@ namespace gpu
 //! Kernel driver to compute mpcd cell list
 cudaError_t compute_cell_list(unsigned int* d_cell_np,
                               double4* d_cell_vel,
-                              double3* d_cell_energy,
+                              double* d_cell_energy,
                               uint3* d_conditions,
                               Scalar4* d_vel,
                               double mpcd_mass,
@@ -78,7 +78,8 @@ cudaError_t compute_cell_list(unsigned int* d_cell_np,
 //! Kernel driver to finalize cell property calculation
 cudaError_t finish_cell_properties(const unsigned int* d_cell_np,
                                    double4* d_cell_vel,
-                                   double3* d_cell_energy,
+                                   const double* d_cell_energy,
+                                   double* d_cell_temp,
                                    const unsigned int N_cells,
                                    const unsigned int N_dim,
                                    const bool need_energy,
@@ -86,8 +87,10 @@ cudaError_t finish_cell_properties(const unsigned int* d_cell_np,
 
 //! Kernel driver to normalize center of mass velocity and compute net properties
 cudaError_t stage_net_cell_thermo(mpcd::detail::cell_thermo_element* d_tmp_thermo,
+                                  const unsigned int* d_cell_np,
                                   const double4* d_cell_vel,
-                                  const double3* d_cell_energy,
+                                  const double* d_cell_energy,
+                                  const double* d_cell_temp,
                                   const unsigned int N_cells,
                                   const bool need_energy,
                                   const unsigned int block_size);

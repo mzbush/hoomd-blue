@@ -69,16 +69,20 @@ void mpcd::SRDCollisionMethod::drawRotationVectors(uint64_t timestep)
 
     // optional scale factors
     std::unique_ptr<ArrayHandle<double>> h_factors;
-    std::unique_ptr<ArrayHandle<double3>> h_cell_energy;
+    std::unique_ptr<ArrayHandle<unsigned int>> h_cell_np;
+    std::unique_ptr<ArrayHandle<double>> h_cell_temp;
     Scalar T_set(1.0);
     const bool use_thermostat = (m_T) ? true : false;
     if (use_thermostat)
         {
         h_factors.reset(
             new ArrayHandle<double>(m_factors, access_location::host, access_mode::overwrite));
-        h_cell_energy.reset(new ArrayHandle<double3>(m_cl->getCellEnergies(),
-                                                     access_location::host,
-                                                     access_mode::read));
+        h_cell_np.reset(new ArrayHandle<unsigned int>(m_cl->getCellSizeArray(),
+                                                      access_location::host,
+                                                      access_mode::read));
+        h_cell_temp.reset(new ArrayHandle<double>(m_cl->getCellTemperature(),
+                                                  access_location::host,
+                                                  access_mode::read));
         T_set = (*m_T)(timestep);
         }
 
@@ -108,8 +112,8 @@ void mpcd::SRDCollisionMethod::drawRotationVectors(uint64_t timestep)
 
                 if (use_thermostat)
                     {
-                    const double3 cell_energy = h_cell_energy->data[idx];
-                    const unsigned int np = __double_as_int(cell_energy.z);
+                    const double cell_temp = h_cell_temp->data[idx];
+                    const unsigned int np = h_cell_np->data[idx];
                     double factor = 1.0;
                     if (np > 1)
                         {
@@ -123,7 +127,7 @@ void mpcd::SRDCollisionMethod::drawRotationVectors(uint64_t timestep)
                         // generate the scale factor from the current temperature
                         // (don't use the kinetic energy of this cell, since this
                         // is total not relative to COM)
-                        const double cur_ke = alpha * cell_energy.y;
+                        const double cur_ke = alpha * cell_temp;
                         factor = (cur_ke > 0.) ? fast::sqrt(rand_ke / cur_ke) : 1.;
                         }
                     h_factors->data[idx] = factor;

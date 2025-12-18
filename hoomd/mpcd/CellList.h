@@ -68,9 +68,15 @@ class PYBIND11_EXPORT CellList : public Compute
         }
 
     //! Get the cell energies from the last call to compute
-    const GPUArray<double3>& getCellEnergies() const
+    const GPUArray<double>& getCellEnergies() const
         {
         return m_cell_energy;
+        }
+
+    //! Get the cell temperature from the last call to compute
+    const GPUArray<double>& getCellTemperature() const
+        {
+        return m_cell_temp;
         }
 
     //! Get the total number of cells in the list
@@ -332,7 +338,8 @@ class PYBIND11_EXPORT CellList : public Compute
     int3 m_origin_idx; //!< Origin as a global index
 
     GPUVector<double4> m_cell_vel;     //!< Average velocity of a cell + cell mass
-    GPUVector<double3> m_cell_energy;  //!< Kinetic energy, unscaled temperature, dof in each cell
+    GPUVector<double> m_cell_energy;   //!< Kinetic energy
+    GPUVector<double> m_cell_temp;     //!< Unscaled temperature
     GPUArray<double> m_net_properties; //!< Scalar properties of the system
     bool m_needs_net_reduce;           //!< Flag if a net reduction is necessary
 
