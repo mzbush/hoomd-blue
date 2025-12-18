@@ -32,11 +32,14 @@ cudaError_t sort_apply(Scalar4* d_pos_alt,
                        const unsigned int block_size);
 
 //! Kernel driver to sort order
-cudaError_t compute_order(unsigned int* d_order,
-                          unsigned int* d_cell_id,
-                          const Scalar4* d_vel,
-                          const unsigned int N_mpcd,
-                          const unsigned int block_size);
+cudaError_t set_order(unsigned int* d_order,
+                      unsigned int* d_cell_id,
+                      const Scalar4* d_vel,
+                      const unsigned int N_mpcd,
+                      const unsigned int block_size);
+
+cudaError_t
+compute_order(unsigned int* d_order, unsigned int* d_cell_id, const unsigned int N_mpcd);
 
 //! Driver for thrust to perform cell-list stream compaction
 unsigned int sort_cell_compact(unsigned int* d_order,

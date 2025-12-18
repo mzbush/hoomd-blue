@@ -168,11 +168,11 @@ cudaError_t sort_apply(Scalar4* d_pos_alt,
  *
  * \sa mpcd::gpu::kernel::set_order
  */
-cudaError_t compute_order(unsigned int* d_order,
-                          unsigned int* d_cell_id,
-                          const Scalar4* d_vel,
-                          const unsigned int N,
-                          const unsigned int block_size)
+cudaError_t set_order(unsigned int* d_order,
+                      unsigned int* d_cell_id,
+                      const Scalar4* d_vel,
+                      const unsigned int N,
+                      const unsigned int block_size)
     {
     unsigned int max_block_size;
     cudaFuncAttributes attr;
@@ -182,6 +182,18 @@ cudaError_t compute_order(unsigned int* d_order,
     unsigned int run_block_size = min(block_size, max_block_size);
     dim3 grid(N / run_block_size + 1);
     mpcd::gpu::kernel::set_order<<<grid, run_block_size>>>(d_order, d_cell_id, d_vel, N);
+    return cudaSuccess;
+    }
+
+/*!
+ * \param d_order Compacted MPCD particle indexes in cell-list order (output)
+ * \param d_cell_id auxillary array to sort cell id of each mpcd particles
+ * \param N Number of particles
+
+ * \returns cudaSuccess on completion
+ */
+cudaError_t compute_order(unsigned int* d_order, unsigned int* d_cell_id, const unsigned int N)
+    {
     thrust::device_ptr<unsigned int> order(d_order);
     thrust::device_ptr<unsigned int> cell_id(d_cell_id);
     thrust::sort_by_key(thrust::device, cell_id, cell_id + N, order);

@@ -59,14 +59,19 @@ void mpcd::SorterGPU::computeOrder(uint64_t timestep)
                                    access_location::device,
                                    access_mode::read);
         m_compute_order_tuner->begin();
-        mpcd::gpu::compute_order(d_order.data,
-                                 d_cell_id.data,
-                                 d_vel.data,
-                                 mpcd_N,
-                                 m_compute_order_tuner->getParam()[0]);
+        mpcd::gpu::set_order(d_order.data,
+                             d_cell_id.data,
+                             d_vel.data,
+                             mpcd_N,
+                             m_compute_order_tuner->getParam()[0]);
         if (m_exec_conf->isCUDAErrorCheckingEnabled())
             CHECK_CUDA_ERROR();
         m_compute_order_tuner->end();
+
+        // perform sorting
+        mpcd::gpu::compute_order(d_order.data, d_cell_id.data, mpcd_N);
+        if (m_exec_conf->isCUDAErrorCheckingEnabled())
+            CHECK_CUDA_ERROR();
         }
 
         // fill out the reverse ordering map
