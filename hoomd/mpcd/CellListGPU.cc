@@ -172,10 +172,6 @@ void mpcd::CellListGPU::buildCellList()
 
 void mpcd::CellListGPU::finishComputeProperties()
     {
-    if (!m_property_sum)
-        {
-        return;
-        }
     ArrayHandle<double4> d_cell_vel(m_cell_vel, access_location::device, access_mode::readwrite);
     ArrayHandle<double3> d_cell_energy(m_cell_energy,
                                        access_location::device,
@@ -191,8 +187,6 @@ void mpcd::CellListGPU::finishComputeProperties()
     if (m_exec_conf->isCUDAErrorCheckingEnabled())
         CHECK_CUDA_ERROR();
     m_tuner_property->end();
-    // ensure that properties will not be normalized twice
-    m_property_sum = false;
     }
 
 void mpcd::CellListGPU::computeNetProperties()

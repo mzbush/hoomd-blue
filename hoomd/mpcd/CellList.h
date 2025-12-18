@@ -333,8 +333,7 @@ class PYBIND11_EXPORT CellList : public Compute
     GPUVector<double4> m_cell_vel;     //!< Average velocity of a cell + cell mass
     GPUVector<double3> m_cell_energy;  //!< Kinetic energy, unscaled temperature, dof in each cell
     GPUArray<double> m_net_properties; //!< Scalar properties of the system
-    bool m_property_sum;     //!< True if contributions to cell properties have been accumulated
-    bool m_needs_net_reduce; //!< Flag if a net reduction is necessary
+    bool m_needs_net_reduce;           //!< Flag if a net reduction is necessary
 
     Nano::Signal<mpcd::detail::ThermoFlags()> m_flag_signal; //!< Signal for requested flags
     mpcd::detail::ThermoFlags m_flags;                       //!< Requested thermo flags

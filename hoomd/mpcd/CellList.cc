@@ -20,8 +20,8 @@ namespace hoomd
 mpcd::CellList::CellList(std::shared_ptr<SystemDefinition> sysdef, Scalar cell_size, bool shift)
     : Compute(sysdef), m_mpcd_pdata(m_sysdef->getMPCDParticleData()), m_cell_np(m_exec_conf),
       m_embed_cell_ids(m_exec_conf), m_conditions(m_exec_conf), m_cell_vel(m_exec_conf),
-      m_cell_energy(m_exec_conf), m_property_sum(false), m_needs_net_reduce(true),
-      m_needs_compute_dim(true), m_particles_sorted(false), m_virtual_change(false)
+      m_cell_energy(m_exec_conf), m_needs_net_reduce(true), m_needs_compute_dim(true),
+      m_particles_sorted(false), m_virtual_change(false)
     {
     assert(m_mpcd_pdata);
     m_exec_conf->msg->notice(5) << "Constructing MPCD CellList" << std::endl;
@@ -55,8 +55,8 @@ mpcd::CellList::CellList(std::shared_ptr<SystemDefinition> sysdef,
                          bool shift)
     : Compute(sysdef), m_mpcd_pdata(m_sysdef->getMPCDParticleData()), m_cell_np(m_exec_conf),
       m_embed_cell_ids(m_exec_conf), m_conditions(m_exec_conf), m_cell_vel(m_exec_conf),
-      m_cell_energy(m_exec_conf), m_property_sum(false), m_needs_compute_dim(true),
-      m_particles_sorted(false), m_virtual_change(false)
+      m_cell_energy(m_exec_conf), m_needs_compute_dim(true), m_particles_sorted(false),
+      m_virtual_change(false)
     {
     assert(m_mpcd_pdata);
     m_exec_conf->msg->notice(5) << "Constructing MPCD CellList" << std::endl;
@@ -147,7 +147,6 @@ void mpcd::CellList::compute(uint64_t timestep)
         // bin particles and compute cell properties
         buildCellList();
         checkConditions();
-        m_property_sum = true;
         finishComputeProperties();
 
         // we are finished building, explicitly mark everything (rather than using shouldCompute)
@@ -373,7 +372,6 @@ void mpcd::CellList::buildCellList()
     ArrayHandle<double3> h_cell_energy(m_cell_energy,
                                        access_location::host,
                                        access_mode::readwrite);
-    m_property_sum = false;
 
     uint3 conditions = make_uint3(0, 0, 0);
 
@@ -551,11 +549,6 @@ void mpcd::CellList::buildCellList()
 
 void mpcd::CellList::finishComputeProperties()
     {
-    if (!m_property_sum)
-        {
-        return;
-        }
-
     const bool need_energy = m_flags[mpcd::detail::thermo_options::energy];
     ArrayHandle<double4> h_cell_vel(m_cell_vel, access_location::host, access_mode::readwrite);
     ArrayHandle<double3> h_cell_energy(m_cell_energy,
@@ -597,9 +590,6 @@ void mpcd::CellList::finishComputeProperties()
             h_cell_energy.data[idx] = make_double3(ke, temp, __int_as_double(np));
             }
         }
-
-    // ensure that properties will not be normalized twice
-    m_property_sum = false;
     }
 
 void mpcd::CellList::computeNetProperties()
