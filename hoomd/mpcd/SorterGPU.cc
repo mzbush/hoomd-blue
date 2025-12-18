@@ -40,9 +40,15 @@ mpcd::SorterGPU::SorterGPU(std::shared_ptr<SystemDefinition> sysdef,
  */
 void mpcd::SorterGPU::computeOrder(uint64_t timestep)
     {
-    // compute the cell list at current timestep, guarantees owned particles are on rank
-    m_cl->compute(timestep);
-    m_cell_id.resize(m_mpcd_pdata->getN());
+    // ensure auxillary array is correct size
+    const unsigned int mpcd_N = m_mpcd_pdata->getN();
+    if (mpcd_N > m_cell_id.getNumElements())
+        {
+        GPUArray<unsigned int> cell_id(mpcd_N, m_exec_conf);
+        m_cell_id.swap(cell_id);
+        }
+
+        // compute the cell list at current timestep, guarantees owned particles are on rank
         // create an order to sort the particle indices by their cell
         {
         ArrayHandle<unsigned int> d_order(m_order, access_location::device, access_mode::overwrite);
@@ -56,7 +62,7 @@ void mpcd::SorterGPU::computeOrder(uint64_t timestep)
         mpcd::gpu::compute_order(d_order.data,
                                  d_cell_id.data,
                                  d_vel.data,
-                                 m_mpcd_pdata->getN(),
+                                 mpcd_N,
                                  m_compute_order_tuner->getParam()[0]);
         if (m_exec_conf->isCUDAErrorCheckingEnabled())
             CHECK_CUDA_ERROR();
@@ -73,7 +79,7 @@ void mpcd::SorterGPU::computeOrder(uint64_t timestep)
         m_reverse_tuner->begin();
         mpcd::gpu::sort_gen_reverse(d_rorder.data,
                                     d_order.data,
-                                    m_mpcd_pdata->getN(),
+                                    mpcd_N,
                                     m_reverse_tuner->getParam()[0]);
         if (m_exec_conf->isCUDAErrorCheckingEnabled())
             CHECK_CUDA_ERROR();
