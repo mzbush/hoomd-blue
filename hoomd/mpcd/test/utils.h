@@ -5,7 +5,6 @@
 #define MPCD_TEST_UTILS_H_
 
 #include "hoomd/mpcd/CellList.h"
-#include "hoomd/mpcd/CellThermoCompute.h"
 
 namespace hoomd
     {
@@ -13,19 +12,6 @@ namespace hoomd
 class AllThermoRequest
     {
     public:
-    //! Constructor
-    /*!
-     * \param thermo Thermo compute to supply flags to.
-     *
-     * \post This object is connected to \a thermo.
-     */
-    AllThermoRequest(std::shared_ptr<mpcd::CellThermoCompute> thermo) : m_thermo(thermo)
-        {
-        if (m_thermo)
-            m_thermo->getFlagsSignal().connect<AllThermoRequest, &AllThermoRequest::operator()>(
-                this);
-        }
-
     //! Constructor
     /*!
      * \param cl CellList to supply flags to.
@@ -44,9 +30,6 @@ class AllThermoRequest
      */
     ~AllThermoRequest()
         {
-        if (m_thermo)
-            m_thermo->getFlagsSignal().disconnect<AllThermoRequest, &AllThermoRequest::operator()>(
-                this);
         if (m_cl)
             m_cl->getFlagsSignal().disconnect<AllThermoRequest, &AllThermoRequest::operator()>(
                 this);
@@ -63,7 +46,6 @@ class AllThermoRequest
         }
 
     private:
-    std::shared_ptr<mpcd::CellThermoCompute> m_thermo;
     std::shared_ptr<mpcd::CellList> m_cl;
     };
 
