@@ -28,7 +28,7 @@ namespace mpcd
 /*!
  * The Sorter puts MPCD particles into an order that is more cache-friendly.
  * The natural way to do this for the algorithm is cell list order. The base
- * Sorter implements applySortOrder() for applying the reordering map to the
+ * Sorter implements applyOrder() for applying the reordering map to the
  * mpcd::ParticleData. Specific sorting algorithms can be implemented by
  * deriving from Sorter and implementing computeOrder(). Any computeOrder()
  * must set the map from old particle index to new particle index, and the
@@ -71,7 +71,7 @@ class PYBIND11_EXPORT Sorter : public Tuner
     virtual void computeOrder(uint64_t timestep);
 
     //! Apply the sorting order
-    virtual void applySortOrder() const;
+    virtual void applyOrder() const;
     };
     } // end namespace mpcd
     } // end namespace hoomd

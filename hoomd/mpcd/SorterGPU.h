@@ -47,7 +47,7 @@ class PYBIND11_EXPORT SorterGPU : public mpcd::Sorter
     void computeOrder(uint64_t timestep) override;
 
     //! Apply the sorting order on the GPU
-    void applySortOrder() const override;
+    void applyOrder() const override;
     };
     } // end namespace mpcd
     } // end namespace hoomd

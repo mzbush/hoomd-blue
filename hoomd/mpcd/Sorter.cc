@@ -28,7 +28,7 @@ mpcd::Sorter::~Sorter()
 /*!
  * \param timestep Current simulation timestep
  *
- * This method is just a driver for the computeOrder() and applySortOrder() methods.
+ * This method is just a driver for the computeOrder() and applyOrder() methods.
  */
 void mpcd::Sorter::update(uint64_t timestep)
     {
@@ -45,7 +45,7 @@ void mpcd::Sorter::update(uint64_t timestep)
 
     // generate and apply the sorted order
     computeOrder(timestep);
-    applySortOrder();
+    applyOrder();
 
     // trigger the sort signal for ParticleData callbacks using the current sortings
     m_mpcd_pdata->notifySort(timestep, m_order, m_rorder);
@@ -89,7 +89,7 @@ void mpcd::Sorter::computeOrder(uint64_t timestep)
  * arrays. The communication flags are \b not sorted in MPI because by design,
  * the caller is responsible for clearing out any old flags before using them.
  */
-void mpcd::Sorter::applySortOrder() const
+void mpcd::Sorter::applyOrder() const
     {
         // apply the sorted order
         {
