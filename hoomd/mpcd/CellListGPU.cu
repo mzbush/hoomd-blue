@@ -413,10 +413,14 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
         = cudaMemset(d_cell_vel, 0, sizeof(double4) * cell_indexer.getNumElements());
     if (error_vel != cudaSuccess)
         return error_vel;
-    cudaError_t error_energy
-        = cudaMemset(d_cell_energy, 0, sizeof(double) * cell_indexer.getNumElements());
-    if (error_energy != cudaSuccess)
-        return error_energy;
+    if (need_energy)
+        {
+        cudaError_t error_energy
+            = cudaMemset(d_cell_energy, 0, sizeof(double) * cell_indexer.getNumElements());
+        if (error_energy != cudaSuccess)
+            return error_energy;
+        }
+
     unsigned int max_block_size;
     cudaFuncAttributes attr;
     cudaFuncGetAttributes(&attr, (const void*)mpcd::gpu::kernel::compute_cell_list);
@@ -472,10 +476,13 @@ cudaError_t mpcd::gpu::finish_cell_properties(const unsigned int* d_cell_np,
                                               const bool need_energy,
                                               const unsigned int block_size)
     {
-    // set all temperature to zero
-    cudaError_t error_temp = cudaMemset(d_cell_temp, 0, sizeof(double) * N_cells);
-    if (error_temp != cudaSuccess)
-        return error_temp;
+    // set all temperatures to zero
+    if (need_energy)
+        {
+        cudaError_t error_temp = cudaMemset(d_cell_temp, 0, sizeof(double) * N_cells);
+        if (error_temp != cudaSuccess)
+            return error_temp;
+        }
 
     unsigned int max_block_size;
     cudaFuncAttributes attr;

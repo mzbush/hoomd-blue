@@ -366,7 +366,10 @@ void mpcd::CellList::buildCellList()
     // zero the cell counter
     m_cell_np.zeroFill();
     m_cell_vel.zeroFill();
-    m_cell_energy.zeroFill();
+    if (m_flags[mpcd::detail::thermo_options::energy])
+        {
+        m_cell_energy.zeroFill();
+        }
 
     ArrayHandle<unsigned int> h_cell_np(m_cell_np, access_location::host, access_mode::readwrite);
     ArrayHandle<double4> h_cell_vel(m_cell_vel, access_location::host, access_mode::readwrite);
@@ -545,8 +548,12 @@ void mpcd::CellList::buildCellList()
 
 void mpcd::CellList::finishComputeProperties()
     {
-    m_cell_temp.zeroFill();
     const bool need_energy = m_flags[mpcd::detail::thermo_options::energy];
+    if (need_energy)
+        {
+        m_cell_temp.zeroFill();
+        }
+
     ArrayHandle<unsigned int> h_cell_np(m_cell_np, access_location::host, access_mode::read);
     ArrayHandle<double4> h_cell_vel(m_cell_vel, access_location::host, access_mode::readwrite);
     ArrayHandle<double> h_cell_energy(m_cell_energy, access_location::host, access_mode::read);
