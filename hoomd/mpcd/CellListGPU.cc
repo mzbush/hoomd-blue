@@ -263,22 +263,24 @@ void mpcd::CellListGPU::computeNetProperties()
         }
 
 #ifdef ENABLE_MPI
-    ArrayHandle<double> h_net_properties(m_net_properties,
-                                         access_location::host,
-                                         access_mode::readwrite);
-    MPI_Allreduce(MPI_IN_PLACE,
-                  h_net_properties.data,
-                  mpcd::detail::thermo_index::num_quantities,
-                  MPI_DOUBLE,
-                  MPI_SUM,
-                  m_exec_conf->getMPICommunicator());
+        {
+        ArrayHandle<double> h_net_properties(m_net_properties,
+                                             access_location::host,
+                                             access_mode::readwrite);
+        MPI_Allreduce(MPI_IN_PLACE,
+                      h_net_properties.data,
+                      mpcd::detail::thermo_index::num_quantities,
+                      MPI_DOUBLE,
+                      MPI_SUM,
+                      m_exec_conf->getMPICommunicator());
 
-    MPI_Allreduce(MPI_IN_PLACE,
-                  &n_temp_cells,
-                  1,
-                  MPI_UNSIGNED,
-                  MPI_SUM,
-                  m_exec_conf->getMPICommunicator());
+        MPI_Allreduce(MPI_IN_PLACE,
+                      &n_temp_cells,
+                      1,
+                      MPI_UNSIGNED,
+                      MPI_SUM,
+                      m_exec_conf->getMPICommunicator());
+        }
 #endif // ENABLE_MPI
 
     if (n_temp_cells > 0)
