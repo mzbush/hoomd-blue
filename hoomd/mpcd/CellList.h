@@ -345,8 +345,6 @@ class PYBIND11_EXPORT CellList : public Compute
 
     Nano::Signal<mpcd::detail::ThermoFlags()> m_flag_signal; //!< Signal for requested flags
     mpcd::detail::ThermoFlags m_flags;                       //!< Requested thermo flags
-    //! Updates the requested optional flags
-    void updateFlags();
 
 #ifdef ENABLE_MPI
     unsigned int m_num_extra;               //!< Number of extra cells to communicate over
@@ -356,6 +354,9 @@ class PYBIND11_EXPORT CellList : public Compute
     //! Determine if embedded particles require migration
     virtual bool needsEmbedMigrate(uint64_t timestep);
 #endif // ENABLE_MPI
+
+    //! Updates the requested optional flags
+    void updateFlags();
 
     //! Check the condition flags
     bool checkConditions();
