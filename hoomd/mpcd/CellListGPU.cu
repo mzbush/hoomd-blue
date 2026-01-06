@@ -181,10 +181,11 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
         }
 
     // compute the contribution of the particle to cell properties
-    atomicAdd(&d_cell_vel[bin_idx].x, vel_i.x * mass_i);
-    atomicAdd(&d_cell_vel[bin_idx].y, vel_i.y * mass_i);
-    atomicAdd(&d_cell_vel[bin_idx].z, vel_i.z * mass_i);
-    atomicAdd(&d_cell_vel[bin_idx].w, mass_i);
+    double4& cell_vel = d_cell_vel[bin_idx];
+    atomicAdd(&cell_vel.x, vel_i.x * mass_i);
+    atomicAdd(&cell_vel.y, vel_i.y * mass_i);
+    atomicAdd(&cell_vel.z, vel_i.z * mass_i);
+    atomicAdd(&cell_vel.w, mass_i);
 
     if (need_energy)
         {
