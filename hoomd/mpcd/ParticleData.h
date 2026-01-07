@@ -57,14 +57,7 @@ namespace mpcd
  * are based on around the velocity and cell. For details of what the cell means,
  * refer to the mpcd::CellList.
  *
- * \todo Because the local cell index changes with position, a signal will be put
- * in place to indicate when the cached cell index is still valid.
- *
- * \todo Likewise, MPCD benefits from sorting data into cell order, so a signal
- * needs to be put in place when the ordering changes.
- *
- * \todo Likewise, a signal should be incorporated to indicate when particles are
- * added or removed locally, as is the case during particle migration.
+ * \todo Add ability to hold ghosts of mpcd particles
  *
  * \ingroup data_structs
  */
