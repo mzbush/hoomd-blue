@@ -272,9 +272,7 @@ class PYBIND11_EXPORT ParticleData : public Autotuned
         }
 
     //! Signature for particle sort signal
-    typedef Nano::Signal<
-        void(uint64_t timestep, const GPUArray<unsigned int>&, const GPUArray<unsigned int>&)>
-        SortSignal;
+    typedef Nano::Signal<void(uint64_t timestep)> SortSignal;
 
     //! Get the sort signal
     /*!
@@ -289,31 +287,13 @@ class PYBIND11_EXPORT ParticleData : public Autotuned
     //! Notify subscribers of a particle sort
     /*!
      * \param timestep Timestep that the sorting occurred
-     * \param order Mapping of sorted particle indexes onto old particle indexes
-     * \param rorder Mapping of old particle indexes onto sorted particle indexes
-     *
-     * This method notifies the subscribers of the sort occurring at \a timestep.
-     * Subscribers may choose to use \a order and \a rorder to reorder their
-     * per-particle data immediately, or delay the sort until their next call.
-     */
-    void notifySort(uint64_t timestep,
-                    const GPUArray<unsigned int>& order,
-                    const GPUArray<unsigned int>& rorder)
-        {
-        m_sort_signal.emit(timestep, order, rorder);
-        }
-
-    //! Notify subscribers of a particle sort
-    /*!
-     * \param timestep Timestep that the sorting occurred
      *
      * This method notifies the subscribers of the sort occurring at \a timestep.
      * Subscribers are not given the updated particle order.
      */
     void notifySort(uint64_t timestep)
         {
-        GPUArray<unsigned int> order, rorder;
-        m_sort_signal.emit(timestep, order, rorder);
+        m_sort_signal.emit(timestep);
         }
     //@}
 

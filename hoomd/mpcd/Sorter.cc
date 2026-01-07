@@ -48,7 +48,7 @@ void mpcd::Sorter::update(uint64_t timestep)
     applyOrder();
 
     // trigger the sort signal for ParticleData callbacks using the current sortings
-    m_mpcd_pdata->notifySort(timestep, m_order, m_rorder);
+    m_mpcd_pdata->notifySort(timestep);
     }
 
 /*!
