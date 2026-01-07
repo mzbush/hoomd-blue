@@ -37,9 +37,6 @@ class PYBIND11_EXPORT SorterGPU : public mpcd::Sorter
     /// Kernel tuner for filling sentinels in cell list.
     std::shared_ptr<Autotuner<1>> m_compute_order_tuner;
 
-    /// Kernel tuner for setting reverse map.
-    std::shared_ptr<Autotuner<1>> m_reverse_tuner;
-
     //!< Kernel tuner for applying sorted order.
     std::shared_ptr<Autotuner<1>> m_apply_tuner;
 

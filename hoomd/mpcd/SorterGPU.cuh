@@ -47,11 +47,6 @@ unsigned int sort_cell_compact(unsigned int* d_order,
                                const unsigned int num_items,
                                const unsigned int N);
 
-//! Kernel driver to reverse map the particle ordering
-cudaError_t sort_gen_reverse(unsigned int* d_rorder,
-                             const unsigned int* d_order,
-                             const unsigned int N,
-                             const unsigned int block_size);
     } // end namespace gpu
     } // end namespace mpcd
     } // end namespace hoomd

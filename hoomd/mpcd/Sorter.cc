@@ -14,8 +14,7 @@ namespace hoomd
  * \param sysdef System definition
  */
 mpcd::Sorter::Sorter(std::shared_ptr<SystemDefinition> sysdef, std::shared_ptr<Trigger> trigger)
-    : Tuner(sysdef, trigger), m_mpcd_pdata(m_sysdef->getMPCDParticleData()), m_order(m_exec_conf),
-      m_rorder(m_exec_conf)
+    : Tuner(sysdef, trigger), m_mpcd_pdata(m_sysdef->getMPCDParticleData()), m_order(m_exec_conf)
     {
     m_exec_conf->msg->notice(5) << "Constructing MPCD Sorter" << std::endl;
     }
@@ -41,7 +40,6 @@ void mpcd::Sorter::update(uint64_t timestep)
 
     // resize the sorted order vector to the current number of particles
     m_order.resize(m_mpcd_pdata->getN());
-    m_rorder.resize(m_mpcd_pdata->getN());
 
     // generate and apply the sorted order
     computeOrder(timestep);

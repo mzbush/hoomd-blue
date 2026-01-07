@@ -21,14 +21,10 @@ mpcd::SorterGPU::SorterGPU(std::shared_ptr<SystemDefinition> sysdef,
     m_compute_order_tuner.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
                                                  m_exec_conf,
                                                  "mpcd_sort_sentinel"));
-    m_reverse_tuner.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
-                                           m_exec_conf,
-                                           "mpcd_sort_reverse"));
     m_apply_tuner.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
                                          m_exec_conf,
                                          "mpcd_sort_apply"));
-    m_autotuners.insert(m_autotuners.end(),
-                        {m_compute_order_tuner, m_reverse_tuner, m_apply_tuner});
+    m_autotuners.insert(m_autotuners.end(), {m_compute_order_tuner, m_apply_tuner});
     }
 
 /*!
@@ -72,23 +68,6 @@ void mpcd::SorterGPU::computeOrder(uint64_t timestep)
         mpcd::gpu::compute_order(d_order.data, d_cell_id.data, mpcd_N);
         if (m_exec_conf->isCUDAErrorCheckingEnabled())
             CHECK_CUDA_ERROR();
-        }
-
-        // fill out the reverse ordering map
-        {
-        ArrayHandle<unsigned int> d_order(m_order, access_location::device, access_mode::read);
-        ArrayHandle<unsigned int> d_rorder(m_rorder,
-                                           access_location::device,
-                                           access_mode::overwrite);
-
-        m_reverse_tuner->begin();
-        mpcd::gpu::sort_gen_reverse(d_rorder.data,
-                                    d_order.data,
-                                    mpcd_N,
-                                    m_reverse_tuner->getParam()[0]);
-        if (m_exec_conf->isCUDAErrorCheckingEnabled())
-            CHECK_CUDA_ERROR();
-        m_reverse_tuner->end();
         }
     }
 
