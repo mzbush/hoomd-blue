@@ -1237,12 +1237,6 @@ class PatchyGaussian(Patchy):
             :math:`\epsilon` :math:`[\mathrm{energy}]`.
           * ``sigma`` (`float`, **required**) -
             :math:`\sigma` :math:`[\mathrm{length}]`.
-          * ``n`` (`float`, **required**) -
-            :math:`n` :math:`[\mathrm{dimensionless}]`.
-          * ``m`` (`float`, **required**) -
-            :math:`m` :math:`[\mathrm{dimensionless}]`.
-          * ``delta`` (`float`, **required**) -
-            :math:`\Delta` :math:`[\mathrm{length}]`.
 
         Type: `TypeParameter` [`tuple` [``particle_type``, ``particle_type``],
         `dict`]
