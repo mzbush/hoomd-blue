@@ -113,6 +113,12 @@ class PYBIND11_EXPORT ParticleData : public Autotuned
         return m_N_virtual;
         }
 
+    //! Get the number of MPCD ghost particles on this rank
+    unsigned int getNGhosts() const
+        {
+        return m_N_ghosts;
+        }
+
     //! Get global number of MPCD particles
     unsigned int getNGlobal() const
         {
@@ -329,6 +335,46 @@ class PYBIND11_EXPORT ParticleData : public Autotuned
         }
     //@}
 
+    //! \name ghost particle methods
+    //@{
+    //! Get the signal for the number of ghost particles changing
+    /*!
+     * \returns A signal that notifies subscribers when the number of ghosts
+     *          particles changes. This includes addition and removal of particles.
+     */
+    Nano::Signal<void()>& getNumGhostSignal()
+        {
+        return m_ghost_signal;
+        }
+
+    //! Notify subscribers that the number of ghost particles has changed
+    void notifyNumGhost()
+        {
+        m_ghost_signal.emit();
+        }
+
+    //! Allocate memory for ghost particles
+    void addGhostParticles(unsigned int N);
+
+    //! Remove all ghost particles
+    /*!
+     * \post The ghost particle counter is reset to zero.
+     *
+     * The memory associated with the previous ghost particle allocation is not freed
+     * since the array growth is amortized in allocateVirtualParticles.
+     * \todo  determine if the above will be true
+     */
+    void removeGhostParticles()
+        {
+        const unsigned int old_N_ghost = m_N_ghosts;
+        m_N_ghosts = 0;
+
+        // only notify of a change if there were ghost particles that have now been removed
+        if (old_N_ghost != 0)
+            notifyNumGhost();
+        }
+    //@}
+
 #ifdef ENABLE_MPI
     //! \name communication methods
     //@{
@@ -382,6 +428,7 @@ class PYBIND11_EXPORT ParticleData : public Autotuned
     private:
     unsigned int m_N;         //!< Number of MPCD particles
     unsigned int m_N_virtual; //!< Number of virtual MPCD particles
+    unsigned int m_N_ghosts;  //!< Number of virtual MPCD particles
     unsigned int m_N_global;  //!< Total number of MPCD particles
     unsigned int m_N_max;     //!< Maximum number of MPCD particles arrays can hold
 
@@ -417,6 +464,7 @@ class PYBIND11_EXPORT ParticleData : public Autotuned
     bool m_valid_cell_cache;               //!< Flag for validity of cell cache
     SortSignal m_sort_signal;              //!< Signal triggered when particles are sorted
     Nano::Signal<void()> m_virtual_signal; //!< Signal for number of virtual particles changing
+    Nano::Signal<void()> m_ghost_signal;   //!< Signal for number of ghost particles changing
 
     //! Check for a valid snapshot
     bool checkSnapshot(const mpcd::ParticleDataSnapshot& snapshot);
