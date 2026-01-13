@@ -155,7 +155,7 @@ def get_mesh_potential_args_forces_and_energies():
         [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
         [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
     ]
-    BendingRigidity_energies = [8, 40, 1200]
+    BendingRigidity_energies = [8/3, 40/3, 1200/3]
     Helfrich_forces = [
         [
             [-12.710842, 0.0, 8.987922],
