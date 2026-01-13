@@ -45,8 +45,8 @@ mpcd::ParticleData::ParticleData(unsigned int N,
                                  unsigned int ndimensions,
                                  std::shared_ptr<ExecutionConfiguration> exec_conf,
                                  std::shared_ptr<DomainDecomposition> decomposition)
-    : m_N(0), m_N_virtual(0), m_N_ghosts(0), m_N_global(0), m_N_max(0), m_exec_conf(exec_conf),
-      m_mass(1.0), m_valid_cell_cache(false)
+    : m_N(0), m_N_virtual(0), m_N_global(0), m_N_max(0), m_exec_conf(exec_conf), m_mass(1.0),
+      m_valid_cell_cache(false)
     {
     m_exec_conf->msg->notice(5) << "Constructing MPCD ParticleData" << endl;
 
@@ -75,8 +75,8 @@ mpcd::ParticleData::ParticleData(const mpcd::ParticleDataSnapshot& snapshot,
                                  std::shared_ptr<const BoxDim> global_box,
                                  std::shared_ptr<const ExecutionConfiguration> exec_conf,
                                  std::shared_ptr<DomainDecomposition> decomposition)
-    : m_N(0), m_N_virtual(0), m_N_ghosts(0), m_N_global(0), m_N_max(0), m_exec_conf(exec_conf),
-      m_mass(1.0), m_valid_cell_cache(false)
+    : m_N(0), m_N_virtual(0), m_N_global(0), m_N_max(0), m_exec_conf(exec_conf), m_mass(1.0),
+      m_valid_cell_cache(false)
     {
     m_exec_conf->msg->notice(5) << "Constructing MPCD ParticleData" << endl;
 
@@ -934,7 +934,7 @@ unsigned int mpcd::ParticleData::addVirtualParticles(unsigned int N)
     m_N_virtual += N;
 
     // minimum size of new arrays must accommodate current particles plus virtual
-    const unsigned int N_min = m_N + m_N_virtual + m_N_ghosts;
+    const unsigned int N_min = m_N + m_N_virtual;
 
     // compute the new size of the array using amortized growth
     unsigned int N_max = m_N_max;
@@ -950,33 +950,6 @@ unsigned int mpcd::ParticleData::addVirtualParticles(unsigned int N)
     notifyNumVirtual();
 
     return first_idx;
-    }
-
-//! Add ghost particles at the end of the local particle data
-/*! Ghost ptls are appended at the end of the particle data.
-  Ghost particles have only incomplete particle information (position, charge, diameter) and
-  don't need tags.
-
-  \param nghosts number of ghost particles to add
-  \post the particle data arrays are resized if necessary to accommodate the ghost particles,
-        the number of ghost particles is updated
-*/
-void mpcd::ParticleData::addGhostParticles(const unsigned int N_ghosts)
-    {
-    assert(N_ghosts >= 0);
-
-    unsigned int max_nparticles = m_N_max;
-
-    m_N_ghosts += N_ghosts;
-
-    if (m_N + m_N_virtual + m_N_ghosts > max_nparticles)
-        {
-        while (m_N + m_N_virtual + m_N_ghosts > max_nparticles)
-            m_N_max = ((unsigned int)(((float)m_N_max) * resize_factor)) + 1;
-
-        // reallocate particle data arrays
-        reallocate(m_N_max);
-        }
     }
 
 #ifdef ENABLE_MPI
