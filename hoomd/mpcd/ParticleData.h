@@ -319,12 +319,12 @@ class PYBIND11_EXPORT ParticleData : public Autotuned
 
     //! Remove all virtual particles
     /*!
-     * \post The virtual particle counter is reset to zero.
+     * \post The virtual particle counter is reset to zero. Any ghost particles
+     * are invalidated (call removeGhostParticles() before or after this method).
      *
      * The memory associated with the previous virtual particle allocation is not freed
      * since the array growth is amortized in allocateVirtualParticles.
-     * \todo figure out how to make sure ghost particles aren't lost if the number of
-     * virtual particles changes. ghost particles may be invalidated.
+     *
      */
     void removeVirtualParticles()
         {
