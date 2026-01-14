@@ -162,6 +162,7 @@ void mpcd::CellList::compute(uint64_t timestep)
 
 void mpcd::CellList::reallocate()
     {
+    m_cell_np.resize(m_cell_indexer.getNumElements());
     m_cell_vel.resize(m_cell_indexer.getNumElements());
     m_cell_energy.resize(m_cell_indexer.getNumElements());
     m_cell_temp.resize(m_cell_indexer.getNumElements());
@@ -303,7 +304,6 @@ void mpcd::CellList::computeDimensions()
     // resize the cell indexers and per-cell counter
     m_global_cell_indexer = Index3D(m_global_cell_dim.x, m_global_cell_dim.y, m_global_cell_dim.z);
     m_cell_indexer = Index3D(m_cell_dim.x, m_cell_dim.y, m_cell_dim.z);
-    m_cell_np.resize(m_cell_indexer.getNumElements());
 
     // reallocate per-cell memory
     reallocate();
