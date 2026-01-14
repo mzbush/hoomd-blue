@@ -351,6 +351,9 @@ class PYBIND11_EXPORT CellList : public Compute
     std::array<unsigned int, 6> m_num_comm; //!< Number of cells to communicate on each face
     BoxDim m_cover_box;                     //!< Box covered by the cell list
 
+    GPUVector<Scalar3> m_ghost_bin_pos; //!< binned position of particles
+    GPUVector<Scalar4> m_ghost_vel;     //!< velocity of ghost particles
+
     //! Determine if embedded particles require migration
     virtual bool needsEmbedMigrate(uint64_t timestep);
 #endif // ENABLE_MPI
