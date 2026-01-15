@@ -57,6 +57,8 @@ namespace mpcd
  * are based on around the velocity and cell. For details of what the cell means,
  * refer to the mpcd::CellList.
  *
+ * \todo Add ability to hold ghosts of mpcd particles
+ *
  * \ingroup data_structs
  */
 class PYBIND11_EXPORT ParticleData : public Autotuned
