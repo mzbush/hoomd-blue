@@ -17,6 +17,9 @@ HOOMD_UP_MAIN()
 
 using namespace hoomd;
 
+/*!
+ * \todo change so each cell is owned by one rank, make sure no duplicate or missing cells
+ */
 void checkDomainBoundaries(std::shared_ptr<SystemDefinition> sysdef,
                            std::shared_ptr<mpcd::CellList> cl)
     {
@@ -28,7 +31,6 @@ void checkDomainBoundaries(std::shared_ptr<SystemDefinition> sysdef,
     auto num_comm = cl->getNComm();
     auto origin_idx = cl->getOriginIndex();
     auto cell_dim = cl->getDim();
-    auto num_extra = cl->getNExtraCells();
 
     for (unsigned int dir = 0; dir < num_comm.size(); ++dir)
         {
@@ -68,7 +70,7 @@ void checkDomainBoundaries(std::shared_ptr<SystemDefinition> sysdef,
             {
             if (d == mpcd::detail::face::east)
                 {
-                send_cells[i] = origin_idx.x + cell_dim.x - num_extra - n_send + i;
+                send_cells[i] = origin_idx.x + cell_dim.x - n_send + i;
                 }
             else if (d == mpcd::detail::face::west)
                 {
@@ -76,7 +78,7 @@ void checkDomainBoundaries(std::shared_ptr<SystemDefinition> sysdef,
                 }
             else if (d == mpcd::detail::face::north)
                 {
-                send_cells[i] = origin_idx.y + cell_dim.y - num_extra - n_send + i;
+                send_cells[i] = origin_idx.y + cell_dim.y - n_send + i;
                 }
             else if (d == mpcd::detail::face::south)
                 {
@@ -84,7 +86,7 @@ void checkDomainBoundaries(std::shared_ptr<SystemDefinition> sysdef,
                 }
             else if (d == mpcd::detail::face::up)
                 {
-                send_cells[i] = origin_idx.z + cell_dim.z - num_extra - n_send + i;
+                send_cells[i] = origin_idx.z + cell_dim.z - n_send + i;
                 }
             else if (d == mpcd::detail::face::down)
                 {
@@ -123,7 +125,7 @@ void checkDomainBoundaries(std::shared_ptr<SystemDefinition> sysdef,
                 }
             else if (d == mpcd::detail::face::west)
                 {
-                expect_recv_cell.x = origin_idx.x + cell_dim.x - num_extra - n_recv + i;
+                expect_recv_cell.x = origin_idx.x + cell_dim.x - n_recv + i;
                 }
             else if (d == mpcd::detail::face::north)
                 {
@@ -131,7 +133,7 @@ void checkDomainBoundaries(std::shared_ptr<SystemDefinition> sysdef,
                 }
             else if (d == mpcd::detail::face::south)
                 {
-                expect_recv_cell.y = origin_idx.y + cell_dim.y - num_extra - n_recv + i;
+                expect_recv_cell.y = origin_idx.y + cell_dim.y - n_recv + i;
                 }
             else if (d == mpcd::detail::face::up)
                 {
@@ -139,7 +141,7 @@ void checkDomainBoundaries(std::shared_ptr<SystemDefinition> sysdef,
                 }
             else if (d == mpcd::detail::face::down)
                 {
-                expect_recv_cell.z = origin_idx.z + cell_dim.z - num_extra - n_recv + i;
+                expect_recv_cell.z = origin_idx.z + cell_dim.z - n_recv + i;
                 }
             expect_recv_cell = cl->wrapGlobalCell(expect_recv_cell);
 
@@ -583,184 +585,6 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
             UP_ASSERT_CLOSE(coverage.getHi().z, 2.5, tol);
             }
         }
-
-    /*******************/
-    // Increase the number of communication cells. This will trigger an increase in the size of
-    // the diffusion layer
-    cl->setNExtraCells(1);
-    cl->computeDimensions();
-    checkDomainBoundaries(sysdef, cl);
-    if (is_orthorhombic)
-        {
-        // all origins should be shifted down by 1 cell
-        const int3 origin = cl->getOriginIndex();
-        const uint3 pos = decomposition->getGridPos();
-        if (mpi_x)
-            {
-            if (pos.x)
-                {
-                UP_ASSERT_EQUAL(origin.x, 3);
-                }
-            else
-                {
-                UP_ASSERT_EQUAL(origin.x, -2);
-                }
-            }
-        else
-            {
-            UP_ASSERT_EQUAL(origin.x, 0);
-            }
-
-        if (mpi_y)
-            {
-            if (pos.y)
-                {
-                UP_ASSERT_EQUAL(origin.y, 3);
-                }
-            else
-                {
-                UP_ASSERT_EQUAL(origin.y, -2);
-                }
-            }
-        else
-            {
-            UP_ASSERT_EQUAL(origin.y, 0);
-            }
-
-        if (mpi_z)
-            {
-            if (pos.z)
-                {
-                UP_ASSERT_EQUAL(origin.z, 4);
-                }
-            else
-                {
-                UP_ASSERT_EQUAL(origin.z, -2);
-                }
-            }
-        else
-            {
-            UP_ASSERT_EQUAL(origin.z, 0);
-            }
-
-        // all dims should be increased by 2
-        const uint3 dim = cl->getDim();
-        if (mpi_x)
-            {
-            UP_ASSERT_EQUAL(dim.x, 9);
-            }
-        else
-            {
-            UP_ASSERT_EQUAL(dim.x, 10);
-            }
-
-        if (mpi_y)
-            {
-            if (pos.y)
-                {
-                UP_ASSERT_EQUAL(dim.y, 9);
-                }
-            else
-                {
-                UP_ASSERT_EQUAL(dim.y, 8);
-                }
-            }
-        else
-            {
-            UP_ASSERT_EQUAL(dim.y, 10);
-            }
-
-        if (mpi_z)
-            {
-            if (pos.z)
-                {
-                UP_ASSERT_EQUAL(dim.z, 8);
-                }
-            else
-                {
-                // floating point rounding makes thes 10 not 9
-                UP_ASSERT_EQUAL(dim.z, 10);
-                }
-            }
-        else
-            {
-            UP_ASSERT_EQUAL(dim.z, 10);
-            }
-
-        // all comms should be increased by 1
-        std::array<unsigned int, 6> num_comm = cl->getNComm();
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::east)],
-                        (mpi_x) ? 3 : 0);
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::west)],
-                        (mpi_x) ? 3 : 0);
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::north)],
-                        (mpi_y) ? ((pos.y) ? 3 : 2) : 0);
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::south)],
-                        (mpi_y) ? ((pos.y) ? 2 : 3) : 0);
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::up)],
-                        (mpi_z) ? 3 : 0);
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::down)],
-                        (mpi_z) ? 3 : 0);
-
-        const BoxDim coverage = cl->getCoverageBox();
-        if (mpi_x)
-            {
-            if (pos.x)
-                {
-                CHECK_CLOSE(coverage.getLo().x, -0.75, tol);
-                CHECK_CLOSE(coverage.getHi().x, 3.25, tol);
-                }
-            else
-                {
-                CHECK_CLOSE(coverage.getLo().x, -3.25, tol);
-                CHECK_CLOSE(coverage.getHi().x, 0.75, tol);
-                }
-            }
-        else
-            {
-            CHECK_CLOSE(coverage.getLo().x, -2.5, tol);
-            CHECK_CLOSE(coverage.getHi().x, 2.5, tol);
-            }
-
-        if (mpi_y)
-            {
-            if (pos.y)
-                {
-                CHECK_CLOSE(coverage.getLo().y, -0.75, tol);
-                CHECK_CLOSE(coverage.getHi().y, 3.25, tol);
-                }
-            else
-                {
-                CHECK_CLOSE(coverage.getLo().y, -3.25, tol);
-                CHECK_CLOSE(coverage.getHi().y, 0.25, tol);
-                }
-            }
-        else
-            {
-            CHECK_CLOSE(coverage.getLo().y, -2.5, tol);
-            CHECK_CLOSE(coverage.getHi().y, 2.5, tol);
-            }
-
-        if (mpi_z)
-            {
-            if (pos.z)
-                {
-                CHECK_CLOSE(coverage.getLo().z, -0.25, tol);
-                CHECK_CLOSE(coverage.getHi().z, 3.25, tol);
-                }
-            else
-                {
-                CHECK_CLOSE(coverage.getLo().z, -3.25, tol);
-                // floating point rounding makes this 1.25 not 0.75
-                CHECK_CLOSE(coverage.getHi().z, 1.25, tol);
-                }
-            }
-        else
-            {
-            CHECK_CLOSE(coverage.getLo().z, -2.5, tol);
-            CHECK_CLOSE(coverage.getHi().z, 2.5, tol);
-            }
-        }
     }
 
 //! Test for correct cell listing of a basic system
@@ -1185,9 +1009,7 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), local_cell);
         }
 
-    // now we move the particles to their exterior boundaries, and repeat the testing process
-    // we are going to pad the cell list with an extra cell just to test that binning now
-    cl->setNExtraCells(1);
+        // now we move the particles to their exterior boundaries, and repeat the testing process
         {
         ArrayHandle<Scalar4> h_pos(pdata->getPositions(),
                                    access_location::host,

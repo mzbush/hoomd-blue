@@ -147,19 +147,6 @@ class PYBIND11_EXPORT CellList : public Compute
         }
 
 #ifdef ENABLE_MPI
-    //! Set the number of extra communication cells
-    void setNExtraCells(unsigned int num_extra)
-        {
-        m_num_extra = num_extra;
-        m_needs_compute_dim = true;
-        }
-
-    //! Get the number of extra communication cells
-    unsigned int getNExtraCells() const
-        {
-        return m_num_extra;
-        }
-
     //! Get the number of communication cells on each face of the box
     const std::array<unsigned int, 6>& getNComm() const
         {
@@ -347,7 +334,6 @@ class PYBIND11_EXPORT CellList : public Compute
     mpcd::detail::ThermoFlags m_flags;                       //!< Requested thermo flags
 
 #ifdef ENABLE_MPI
-    unsigned int m_num_extra;               //!< Number of extra cells to communicate over
     std::array<unsigned int, 6> m_num_comm; //!< Number of cells to communicate on each face
     BoxDim m_cover_box;                     //!< Box covered by the cell list
 

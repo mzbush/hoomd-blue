@@ -84,17 +84,8 @@ void mpcd::CellListGPU::buildCellList()
     const unsigned int N_mpcd = m_mpcd_pdata->getN() + m_mpcd_pdata->getNVirtual();
     unsigned int N_tot = N_mpcd;
 
-    // total effective number of cells in the global box, optionally padded by
-    // extra cells in MPI simulations
+    // total effective number of cells in the global box
     uint3 n_global_cells = m_global_cell_dim;
-#ifdef ENABLE_MPI
-    if (isCommunicating(mpcd::detail::face::east))
-        n_global_cells.x += 2 * m_num_extra;
-    if (isCommunicating(mpcd::detail::face::north))
-        n_global_cells.y += 2 * m_num_extra;
-    if (isCommunicating(mpcd::detail::face::up))
-        n_global_cells.z += 2 * m_num_extra;
-#endif // ENABLE_MPI
 
     if (m_embed_group)
         {

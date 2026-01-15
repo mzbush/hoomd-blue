@@ -930,16 +930,16 @@ void test_communicator_overdecompose(std::shared_ptr<ExecutionConfiguration> exe
         comm->communicate(0);
         }
 
-    // make sure test gets run again
-    cl->setNExtraCells(1);
-    if (should_fail)
-        {
-        UP_ASSERT_EXCEPTION(std::runtime_error, [&] { comm->communicate(1); });
-        }
-    else
-        {
-        comm->communicate(1);
-        }
+    // // make sure test gets run again
+    // cl->setNExtraCells(1);
+    // if (should_fail)
+    //     {
+    //     UP_ASSERT_EXCEPTION(std::runtime_error, [&] { comm->communicate(1); });
+    //     }
+    // else
+    //     {
+    //     comm->communicate(1);
+    //     }
     }
 
 //! Communicator creator for unit tests

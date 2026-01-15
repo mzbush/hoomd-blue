@@ -40,7 +40,6 @@ mpcd::CellList::CellList(std::shared_ptr<SystemDefinition> sysdef, Scalar cell_s
 
 #ifdef ENABLE_MPI
     m_decomposition = m_pdata->getDomainDecomposition();
-    m_num_extra = 0;
     m_cover_box = m_pdata->getBox();
 #endif // ENABLE_MPI
 
@@ -75,7 +74,6 @@ mpcd::CellList::CellList(std::shared_ptr<SystemDefinition> sysdef,
 
 #ifdef ENABLE_MPI
     m_decomposition = m_pdata->getDomainDecomposition();
-    m_num_extra = 0;
     m_cover_box = m_pdata->getBox();
 #endif // ENABLE_MPI
 
@@ -197,34 +195,27 @@ void mpcd::CellList::computeDimensions()
                            m_decomposition->getCumulativeFraction(2, grid_pos.z + 1));
 
         // setup lo bin
-        const Scalar3 fractional_lo_shifted_down = fractional_lo - m_max_grid_shift;
-        int3 my_lo_bin
-            = make_int3((int)std::floor(fractional_lo_shifted_down.x * m_global_cell_dim.x),
-                        (int)std::floor(fractional_lo_shifted_down.y * m_global_cell_dim.y),
-                        (int)std::floor(fractional_lo_shifted_down.z * m_global_cell_dim.z));
-        const Scalar3 fractional_lo_shifted_up = fractional_lo + m_max_grid_shift;
-        int3 lo_neigh_bin
-            = make_int3((int)std::ceil(fractional_lo_shifted_up.x * m_global_cell_dim.x),
-                        (int)std::ceil(fractional_lo_shifted_up.y * m_global_cell_dim.y),
-                        (int)std::ceil(fractional_lo_shifted_up.z * m_global_cell_dim.z));
+        int3 my_lo_bin = make_int3((int)std::round(fractional_lo.x * m_global_cell_dim.x),
+                                   (int)std::round(fractional_lo.y * m_global_cell_dim.y),
+                                   (int)std::round(fractional_lo.z * m_global_cell_dim.z));
+
+        int3 neigh_lo_bin = make_int3((int)std::ceil(fractional_lo.x * m_global_cell_dim.x),
+                                      (int)std::ceil(fractional_lo.y * m_global_cell_dim.y),
+                                      (int)std::ceil(fractional_lo.z * m_global_cell_dim.z));
 
         // setup hi bin
-        const Scalar3 fractional_hi_shifted_up = fractional_hi + m_max_grid_shift;
-        int3 my_hi_bin
-            = make_int3((int)std::ceil(fractional_hi_shifted_up.x * m_global_cell_dim.x),
-                        (int)std::ceil(fractional_hi_shifted_up.y * m_global_cell_dim.y),
-                        (int)std::ceil(fractional_hi_shifted_up.z * m_global_cell_dim.z));
-        const Scalar3 fractional_hi_shifted_down = fractional_hi - m_max_grid_shift;
-        int3 hi_neigh_bin
-            = make_int3((int)std::floor(fractional_hi_shifted_down.x * m_global_cell_dim.x),
-                        (int)std::floor(fractional_hi_shifted_down.y * m_global_cell_dim.y),
-                        (int)std::floor(fractional_hi_shifted_down.z * m_global_cell_dim.z));
+        int3 my_hi_bin = make_int3((int)std::round(fractional_hi.x * m_global_cell_dim.x),
+                                   (int)std::round(fractional_hi.y * m_global_cell_dim.y),
+                                   (int)std::round(fractional_hi.z * m_global_cell_dim.z));
+
+        int3 neigh_hi_bin = make_int3((int)std::floor(fractional_hi.x * m_global_cell_dim.x),
+                                      (int)std::floor(fractional_hi.y * m_global_cell_dim.y),
+                                      (int)std::floor(fractional_hi.z * m_global_cell_dim.z));
 
         // initially size the grid assuming one rank in each direction, and then resize based on
         // communication
         m_cell_dim = m_global_cell_dim;
         m_origin_idx = make_int3(0, 0, 0);
-        std::fill(m_num_comm.begin(), m_num_comm.end(), 0);
 
         // Compute size of the box with diffusion layer
         const BoxDim& global_box = m_pdata->getGlobalBox();
@@ -234,15 +225,15 @@ void mpcd::CellList::computeDimensions()
 
         if (communicating.x)
             {
-            // number of cells and cell origin, padding with extra cells in diffusion layer
-            m_cell_dim.x = my_hi_bin.x - my_lo_bin.x + 2 * m_num_extra;
-            m_origin_idx.x = my_lo_bin.x - m_num_extra;
+            // number of cells and cell origin
+            m_cell_dim.x = my_hi_bin.x - my_lo_bin.x;
+            m_origin_idx.x = my_lo_bin.x;
 
             // number of communication cells along each direction
             m_num_comm[static_cast<unsigned int>(mpcd::detail::face::east)]
-                = my_hi_bin.x - hi_neigh_bin.x + m_num_extra;
+                = my_hi_bin.x - neigh_hi_bin.x;
             m_num_comm[static_cast<unsigned int>(mpcd::detail::face::west)]
-                = lo_neigh_bin.x - my_lo_bin.x + m_num_extra;
+                = neigh_lo_bin.x - my_lo_bin.x;
 
             // "safe" size of the diffusion layer
             fractional_cover_lo.x = m_global_cell_dim_inv.x * m_origin_idx.x + m_max_grid_shift.x;
@@ -253,13 +244,13 @@ void mpcd::CellList::computeDimensions()
 
         if (communicating.y)
             {
-            m_cell_dim.y = my_hi_bin.y - my_lo_bin.y + 2 * m_num_extra;
-            m_origin_idx.y = my_lo_bin.y - m_num_extra;
+            m_cell_dim.y = my_hi_bin.y - my_lo_bin.y;
+            m_origin_idx.y = my_lo_bin.y;
 
             m_num_comm[static_cast<unsigned int>(mpcd::detail::face::north)]
-                = my_hi_bin.y - hi_neigh_bin.y + m_num_extra;
+                = my_hi_bin.y - neigh_hi_bin.y;
             m_num_comm[static_cast<unsigned int>(mpcd::detail::face::south)]
-                = lo_neigh_bin.y - my_lo_bin.y + m_num_extra;
+                = neigh_lo_bin.y - my_lo_bin.y;
 
             fractional_cover_lo.y = m_global_cell_dim_inv.y * m_origin_idx.y + m_max_grid_shift.y;
             fractional_cover_hi.y
@@ -269,13 +260,13 @@ void mpcd::CellList::computeDimensions()
 
         if (m_sysdef->getNDimensions() == 3 && communicating.z)
             {
-            m_cell_dim.z = my_hi_bin.z - my_lo_bin.z + 2 * m_num_extra;
-            m_origin_idx.z = my_lo_bin.z - m_num_extra;
+            m_cell_dim.z = my_hi_bin.z - my_lo_bin.z;
+            m_origin_idx.z = my_lo_bin.z;
 
             m_num_comm[static_cast<unsigned int>(mpcd::detail::face::up)]
-                = my_hi_bin.z - hi_neigh_bin.z + m_num_extra;
+                = my_hi_bin.z - neigh_hi_bin.z;
             m_num_comm[static_cast<unsigned int>(mpcd::detail::face::down)]
-                = lo_neigh_bin.z - my_lo_bin.z + m_num_extra;
+                = neigh_lo_bin.z - my_lo_bin.z;
 
             fractional_cover_lo.z = m_global_cell_dim_inv.z * m_origin_idx.z + m_max_grid_shift.z;
             fractional_cover_hi.z
@@ -408,17 +399,8 @@ void mpcd::CellList::buildCellList()
         N_tot += m_embed_group->getNumMembers();
         }
 
-    // total effective number of cells in the global box, optionally padded by
-    // extra cells in MPI simulations
+    // total effective number of cells in the global box
     uint3 n_global_cells = m_global_cell_dim;
-#ifdef ENABLE_MPI
-    if (isCommunicating(mpcd::detail::face::east))
-        n_global_cells.x += 2 * m_num_extra;
-    if (isCommunicating(mpcd::detail::face::north))
-        n_global_cells.y += 2 * m_num_extra;
-    if (isCommunicating(mpcd::detail::face::up))
-        n_global_cells.z += 2 * m_num_extra;
-#endif // ENABLE_MPI
 
     const BoxDim& global_box = m_pdata->getGlobalBox();
 
