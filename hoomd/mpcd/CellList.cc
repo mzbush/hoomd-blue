@@ -470,40 +470,19 @@ void mpcd::CellList::buildCellList()
                 global_bin.z = n_global_cells.z - 1;
             }
 
-        // compute the local cell
-        int3 bin = make_int3(global_bin.x - m_origin_idx.x,
-                             global_bin.y - m_origin_idx.y,
-                             global_bin.z - m_origin_idx.z);
-        // these checks guard against round-off errors with domain decomposition
-        if (!periodic.x)
-            {
-            if (bin.x == -1)
-                bin.x = 0;
-            else if (bin.x == (int)m_cell_dim.x)
-                bin.x = m_cell_dim.x - 1;
-            }
-        if (!periodic.y)
-            {
-            if (bin.y == -1)
-                bin.y = 0;
-            else if (bin.y == (int)m_cell_dim.y)
-                bin.y = m_cell_dim.y - 1;
-            }
-        if (!periodic.z)
-            {
-            if (bin.z == -1)
-                bin.z = 0;
-            else if (bin.z == (int)m_cell_dim.z)
-                bin.z = m_cell_dim.z - 1;
-            }
-
         // validate and make sure no particles blew out of the box
-        if ((bin.x < 0 || bin.x >= (int)m_cell_dim.x) || (bin.y < 0 || bin.y >= (int)m_cell_dim.y)
-            || (bin.z < 0 || bin.z >= (int)m_cell_dim.z))
+        if ((global_bin.x < 0 || global_bin.x >= (int)n_global_cells.x)
+            || (global_bin.y < 0 || global_bin.y >= (int)n_global_cells.y)
+            || (global_bin.z < 0 || global_bin.z >= (int)n_global_cells.z))
             {
             conditions.z = cur_p + 1;
             continue;
             }
+
+        // compute the local cell
+        int3 bin = make_int3(global_bin.x - m_origin_idx.x,
+                             global_bin.y - m_origin_idx.y,
+                             global_bin.z - m_origin_idx.z);
 
         unsigned int bin_idx = m_cell_indexer(bin.x, bin.y, bin.z);
 
