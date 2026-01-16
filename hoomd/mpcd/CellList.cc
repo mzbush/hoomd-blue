@@ -41,6 +41,15 @@ mpcd::CellList::CellList(std::shared_ptr<SystemDefinition> sysdef, Scalar cell_s
 #ifdef ENABLE_MPI
     m_decomposition = m_pdata->getDomainDecomposition();
     m_cover_box = m_pdata->getBox();
+    // create buffer and ghost arrays
+    GPUVector<int3> bin_pos_sendbuf(m_exec_conf);
+    m_bin_pos_sendbuf.swap(bin_pos_sendbuf);
+    GPUVector<int3> ghost_bin_pos(m_exec_conf);
+    m_ghost_bin_pos.swap(ghost_bin_pos);
+    GPUVector<Scalar4> vel_sendbuf(m_exec_conf);
+    m_vel_sendbuf.swap(vel_sendbuf);
+    GPUVector<Scalar4> ghost_vel(m_exec_conf);
+    m_ghost_vel.swap(ghost_vel);
 #endif // ENABLE_MPI
 
     m_mpcd_pdata->getNumVirtualSignal().connect<mpcd::CellList, &mpcd::CellList::slotNumVirtual>(
