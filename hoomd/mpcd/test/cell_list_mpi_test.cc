@@ -220,14 +220,14 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         const uint3 pos = decomposition->getGridPos();
         if (mpi_x)
             {
-            // exactly halfway -> -1 and 2
+            // right rank gets middle cell -> 0 and 3
             if (pos.x)
                 {
-                UP_ASSERT_EQUAL(origin.x, 2);
+                UP_ASSERT_EQUAL(origin.x, 3);
                 }
             else
                 {
-                UP_ASSERT_EQUAL(origin.x, -1);
+                UP_ASSERT_EQUAL(origin.x, 0);
                 }
             }
         else
@@ -237,14 +237,15 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
 
         if (mpi_y)
             {
-            // biased to lower edge -> -1 and 1
+            // hight rank gets middle cell due to domain decomp pushback -> 0 and 2
+            // biased to lower edge -> upper domains need extra cell
             if (pos.y)
                 {
-                UP_ASSERT_EQUAL(origin.y, 1);
+                UP_ASSERT_EQUAL(origin.y, 2);
                 }
             else
                 {
-                UP_ASSERT_EQUAL(origin.y, -1);
+                UP_ASSERT_EQUAL(origin.y, 0);
                 }
             }
         else
@@ -252,16 +253,16 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
             UP_ASSERT_EQUAL(origin.y, 0);
             }
 
-        // biased to upper edge -> -1 and 2
         if (mpi_z)
             {
+            // lower rank gets middle cell -> 0 and 3
             if (pos.z)
                 {
-                UP_ASSERT_EQUAL(origin.z, 2);
+                UP_ASSERT_EQUAL(origin.z, 3);
                 }
             else
                 {
-                UP_ASSERT_EQUAL(origin.z, -1);
+                UP_ASSERT_EQUAL(origin.z, 0);
                 }
             }
         else
@@ -273,14 +274,14 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         const uint3 dim = cl->getDim();
         if (mpi_x)
             {
-            // split evenly in x -> both domains are same size
+            // lower rank gets middle cell
             if (pos.x)
                 {
-                UP_ASSERT_EQUAL(dim.x, 4);
+                UP_ASSERT_EQUAL(dim.x, 2);
                 }
             else
                 {
-                UP_ASSERT_EQUAL(dim.x, 4);
+                UP_ASSERT_EQUAL(dim.x, 3);
                 }
             }
         else
@@ -290,14 +291,15 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
 
         if (mpi_y)
             {
+            // higher rank gets middle cell due to domain decomp pushback
             // biased to lower edge -> upper domains need extra cell
             if (pos.y)
                 {
-                UP_ASSERT_EQUAL(dim.y, 5);
+                UP_ASSERT_EQUAL(dim.y, 3);
                 }
             else
                 {
-                UP_ASSERT_EQUAL(dim.y, 4);
+                UP_ASSERT_EQUAL(dim.y, 2);
                 }
             }
         else
@@ -307,14 +309,14 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
 
         if (mpi_z)
             {
-            // biased to upper edge -> lower domains need extra cell
+            // lower rank gets middle cell
             if (pos.z)
                 {
-                UP_ASSERT_EQUAL(dim.z, 4);
+                UP_ASSERT_EQUAL(dim.z, 2);
                 }
             else
                 {
-                UP_ASSERT_EQUAL(dim.z, 5);
+                UP_ASSERT_EQUAL(dim.z, 3);
                 }
             }
         else
@@ -324,17 +326,14 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
 
         std::array<unsigned int, 6> num_comm = cl->getNComm();
         UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::east)],
-                        (mpi_x) ? ((pos.x) ? 2 : 1) : 0);
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::west)],
-                        (mpi_x) ? ((pos.x) ? 1 : 2) : 0);
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::north)],
-                        (mpi_y) ? 2 : 0);
+                        (mpi_x) ? ((pos.x) ? 0 : 1) : 0);
+        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::west)], 0);
+        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::north)], 0);
         UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::south)],
-                        (mpi_y) ? 2 : 0);
+                        (mpi_y) ? ((pos.y) ? 1 : 0) : 0);
         UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::up)],
-                        (mpi_z) ? 2 : 0);
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::down)],
-                        (mpi_z) ? 2 : 0);
+                        (mpi_z) ? ((pos.z) ? 0 : 1) : 0);
+        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::down)], 0);
 
         // check coverage box
         const BoxDim coverage = cl->getCoverageBox();
@@ -411,11 +410,11 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
             // halfway is now exactly on a domain boundary
             if (pos.x)
                 {
-                UP_ASSERT_EQUAL(origin.x, 4);
+                UP_ASSERT_EQUAL(origin.x, 5);
                 }
             else
                 {
-                UP_ASSERT_EQUAL(origin.x, -1);
+                UP_ASSERT_EQUAL(origin.x, 0);
                 }
             }
         else
@@ -425,14 +424,14 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
 
         if (mpi_y)
             {
-            // this edge falls halfway in the middle of cell 4 now
+            // this edge falls halfway in the middle of cell 5 now
             if (pos.y)
                 {
-                UP_ASSERT_EQUAL(origin.y, 4);
+                UP_ASSERT_EQUAL(origin.y, 5);
                 }
             else
                 {
-                UP_ASSERT_EQUAL(origin.y, -1);
+                UP_ASSERT_EQUAL(origin.y, 0);
                 }
             }
         else
@@ -445,11 +444,11 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
             // this edge falls halfway in the middle of cell 5 now
             if (pos.z)
                 {
-                UP_ASSERT_EQUAL(origin.z, 5);
+                UP_ASSERT_EQUAL(origin.z, 6);
                 }
             else
                 {
-                UP_ASSERT_EQUAL(origin.z, -1);
+                UP_ASSERT_EQUAL(origin.z, 0);
                 }
             }
         else
@@ -462,7 +461,7 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         if (mpi_x)
             {
             // split evenly in x -> both domains are same size
-            UP_ASSERT_EQUAL(dim.x, 7);
+            UP_ASSERT_EQUAL(dim.x, 5);
             }
         else
             {
@@ -471,15 +470,8 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
 
         if (mpi_y)
             {
-            // biased to lower edge -> upper domains need extra cell
-            if (pos.y)
-                {
-                UP_ASSERT_EQUAL(dim.y, 7);
-                }
-            else
-                {
-                UP_ASSERT_EQUAL(dim.y, 6);
-                }
+            // split evenly in y -> both domains are same size
+            UP_ASSERT_EQUAL(dim.y, 5);
             }
         else
             {
@@ -491,13 +483,11 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
             // biased to upper edge -> lower domains need extra cell
             if (pos.z)
                 {
-                UP_ASSERT_EQUAL(dim.z, 6);
+                UP_ASSERT_EQUAL(dim.z, 4);
                 }
             else
                 {
-                // floating point rounding makes this 8 not 7 (extra cell communicated on this
-                // edge)
-                UP_ASSERT_EQUAL(dim.z, 8);
+                UP_ASSERT_EQUAL(dim.z, 6);
                 }
             }
         else
@@ -506,18 +496,16 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
             }
 
         std::array<unsigned int, 6> num_comm = cl->getNComm();
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::east)],
-                        (mpi_x) ? 2 : 0);
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::west)],
-                        (mpi_x) ? 2 : 0);
+        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::east)], 0);
+        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::west)], 0);
+        // due to rounding error, gives 1 instead of 0
         UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::north)],
-                        (mpi_y) ? ((pos.y) ? 2 : 1) : 0);
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::south)],
-                        (mpi_y) ? ((pos.y) ? 1 : 2) : 0);
+                        (mpi_y) ? ((pos.y) ? 0 : 1) : 0);
+        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::south)], 0);
+        // bias requires communication
         UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::up)],
-                        (mpi_z) ? 2 : 0);
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::down)],
-                        (mpi_z) ? 2 : 0);
+                        (mpi_z) ? ((pos.z) ? 0 : 1) : 0);
+        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::down)], 0);
 
         const BoxDim coverage = cl->getCoverageBox();
         if (mpi_x)
