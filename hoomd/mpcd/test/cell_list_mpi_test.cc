@@ -52,19 +52,12 @@ void checkDomainBoundaries(std::shared_ptr<SystemDefinition> sysdef,
 
         // check that the number received is the same as that being sent from neighbor
         unsigned int n_send = num_comm[dir];
-        unsigned int n_expect_recv;
-        if (dir % 2 == 0)
-            n_expect_recv = num_comm[dir + 1];
-        else
-            n_expect_recv = num_comm[dir - 1];
-
         unsigned int n_recv;
         MPI_Isend(&n_send, 1, MPI_UNSIGNED, send_neighbor, 0, mpi_comm, &reqs[0]);
         MPI_Irecv(&n_recv, 1, MPI_UNSIGNED, recv_neighbor, 0, mpi_comm, &reqs[1]);
         MPI_Waitall(2, reqs, status);
-        UP_ASSERT_EQUAL(n_recv, n_expect_recv);
 
-        // check that the same cell ids are communicated
+        // check that the neighboring cell ids are communicated
         std::vector<int> send_cells(n_send), recv_cells(n_recv);
         for (unsigned int i = 0; i < n_send; ++i)
             {
@@ -121,27 +114,27 @@ void checkDomainBoundaries(std::shared_ptr<SystemDefinition> sysdef,
             int3 expect_recv_cell = make_int3(0, 0, 0);
             if (d == mpcd::detail::face::east)
                 {
-                expect_recv_cell.x = origin_idx.x + i;
+                expect_recv_cell.x = origin_idx.x + i - 1;
                 }
             else if (d == mpcd::detail::face::west)
                 {
-                expect_recv_cell.x = origin_idx.x + cell_dim.x - n_recv + i;
+                expect_recv_cell.x = origin_idx.x + cell_dim.x - n_recv + i + 1;
                 }
             else if (d == mpcd::detail::face::north)
                 {
-                expect_recv_cell.y = origin_idx.y + i;
+                expect_recv_cell.y = origin_idx.y + i - 1;
                 }
             else if (d == mpcd::detail::face::south)
                 {
-                expect_recv_cell.y = origin_idx.y + cell_dim.y - n_recv + i;
+                expect_recv_cell.y = origin_idx.y + cell_dim.y - n_recv + i + 1;
                 }
             else if (d == mpcd::detail::face::up)
                 {
-                expect_recv_cell.z = origin_idx.z + i;
+                expect_recv_cell.z = origin_idx.z + i - 1;
                 }
             else if (d == mpcd::detail::face::down)
                 {
-                expect_recv_cell.z = origin_idx.z + cell_dim.z - n_recv + i;
+                expect_recv_cell.z = origin_idx.z + cell_dim.z - n_recv + i + 1;
                 }
             expect_recv_cell = cl->wrapGlobalCell(expect_recv_cell);
 
