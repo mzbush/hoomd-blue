@@ -212,6 +212,12 @@ void mpcd::CellList::computeDimensions()
                                       (int)std::ceil(fractional_lo.y * m_global_cell_dim.y),
                                       (int)std::ceil(fractional_lo.z * m_global_cell_dim.z));
 
+        const Scalar3 fractional_lo_shifted_down = fractional_lo - m_max_grid_shift;
+        int3 cover_lo_bin
+            = make_int3((int)std::floor(fractional_lo_shifted_down.x * m_global_cell_dim.x),
+                        (int)std::floor(fractional_lo_shifted_down.y * m_global_cell_dim.y),
+                        (int)std::floor(fractional_lo_shifted_down.z * m_global_cell_dim.z));
+
         // setup hi bin
         int3 my_hi_bin = make_int3((int)std::round(fractional_hi.x * m_global_cell_dim.x),
                                    (int)std::round(fractional_hi.y * m_global_cell_dim.y),
@@ -221,10 +227,16 @@ void mpcd::CellList::computeDimensions()
                                       (int)std::floor(fractional_hi.y * m_global_cell_dim.y),
                                       (int)std::floor(fractional_hi.z * m_global_cell_dim.z));
 
+        const Scalar3 fractional_hi_shifted_up = fractional_hi + m_max_grid_shift;
+        int3 cover_hi_bin
+            = make_int3((int)std::ceil(fractional_hi_shifted_up.x * m_global_cell_dim.x),
+                        (int)std::ceil(fractional_hi_shifted_up.y * m_global_cell_dim.y),
+                        (int)std::ceil(fractional_hi_shifted_up.z * m_global_cell_dim.z));
         // initially size the grid assuming one rank in each direction, and then resize based on
         // communication
         m_cell_dim = m_global_cell_dim;
         m_origin_idx = make_int3(0, 0, 0);
+        std::fill(m_num_comm.begin(), m_num_comm.end(), 0);
 
         // Compute size of the box with diffusion layer
         const BoxDim& global_box = m_pdata->getGlobalBox();
@@ -245,9 +257,8 @@ void mpcd::CellList::computeDimensions()
                 = neigh_lo_bin.x - my_lo_bin.x;
 
             // "safe" size of the diffusion layer
-            fractional_cover_lo.x = m_global_cell_dim_inv.x * m_origin_idx.x + m_max_grid_shift.x;
-            fractional_cover_hi.x
-                = m_global_cell_dim_inv.x * (m_origin_idx.x + m_cell_dim.x) - m_max_grid_shift.x;
+            fractional_cover_lo.x = m_global_cell_dim_inv.x * cover_lo_bin.x + m_max_grid_shift.x;
+            fractional_cover_hi.x = m_global_cell_dim_inv.x * (cover_hi_bin.x) - m_max_grid_shift.x;
             cover_periodic.x = 0;
             }
 
@@ -255,15 +266,13 @@ void mpcd::CellList::computeDimensions()
             {
             m_cell_dim.y = my_hi_bin.y - my_lo_bin.y;
             m_origin_idx.y = my_lo_bin.y;
-
             m_num_comm[static_cast<unsigned int>(mpcd::detail::face::north)]
                 = my_hi_bin.y - neigh_hi_bin.y;
             m_num_comm[static_cast<unsigned int>(mpcd::detail::face::south)]
                 = neigh_lo_bin.y - my_lo_bin.y;
 
-            fractional_cover_lo.y = m_global_cell_dim_inv.y * m_origin_idx.y + m_max_grid_shift.y;
-            fractional_cover_hi.y
-                = m_global_cell_dim_inv.y * (m_origin_idx.y + m_cell_dim.y) - m_max_grid_shift.y;
+            fractional_cover_lo.y = m_global_cell_dim_inv.y * cover_lo_bin.y + m_max_grid_shift.y;
+            fractional_cover_hi.y = m_global_cell_dim_inv.y * (cover_hi_bin.y) - m_max_grid_shift.y;
             cover_periodic.y = 0;
             }
 
@@ -277,9 +286,8 @@ void mpcd::CellList::computeDimensions()
             m_num_comm[static_cast<unsigned int>(mpcd::detail::face::down)]
                 = neigh_lo_bin.z - my_lo_bin.z;
 
-            fractional_cover_lo.z = m_global_cell_dim_inv.z * m_origin_idx.z + m_max_grid_shift.z;
-            fractional_cover_hi.z
-                = m_global_cell_dim_inv.z * (m_origin_idx.z + m_cell_dim.z) - m_max_grid_shift.z;
+            fractional_cover_lo.z = m_global_cell_dim_inv.z * cover_lo_bin.z + m_max_grid_shift.z;
+            fractional_cover_hi.z = m_global_cell_dim_inv.z * (cover_hi_bin.z) - m_max_grid_shift.z;
             cover_periodic.z = 0;
             }
 
