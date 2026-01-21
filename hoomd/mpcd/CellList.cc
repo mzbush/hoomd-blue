@@ -492,7 +492,6 @@ void mpcd::CellList::buildCellList()
                              global_bin.y - m_origin_idx.y,
                              global_bin.z - m_origin_idx.z);
         unsigned int bin_idx;
-        bin_idx = m_cell_indexer(bin.x, bin.y, bin.z);
         if ((0 <= bin.x && bin.x < (int)m_cell_dim.x) && (0 <= bin.y && bin.y < (int)m_cell_dim.y)
             && (0 <= bin.z && bin.z < (int)m_cell_dim.z))
             {
@@ -505,8 +504,8 @@ void mpcd::CellList::buildCellList()
 #endif // ENABLE_MPI
                 {
                 conditions.x = cur_p + 1;
-                continue;
                 }
+            continue;
             }
 
         // stash the current particle bin into the velocity array
