@@ -491,8 +491,23 @@ void mpcd::CellList::buildCellList()
         int3 bin = make_int3(global_bin.x - m_origin_idx.x,
                              global_bin.y - m_origin_idx.y,
                              global_bin.z - m_origin_idx.z);
-
-        unsigned int bin_idx = m_cell_indexer(bin.x, bin.y, bin.z);
+        unsigned int bin_idx;
+        bin_idx = m_cell_indexer(bin.x, bin.y, bin.z);
+        if ((0 <= bin.x && bin.x <= (int)m_cell_dim.x) && (0 <= bin.y && bin.y <= (int)m_cell_dim.y)
+            && (0 <= bin.z && bin.z <= (int)m_cell_dim.z))
+            {
+            bin_idx = m_cell_indexer(bin.x, bin.y, bin.z);
+            }
+        else
+            {
+#ifdef ENABLE_MPI
+            continue;
+#endif // ENABLE_MPI
+                {
+                conditions.x = cur_p + 1;
+                continue;
+                }
+            }
 
         // stash the current particle bin into the velocity array
         if (cur_p < N_mpcd)
@@ -716,7 +731,27 @@ bool mpcd::CellList::checkConditions()
     bool result = false;
 
     uint3 conditions = m_conditions.readFlags();
-
+    if (conditions.x)
+        {
+        unsigned int n = conditions.x - 1;
+        if (n < m_mpcd_pdata->getN())
+            m_exec_conf->msg->errorAllRanks()
+                << "MPCD particle " << n << " has no valid cell" << std::endl;
+        else if (n < m_mpcd_pdata->getN() + m_mpcd_pdata->getNVirtual())
+            m_exec_conf->msg->errorAllRanks()
+                << "MPCD virtual particle " << n << " has no valid cell" << std::endl;
+        else
+            {
+            ArrayHandle<unsigned int> h_embed_member_idx(m_embed_group->getIndexArray(),
+                                                         access_location::host,
+                                                         access_mode::read);
+            m_exec_conf->msg->errorAllRanks()
+                << "Embedded particle "
+                << h_embed_member_idx.data[n - (m_mpcd_pdata->getN() + m_mpcd_pdata->getNVirtual())]
+                << " has no valid cell" << std::endl;
+            }
+        throw std::runtime_error("Error computing cell list");
+        }
     if (conditions.y)
         {
         unsigned int n = conditions.y - 1;
