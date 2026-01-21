@@ -723,7 +723,7 @@ bool mpcd::CellList::checkConditions()
         if (n < m_mpcd_pdata->getN())
             m_exec_conf->msg->errorAllRanks()
                 << "MPCD particle " << n << " has position NaN" << std::endl;
-        else if (n < m_mpcd_pdata->getNVirtual())
+        else if (n < m_mpcd_pdata->getN() + m_mpcd_pdata->getNVirtual())
             m_exec_conf->msg->errorAllRanks()
                 << "MPCD virtual particle " << n << " has position NaN" << std::endl;
         else
