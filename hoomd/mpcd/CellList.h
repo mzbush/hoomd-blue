@@ -153,6 +153,11 @@ class PYBIND11_EXPORT CellList : public Compute
         return m_num_comm;
         }
 
+    //! Get the number of ghost particles
+    const unsigned int getNGhosts() const
+        {
+        return m_num_ghosts_recv;
+        }
     //! Check if communication is occurring along a direction
     bool isCommunicating(mpcd::detail::face dir);
 #endif // ENABLE_MPI
@@ -337,12 +342,28 @@ class PYBIND11_EXPORT CellList : public Compute
     std::array<unsigned int, 6> m_num_comm; //!< Number of cells to communicate on each face
     BoxDim m_cover_box;                     //!< Box covered by the cell list
 
-    std::vector<unsigned int> m_n_send_ptls; //!< Number of particles sent per neighbor
-    std::vector<unsigned int> m_n_recv_ptls; //!< Number of particles received per neighbor
-    GPUVector<int3> m_bin_pos_sendbuf;       //!< Buffer for binned position sent
-    GPUVector<Scalar4> m_vel_sendbuf;        //!< Buffer for binned velocity sent
-    GPUVector<int3> m_ghost_bin_pos;         //!< binned position of particles received
-    GPUVector<Scalar4> m_ghost_vel;          //!< velocity of ghost particles received
+    GPUVector<uint2> m_comm_key;              //!< Buffer for binned position sent
+    GPUVector<Scalar3> m_pos_sendbuf;         //!< Buffer for ghost position sent
+    GPUVector<Scalar3> m_vel_sendbuf;         //!< Buffer for ghost velocity sent
+    GPUVector<Scalar3> m_ghost_pos;           //!< position of ghost particles received
+    GPUVector<Scalar3> m_ghost_vel;           //!< velocity of ghost particles received
+    GPUVector<unsigned int> m_ghost_cell_ids; //!< Cell ids of the ghost particles
+    unsigned int m_num_ghosts_recv;           //!< number of ghost particles received
+    unsigned int m_num_ghosts_send;           //!< number of ghost particles sent
+    std::vector<MPI_Request> m_reqs;          //!< MPI requests
+    MPI_Comm m_mpi_comm;                      //!< MPI communicator
+
+    std::vector<unsigned int> m_n_send_ptls;      //!< Number of particles sent per neighbor
+    std::vector<unsigned int> m_n_recv_ptls;      //!< Number of particles received per neighbor
+    std::vector<unsigned int> m_offsets;          //!< Offsets for particle send buffers
+    std::vector<unsigned int> m_unique_neighbors; //!< Neighbor ranks
+    std::vector<unsigned int> m_adj_mask;         //!< Adjacency mask for every neighbor
+    unsigned int m_num_unique_neigh;              //!< Number of unique neighbors
+    std::map<unsigned int, unsigned int> m_adj_mask_map; //!< Mapping of adj mask to number counting
+    std::map<unsigned int, unsigned int> m_neigh_rank_map; //!< Mapping of neighbors to MPI rank
+
+    //! Generate a mapping of unique neighbors for ghost communication
+    void initializeCommunicationSetup();
 
     //! Determine if embedded particles require migration
     virtual bool needsEmbedMigrate(uint64_t timestep);
