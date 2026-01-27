@@ -673,6 +673,7 @@ void celllist_basic_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         }
 
     // apply a grid shift so that particles move into the same cell (3,3,3)
+    // this will cause all the particles to be sent to the same rank as ghosts
     const Scalar3 shift = (Scalar(0.5) / 6) * make_scalar3(1, 1, 1);
     cl->setGridShift(-shift);
     cl->compute(1);
@@ -684,53 +685,31 @@ void celllist_basic_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         ArrayHandle<Scalar4> h_vel(pdata->getVelocities(),
                                    access_location::host,
                                    access_mode::read);
-
-        switch (my_rank)
+        unsigned int num_ghosts = cl->getNGhosts();
+        if (my_rank == 7)
             {
-        case 0:
-            // global index is (3,3,3), with origin (-1,-1,-1)
-            UP_ASSERT_EQUAL(h_cell_np.data[ci(4, 4, 4)], 1);
-            UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(4, 4, 4));
-            break;
-        case 1:
-            // global index is (3,3,3), with origin (2,-1,-1)
-            UP_ASSERT_EQUAL(h_cell_np.data[ci(1, 4, 4)], 1);
-            UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(1, 4, 4));
-            break;
-        case 2:
-            // global index is (3,3,3), with origin (-1,2,-1)
-            UP_ASSERT_EQUAL(h_cell_np.data[ci(4, 1, 4)], 1);
-            UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(4, 1, 4));
-            break;
-        case 3:
-            // global index is (3,3,3), with origin (2,2,-1)
-            UP_ASSERT_EQUAL(h_cell_np.data[ci(1, 1, 4)], 1);
-            UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(1, 1, 4));
-            break;
-        case 4:
-            // global index is (3,3,3), with origin (-1,-1,2)
-            UP_ASSERT_EQUAL(h_cell_np.data[ci(4, 4, 1)], 1);
-            UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(4, 4, 1));
-            break;
-        case 5:
-            // global index is (3,3,3), with origin (2,-1,2)
-            UP_ASSERT_EQUAL(h_cell_np.data[ci(1, 4, 1)], 1);
-            UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(1, 4, 1));
-            break;
-        case 6:
-            // global index is (3,3,3), with origin (-1,2,2)
-            UP_ASSERT_EQUAL(h_cell_np.data[ci(4, 1, 1)], 1);
-            UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(4, 1, 1));
-            break;
-        case 7:
-            // global index is (3,3,3), with origin (2,2,2)
-            UP_ASSERT_EQUAL(h_cell_np.data[ci(1, 1, 1)], 1);
-            UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(1, 1, 1));
-            break;
-            };
+            // global index is (3,3,3), with origin (3,3,3)
+            int3 global_cell = cl->getGlobalCell(make_int3(0, 0, 0));
+            UP_ASSERT_EQUAL(global_cell.x, 3);
+            UP_ASSERT_EQUAL(global_cell.y, 3);
+            UP_ASSERT_EQUAL(global_cell.z, 3);
+            UP_ASSERT_EQUAL(h_cell_np.data[ci(0, 0, 0)], 8);
+            UP_ASSERT_EQUAL(num_ghosts, 7);
+            UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(0, 0, 0));
+            }
+        else
+            {
+            // other ranks no local particles are in cells
+            UP_ASSERT_EQUAL(num_ghosts, 0);
+            for (unsigned int c = 0; c < cl->getNCells(); ++c)
+                {
+                UP_ASSERT_EQUAL(h_cell_np.data[c], 0);
+                }
+            }
         }
 
     // apply a grid shift so that particles move into the same cell (2,2,2)
+    // this will cause all the particles to be on the same rank
     cl->setGridShift(shift);
     cl->compute(2);
         {
@@ -741,50 +720,27 @@ void celllist_basic_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         ArrayHandle<Scalar4> h_vel(pdata->getVelocities(),
                                    access_location::host,
                                    access_mode::read);
-
-        switch (my_rank)
+        unsigned int num_ghosts = cl->getNGhosts();
+        if (my_rank == 0)
             {
-        case 0:
-            // global index is (2,2,2), with origin (-1,-1,-1)
-            UP_ASSERT_EQUAL(h_cell_np.data[ci(3, 3, 3)], 1);
-            UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(3, 3, 3));
-            break;
-        case 1:
-            // global index is (2,2,2), with origin (2,-1,-1)
-            UP_ASSERT_EQUAL(h_cell_np.data[ci(0, 3, 3)], 1);
-            UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(0, 3, 3));
-            break;
-        case 2:
-            // global index is (2,2,2), with origin (-1,2,-1)
-            UP_ASSERT_EQUAL(h_cell_np.data[ci(3, 0, 3)], 1);
-            UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(3, 0, 3));
-            break;
-        case 3:
-            // global index is (2,2,2), with origin (2,2,-1)
-            UP_ASSERT_EQUAL(h_cell_np.data[ci(0, 0, 3)], 1);
-            UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(0, 0, 3));
-            break;
-        case 4:
-            // global index is (2,2,2), with origin (-1,-1,2)
-            UP_ASSERT_EQUAL(h_cell_np.data[ci(3, 3, 0)], 1);
-            UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(3, 3, 0));
-            break;
-        case 5:
-            // global index is (2,2,2), with origin (2,-1,2)
-            UP_ASSERT_EQUAL(h_cell_np.data[ci(0, 3, 0)], 1);
-            UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(0, 3, 0));
-            break;
-        case 6:
-            // global index is (2,2,2), with origin (-1,2,2)
-            UP_ASSERT_EQUAL(h_cell_np.data[ci(3, 0, 0)], 1);
-            UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(3, 0, 0));
-            break;
-        case 7:
-            // global index is (2,2,2), with origin (2,2,2)
-            UP_ASSERT_EQUAL(h_cell_np.data[ci(0, 0, 0)], 1);
-            UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(0, 0, 0));
-            break;
-            };
+            // global index is (2,2,2), with origin (0,0,0)
+            int3 global_cell = cl->getGlobalCell(make_int3(2, 2, 2));
+            UP_ASSERT_EQUAL(global_cell.x, 2);
+            UP_ASSERT_EQUAL(global_cell.y, 2);
+            UP_ASSERT_EQUAL(global_cell.z, 2);
+            UP_ASSERT_EQUAL(h_cell_np.data[ci(2, 2, 2)], 8);
+            UP_ASSERT_EQUAL(num_ghosts, 7);
+            UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(2, 2, 2));
+            }
+        else
+            {
+            // other ranks no local particles are in cells
+            UP_ASSERT_EQUAL(num_ghosts, 0);
+            for (unsigned int c = 0; c < cl->getNCells(); ++c)
+                {
+                UP_ASSERT_EQUAL(h_cell_np.data[c], 0);
+                }
+            }
         }
     }
 
