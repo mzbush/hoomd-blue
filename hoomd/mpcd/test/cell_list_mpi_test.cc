@@ -844,9 +844,29 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         ArrayHandle<Scalar4> h_vel(pdata->getVelocities(),
                                    access_location::host,
                                    access_mode::read);
-        const unsigned int local_cell = make_local_cell(cl, 2, 2, 2);
-        UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 1);
-        UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), local_cell);
+        ArrayHandle<unsigned int> h_ghost_cell_ids(cl->getGhostCellIds(),
+                                                   access_location::host,
+                                                   access_mode::read);
+        unsigned int num_ghosts = cl->getNGhosts();
+        if (cl->hasGlobalCell(make_int3(2, 2, 2)))
+            {
+            const unsigned int local_cell = make_local_cell(cl, 2, 2, 2);
+            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 8);
+            UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), local_cell);
+            UP_ASSERT_EQUAL(num_ghosts, 7);
+            for (unsigned int i = 0; i < num_ghosts; i++)
+                {
+                UP_ASSERT_EQUAL(h_ghost_cell_ids.data[i], local_cell);
+                }
+            }
+        else
+            {
+            UP_ASSERT_EQUAL(num_ghosts, 0);
+            for (unsigned int c = 0; c < cl->getNCells(); ++c)
+                {
+                UP_ASSERT_EQUAL(h_cell_np.data[c], 0);
+                }
+            }
         }
 
     // apply a grid shift, particles on left internal boundary will move up one cell
@@ -862,39 +882,39 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         ArrayHandle<Scalar4> h_vel(pdata->getVelocities(),
                                    access_location::host,
                                    access_mode::read);
+        ArrayHandle<unsigned int> h_ghost_cell_ids(cl->getGhostCellIds(),
+                                                   access_location::host,
+                                                   access_mode::read);
+        unsigned int num_ghosts = cl->getNGhosts();
 
-        int3 cell;
-        switch (my_rank)
+        std::array<int3, 8> cells_with_particles = {make_int3(2, 2, 2),
+                                                    make_int3(3, 2, 2),
+                                                    make_int3(2, 3, 2),
+                                                    make_int3(3, 3, 2),
+                                                    make_int3(2, 2, 3),
+                                                    make_int3(3, 2, 3),
+                                                    make_int3(2, 3, 3),
+                                                    make_int3(3, 3, 3)};
+        for (unsigned int i = 0; i < 8; i++)
             {
-        case 0:
-            cell = make_int3(2, 2, 2);
-            break;
-        case 1:
-            cell = make_int3(3, 2, 2);
-            break;
-        case 2:
-            cell = make_int3(2, 3, 2);
-            break;
-        case 3:
-            cell = make_int3(3, 3, 2);
-            break;
-        case 4:
-            cell = make_int3(2, 2, 3);
-            break;
-        case 5:
-            cell = make_int3(3, 2, 3);
-            break;
-        case 6:
-            cell = make_int3(2, 3, 3);
-            break;
-        case 7:
-            cell = make_int3(3, 3, 3);
-            break;
-            };
-
-        const unsigned int local_cell = make_local_cell(cl, cell.x, cell.y, cell.z);
-        UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 1);
-        UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), local_cell);
+            int3 cell = cells_with_particles[i];
+            if (cl->hasGlobalCell(cell))
+                {
+                const unsigned int local_cell = make_local_cell(cl, cell.x, cell.y, cell.z);
+                UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 1);
+                if (num_ghosts)
+                    {
+                    // if there are ghosts, either the ghost or the local particle should be in the
+                    // local cell
+                    UP_ASSERT((h_ghost_cell_ids.data[0] == local_cell)
+                              != (__scalar_as_int(h_vel.data[0].w) == int(local_cell)));
+                    }
+                else
+                    {
+                    UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), int(local_cell));
+                    }
+                }
+            }
         }
 
         // apply a grid shift, particles on left internal boundary will stay in cell
@@ -911,39 +931,43 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         ArrayHandle<Scalar4> h_vel(pdata->getVelocities(),
                                    access_location::host,
                                    access_mode::read);
-
-        int3 cell;
-        switch (my_rank)
+        ArrayHandle<unsigned int> h_ghost_cell_ids(cl->getGhostCellIds(),
+                                                   access_location::host,
+                                                   access_mode::read);
+        unsigned int num_ghosts = cl->getNGhosts();
+        std::array<int3, 8> cells_with_particles = {make_int3(1, 1, 1),
+                                                    make_int3(2, 1, 1),
+                                                    make_int3(1, 2, 1),
+                                                    make_int3(2, 2, 1),
+                                                    make_int3(1, 1, 2),
+                                                    make_int3(2, 1, 2),
+                                                    make_int3(1, 2, 2),
+                                                    make_int3(2, 2, 2)};
+        for (unsigned int i = 0; i < 8; i++)
             {
-        case 0:
-            cell = make_int3(1, 1, 1);
-            break;
-        case 1:
-            cell = make_int3(2, 1, 1);
-            break;
-        case 2:
-            cell = make_int3(1, 2, 1);
-            break;
-        case 3:
-            cell = make_int3(2, 2, 1);
-            break;
-        case 4:
-            cell = make_int3(1, 1, 2);
-            break;
-        case 5:
-            cell = make_int3(2, 1, 2);
-            break;
-        case 6:
-            cell = make_int3(1, 2, 2);
-            break;
-        case 7:
-            cell = make_int3(2, 2, 2);
-            break;
-            };
-
-        const unsigned int local_cell = make_local_cell(cl, cell.x, cell.y, cell.z);
-        UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 1);
-        UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), local_cell);
+            int3 cell = cells_with_particles[i];
+            if (cl->hasGlobalCell(cell))
+                {
+                const unsigned int local_cell = make_local_cell(cl, cell.x, cell.y, cell.z);
+                UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 1);
+                if (num_ghosts)
+                    {
+                    // if there are ghosts, either the ghost or the local particle should be in the
+                    // local cell
+                    unsigned int particle_in_cell
+                        = __scalar_as_int(h_vel.data[0].w) == int(local_cell);
+                    for (unsigned int j = 0; j < num_ghosts; j++)
+                        {
+                        particle_in_cell += h_ghost_cell_ids.data[j] == local_cell;
+                        }
+                    UP_ASSERT_EQUAL(particle_in_cell, 1);
+                    }
+                else
+                    {
+                    UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), int(local_cell));
+                    }
+                }
+            }
         }
 
         // now we move the particles to their exterior boundaries, and repeat the testing process
