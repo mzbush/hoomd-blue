@@ -1377,7 +1377,22 @@ void mpcd::CellList::setCellSize(Scalar cell_size)
 
     setGlobalDim(global_cell_dim);
     }
+/*!
+ * \param global Global cell index to check if it exists in local cell index
+ * \returns True if the global cell lies within the local grid, false otherwise
+ *
+ */
+const bool mpcd::CellList::hasGlobalCell(const int3& global)
+    {
+    computeDimensions();
 
+    int3 local = make_int3(global.x - m_origin_idx.x,
+                           global.y - m_origin_idx.y,
+                           global.z - m_origin_idx.z);
+    return ((0 <= local.x && local.x < (int)m_cell_dim.x)
+            && (0 <= local.y && local.y < (int)m_cell_dim.y)
+            && (0 <= local.z && local.z < (int)m_cell_dim.z));
+    }
 /*!
  * \param cell Cell coordinates to wrap back into the global box
  *

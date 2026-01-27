@@ -125,6 +125,9 @@ class PYBIND11_EXPORT CellList : public Compute
     //! Wrap a cell into a global cell
     const int3 wrapGlobalCell(const int3& cell);
 
+    //! Check if a global cell is a local cell
+    const bool hasGlobalCell(const int3& global);
+
     //! Get the MPCD cell size (deprecated)
     Scalar3 getCellSize();
 
@@ -158,6 +161,25 @@ class PYBIND11_EXPORT CellList : public Compute
         {
         return m_num_ghosts_recv;
         }
+
+    //! Get the ghost velocities
+    const GPUVector<Scalar3>& getGhostVelocities() const
+        {
+        return m_ghost_vel;
+        }
+
+    //! Get the ghost positions
+    const GPUVector<Scalar3>& getGhostPositions() const
+        {
+        return m_ghost_pos;
+        }
+
+    //! Get the ghost cell ids
+    const GPUVector<unsigned int>& getGhostCellIds() const
+        {
+        return m_ghost_cell_ids;
+        }
+
     //! Check if communication is occurring along a direction
     bool isCommunicating(mpcd::detail::face dir);
 #endif // ENABLE_MPI
