@@ -195,17 +195,6 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
             UP_ASSERT_EQUAL(dim.z, 5);
             }
 
-        std::array<unsigned int, 6> num_comm = cl->getNComm();
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::east)],
-                        (mpi_x) ? ((pos.x) ? 0 : 1) : 0);
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::west)], 0);
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::north)], 0);
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::south)],
-                        (mpi_y) ? ((pos.y) ? 1 : 0) : 0);
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::up)],
-                        (mpi_z) ? ((pos.z) ? 0 : 1) : 0);
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::down)], 0);
-
         // check coverage box
         const BoxDim coverage = cl->getCoverageBox();
         if (mpi_x)
@@ -364,18 +353,6 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
             {
             UP_ASSERT_EQUAL(dim.z, 10);
             }
-
-        std::array<unsigned int, 6> num_comm = cl->getNComm();
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::east)], 0);
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::west)], 0);
-        // due to rounding error, gives 1 instead of 0
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::north)],
-                        (mpi_y) ? ((pos.y) ? 0 : 1) : 0);
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::south)], 0);
-        // bias requires communication
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::up)],
-                        (mpi_z) ? ((pos.z) ? 0 : 1) : 0);
-        UP_ASSERT_EQUAL(num_comm[static_cast<unsigned int>(mpcd::detail::face::down)], 0);
 
         const BoxDim coverage = cl->getCoverageBox();
         if (mpi_x)
