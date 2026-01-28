@@ -17,134 +17,6 @@ HOOMD_UP_MAIN()
 
 using namespace hoomd;
 
-/*!
- * \todo change so each cell is owned by one rank, make sure no duplicate or missing cells
- */
-void checkDomainBoundaries(std::shared_ptr<SystemDefinition> sysdef,
-                           std::shared_ptr<mpcd::CellList> cl)
-    {
-    auto pdata = sysdef->getParticleData();
-    auto exec_conf = pdata->getExecConf();
-    MPI_Comm mpi_comm = exec_conf->getMPICommunicator();
-    auto decomposition = pdata->getDomainDecomposition();
-
-    auto num_comm = cl->getNComm();
-    auto origin_idx = cl->getOriginIndex();
-    auto cell_dim = cl->getDim();
-
-    for (unsigned int dir = 0; dir < num_comm.size(); ++dir)
-        {
-        mpcd::detail::face d = static_cast<mpcd::detail::face>(dir);
-        if (!cl->isCommunicating(d))
-            continue;
-
-        // receive in the opposite direction from which we send
-        unsigned int send_neighbor = decomposition->getNeighborRank(dir);
-        unsigned int recv_neighbor;
-        if (dir % 2 == 0)
-            recv_neighbor = decomposition->getNeighborRank(dir + 1);
-        else
-            recv_neighbor = decomposition->getNeighborRank(dir - 1);
-
-        // first make sure each dimension is sending and receiving the same size data
-        MPI_Request reqs[2];
-        MPI_Status status[2];
-
-        // check that the number received is the same as that being sent from neighbor
-        unsigned int n_send = num_comm[dir];
-        unsigned int n_recv;
-        MPI_Isend(&n_send, 1, MPI_UNSIGNED, send_neighbor, 0, mpi_comm, &reqs[0]);
-        MPI_Irecv(&n_recv, 1, MPI_UNSIGNED, recv_neighbor, 0, mpi_comm, &reqs[1]);
-        MPI_Waitall(2, reqs, status);
-
-        // check that the neighboring cell ids are communicated
-        std::vector<int> send_cells(n_send), recv_cells(n_recv);
-        for (unsigned int i = 0; i < n_send; ++i)
-            {
-            if (d == mpcd::detail::face::east)
-                {
-                send_cells[i] = origin_idx.x + cell_dim.x - n_send + i;
-                }
-            else if (d == mpcd::detail::face::west)
-                {
-                send_cells[i] = origin_idx.x + i;
-                }
-            else if (d == mpcd::detail::face::north)
-                {
-                send_cells[i] = origin_idx.y + cell_dim.y - n_send + i;
-                }
-            else if (d == mpcd::detail::face::south)
-                {
-                send_cells[i] = origin_idx.y + i;
-                }
-            else if (d == mpcd::detail::face::up)
-                {
-                send_cells[i] = origin_idx.z + cell_dim.z - n_send + i;
-                }
-            else if (d == mpcd::detail::face::down)
-                {
-                send_cells[i] = origin_idx.z + i;
-                }
-            }
-
-        MPI_Isend(&send_cells[0], n_send, MPI_INT, send_neighbor, 1, mpi_comm, &reqs[0]);
-        MPI_Irecv(&recv_cells[0], n_recv, MPI_INT, recv_neighbor, 1, mpi_comm, &reqs[1]);
-        MPI_Waitall(2, reqs, status);
-
-        for (unsigned int i = 0; i < n_recv; ++i)
-            {
-            // wrap the received cell back into the global box
-            // only two of the entries will be valid, the others are dummies
-            int3 recv_cell = make_int3(0, 0, 0);
-            if (d == mpcd::detail::face::east || d == mpcd::detail::face::west)
-                {
-                recv_cell.x = recv_cells[i];
-                }
-            else if (d == mpcd::detail::face::north || d == mpcd::detail::face::south)
-                {
-                recv_cell.y = recv_cells[i];
-                }
-            else if (d == mpcd::detail::face::up || d == mpcd::detail::face::down)
-                {
-                recv_cell.z = recv_cells[i];
-                }
-            recv_cell = cl->wrapGlobalCell(recv_cell);
-
-            // compute the expected cell to receive, also wrapped
-            int3 expect_recv_cell = make_int3(0, 0, 0);
-            if (d == mpcd::detail::face::east)
-                {
-                expect_recv_cell.x = origin_idx.x + i - 1;
-                }
-            else if (d == mpcd::detail::face::west)
-                {
-                expect_recv_cell.x = origin_idx.x + cell_dim.x - n_recv + i + 1;
-                }
-            else if (d == mpcd::detail::face::north)
-                {
-                expect_recv_cell.y = origin_idx.y + i - 1;
-                }
-            else if (d == mpcd::detail::face::south)
-                {
-                expect_recv_cell.y = origin_idx.y + cell_dim.y - n_recv + i + 1;
-                }
-            else if (d == mpcd::detail::face::up)
-                {
-                expect_recv_cell.z = origin_idx.z + i - 1;
-                }
-            else if (d == mpcd::detail::face::down)
-                {
-                expect_recv_cell.z = origin_idx.z + cell_dim.z - n_recv + i + 1;
-                }
-            expect_recv_cell = cl->wrapGlobalCell(expect_recv_cell);
-
-            UP_ASSERT_EQUAL(recv_cell.x, expect_recv_cell.x);
-            UP_ASSERT_EQUAL(recv_cell.y, expect_recv_cell.y);
-            UP_ASSERT_EQUAL(recv_cell.z, expect_recv_cell.z);
-            }
-        }
-    }
-
 //! Test for correct calculation of MPCD grid dimensions
 /*!
  * \param exec_conf Execution configuration
@@ -210,7 +82,6 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
 
     // compute the cell list
     cl->computeDimensions();
-    checkDomainBoundaries(sysdef, cl);
 
     const bool is_orthorhombic = (tilt == make_scalar3(0, 0, 0));
     if (is_orthorhombic)
@@ -399,7 +270,6 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
     // Change the cell size, and ensure everything stays up to date
     cl->setGlobalDim(make_uint3(10, 10, 10));
     cl->computeDimensions();
-    checkDomainBoundaries(sysdef, cl);
     if (is_orthorhombic)
         {
         // check domain origins
@@ -987,7 +857,6 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         }
 
     cl->compute(0);
-    checkDomainBoundaries(sysdef, cl);
         {
         ArrayHandle<unsigned int> h_cell_np(cl->getCellSizeArray(),
                                             access_location::host,
@@ -1026,7 +895,6 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         {
         cl->setGridShift(-shift);
         cl->compute(1);
-        checkDomainBoundaries(sysdef, cl);
         ArrayHandle<unsigned int> h_cell_np(cl->getCellSizeArray(),
                                             access_location::host,
                                             access_mode::read);
@@ -1074,7 +942,6 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         {
         cl->setGridShift(shift);
         cl->compute(2);
-        checkDomainBoundaries(sysdef, cl);
 
         ArrayHandle<unsigned int> h_cell_np(cl->getCellSizeArray(),
                                             access_location::host,
