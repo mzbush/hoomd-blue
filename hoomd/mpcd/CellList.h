@@ -154,25 +154,19 @@ class PYBIND11_EXPORT CellList : public Compute
     //! Get the number of ghost particles
     const unsigned int getNGhosts() const
         {
-        return m_num_ghosts_recv;
+        return m_num_mpcd_ghosts_recv;
         }
 
     //! Get the ghost velocities
-    const GPUVector<Scalar3>& getGhostVelocities() const
+    const GPUVector<Scalar4>& getMPCDGhostVelocities() const
         {
-        return m_ghost_vel;
-        }
-
-    //! Get the ghost positions
-    const GPUVector<Scalar3>& getGhostPositions() const
-        {
-        return m_ghost_pos;
+        return m_mpcd_ghost_vel;
         }
 
     //! Get the ghost cell ids
-    const GPUVector<unsigned int>& getGhostCellIds() const
+    const GPUVector<unsigned int>& getEmbedGhostCellIds() const
         {
-        return m_ghost_cell_ids;
+        return m_embed_ghost_cell_ids;
         }
 
     //! Check if communication is occurring along a direction
@@ -358,23 +352,24 @@ class PYBIND11_EXPORT CellList : public Compute
 #ifdef ENABLE_MPI
     BoxDim m_cover_box; //!< Box covered by the cell list
 
-    GPUVector<uint2> m_comm_key;              //!< Buffer for binned position sent
-    GPUVector<Scalar3> m_pos_sendbuf;         //!< Buffer for ghost position sent
-    GPUVector<Scalar3> m_vel_sendbuf;         //!< Buffer for ghost velocity sent
-    GPUVector<Scalar3> m_ghost_pos;           //!< position of ghost particles received
-    GPUVector<Scalar3> m_ghost_vel;           //!< velocity of ghost particles received
-    GPUVector<unsigned int> m_ghost_cell_ids; //!< Cell ids of the ghost particles
-    unsigned int m_num_ghosts_recv;           //!< number of ghost particles received
-    unsigned int m_num_ghosts_send;           //!< number of ghost particles sent
-    std::vector<MPI_Request> m_reqs;          //!< MPI requests
-    MPI_Comm m_mpi_comm;                      //!< MPI communicator
+    GPUVector<uint2> m_mpcd_comm_key;               //!< Buffer for direction to send MPCD ghosts
+    GPUVector<Scalar4> m_mpcd_ghost_vel;            //!< velocity of MPCD ghost particles received
+    GPUVector<Scalar3> m_mpcd_ghost_pos;            //!< position of MPCD ghost particles received
+    GPUVector<Scalar4> m_mpcd_vel_sendbuf;          //!< Buffer for MPCD ghost velocity sent
+    GPUVector<Scalar3> m_mpcd_pos_sendbuf;          //!< Buffer for MPCD ghost position sent
+    unsigned int m_num_mpcd_ghosts_recv;            //!< number of ghost particles received
+    unsigned int m_num_mpcd_ghosts_send;            //!< number of ghost particles sent
+    GPUVector<unsigned int> m_embed_ghost_cell_ids; //!< Cell ids of the embedded ghost particles
+    std::vector<MPI_Request> m_reqs;                //!< MPI requests
+    MPI_Comm m_mpi_comm;                            //!< MPI communicator
 
-    std::vector<unsigned int> m_n_send_ptls;      //!< Number of particles sent per neighbor
-    std::vector<unsigned int> m_n_recv_ptls;      //!< Number of particles received per neighbor
-    std::vector<unsigned int> m_offsets;          //!< Offsets for particle send buffers
-    std::vector<unsigned int> m_unique_neighbors; //!< Neighbor ranks
-    std::vector<unsigned int> m_adj_mask;         //!< Adjacency mask for every neighbor
-    unsigned int m_num_unique_neigh;              //!< Number of unique neighbors
+    std::vector<unsigned int> m_num_mpcd_send_ptls; //!< Number of MPCD particles sent per neighbor
+    std::vector<unsigned int>
+        m_num_mpcd_recv_ptls;                 //!< Number of MPCD particles received per neighbor
+    std::vector<unsigned int> m_mpcd_offsets; //!< Offsets for MPCD particle send buffers
+    std::vector<unsigned int> m_unique_neighbors;        //!< Neighbor ranks
+    std::vector<unsigned int> m_adj_mask;                //!< Adjacency mask for every neighbor
+    unsigned int m_num_unique_neigh;                     //!< Number of unique neighbors
     std::map<unsigned int, unsigned int> m_adj_mask_map; //!< Mapping of adj mask to number counting
     std::map<unsigned int, unsigned int> m_neigh_rank_map; //!< Mapping of neighbors to MPI rank
 

@@ -841,9 +841,9 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         ArrayHandle<Scalar4> h_vel(pdata->getVelocities(),
                                    access_location::host,
                                    access_mode::read);
-        ArrayHandle<unsigned int> h_ghost_cell_ids(cl->getGhostCellIds(),
-                                                   access_location::host,
-                                                   access_mode::read);
+        ArrayHandle<Scalar4> h_mpcd_ghost_vel(cl->getMPCDGhostVelocities(),
+                                              access_location::host,
+                                              access_mode::read);
         unsigned int num_ghosts = cl->getNGhosts();
         if (cl->hasGlobalCell(make_int3(2, 2, 2)))
             {
@@ -853,7 +853,7 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
             UP_ASSERT_EQUAL(num_ghosts, 7);
             for (unsigned int i = 0; i < num_ghosts; i++)
                 {
-                UP_ASSERT_EQUAL(h_ghost_cell_ids.data[i], local_cell);
+                UP_ASSERT_EQUAL(__scalar_as_int(h_mpcd_ghost_vel.data[i].w), local_cell);
                 }
             }
         else
@@ -878,9 +878,9 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         ArrayHandle<Scalar4> h_vel(pdata->getVelocities(),
                                    access_location::host,
                                    access_mode::read);
-        ArrayHandle<unsigned int> h_ghost_cell_ids(cl->getGhostCellIds(),
-                                                   access_location::host,
-                                                   access_mode::read);
+        ArrayHandle<Scalar4> h_mpcd_ghost_vel(cl->getMPCDGhostVelocities(),
+                                              access_location::host,
+                                              access_mode::read);
         unsigned int num_ghosts = cl->getNGhosts();
 
         std::array<int3, 8> cells_with_particles = {make_int3(2, 2, 2),
@@ -902,7 +902,7 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
                     {
                     // if there are ghosts, either the ghost or the local particle should be in the
                     // local cell
-                    UP_ASSERT((h_ghost_cell_ids.data[0] == local_cell)
+                    UP_ASSERT((__scalar_as_int(h_mpcd_ghost_vel.data[0].w) == int(local_cell))
                               != (__scalar_as_int(h_vel.data[0].w) == int(local_cell)));
                     }
                 else
@@ -926,9 +926,9 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         ArrayHandle<Scalar4> h_vel(pdata->getVelocities(),
                                    access_location::host,
                                    access_mode::read);
-        ArrayHandle<unsigned int> h_ghost_cell_ids(cl->getGhostCellIds(),
-                                                   access_location::host,
-                                                   access_mode::read);
+        ArrayHandle<Scalar4> h_mpcd_ghost_vel(cl->getMPCDGhostVelocities(),
+                                              access_location::host,
+                                              access_mode::read);
         unsigned int num_ghosts = cl->getNGhosts();
         std::array<int3, 8> cells_with_particles = {make_int3(1, 1, 1),
                                                     make_int3(2, 1, 1),
@@ -953,7 +953,8 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
                         = __scalar_as_int(h_vel.data[0].w) == int(local_cell);
                     for (unsigned int j = 0; j < num_ghosts; j++)
                         {
-                        particle_in_cell += h_ghost_cell_ids.data[j] == local_cell;
+                        particle_in_cell
+                            += __scalar_as_int(h_mpcd_ghost_vel.data[j].w) == int(local_cell);
                         }
                     UP_ASSERT_EQUAL(particle_in_cell, 1);
                     }
