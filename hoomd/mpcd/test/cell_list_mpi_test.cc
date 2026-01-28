@@ -596,7 +596,7 @@ void celllist_basic_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
      * 6: - + +
      * 7: + + +
      */
-    snap->mpcd_data.resize(8);
+    snap->mpcd_data.resize(9);
     snap->mpcd_data.type_mapping.push_back("A");
     snap->mpcd_data.position[0] = scale(vec3<Scalar>(-0.1, -0.1, -0.1), ref_box, box);
     snap->mpcd_data.position[1] = scale(vec3<Scalar>(0.1, -0.1, -0.1), ref_box, box);
@@ -606,6 +606,18 @@ void celllist_basic_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
     snap->mpcd_data.position[5] = scale(vec3<Scalar>(0.1, -0.1, 0.1), ref_box, box);
     snap->mpcd_data.position[6] = scale(vec3<Scalar>(-0.1, 0.1, 0.1), ref_box, box);
     snap->mpcd_data.position[7] = scale(vec3<Scalar>(0.1, 0.1, 0.1), ref_box, box);
+    // put an extra particle on rank 0 so that at least one temp is defined
+    snap->mpcd_data.position[8] = scale(vec3<Scalar>(-0.1, -0.1, -0.1), ref_box, box);
+
+    snap->mpcd_data.velocity[0] = vec3<Scalar>(-1.0, -1.0, -1.0);
+    snap->mpcd_data.velocity[1] = vec3<Scalar>(1.0, -1.0, -1.0);
+    snap->mpcd_data.velocity[2] = vec3<Scalar>(-1.0, 1.0, -1.0);
+    snap->mpcd_data.velocity[3] = vec3<Scalar>(1.0, 1.0, -1.0);
+    snap->mpcd_data.velocity[4] = vec3<Scalar>(-1.0, -1.0, 1.0);
+    snap->mpcd_data.velocity[5] = vec3<Scalar>(1.0, -1.0, 1.0);
+    snap->mpcd_data.velocity[6] = vec3<Scalar>(-1.0, 1.0, 1.0);
+    snap->mpcd_data.velocity[7] = vec3<Scalar>(1.0, 1.0, 1.0);
+    snap->mpcd_data.velocity[8] = vec3<Scalar>(1.0, 1.0, 1.0);
 
     std::shared_ptr<DomainDecomposition> decomposition(
         new DomainDecomposition(exec_conf, snap->global_box->getL(), 2, 2, 2));
@@ -616,12 +628,22 @@ void celllist_basic_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
     // initialize mpcd system
     std::shared_ptr<mpcd::ParticleData> pdata = sysdef->getMPCDParticleData();
     std::shared_ptr<mpcd::CellList> cl(new CL(sysdef, make_uint3(6, 6, 6), false));
+    AllThermoRequest thermo_req(cl);
     cl->compute(0);
     const unsigned int my_rank = exec_conf->getRank();
         {
         ArrayHandle<unsigned int> h_cell_np(cl->getCellSizeArray(),
                                             access_location::host,
                                             access_mode::read);
+        ArrayHandle<double4> h_cell_vel(cl->getCellVelocities(),
+                                        access_location::host,
+                                        access_mode::read);
+        ArrayHandle<double> h_cell_energy(cl->getCellEnergies(),
+                                          access_location::host,
+                                          access_mode::read);
+        ArrayHandle<double> h_cell_temp(cl->getCellTemperature(),
+                                        access_location::host,
+                                        access_mode::read);
         Index3D ci = cl->getCellIndexer();
         ArrayHandle<Scalar4> h_vel(pdata->getVelocities(),
                                    access_location::host,
@@ -631,46 +653,119 @@ void celllist_basic_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
             {
         case 0:
             // global index is (2,2,2), with origin (0,0,0)
-            UP_ASSERT_EQUAL(h_cell_np.data[ci(2, 2, 2)], 1);
+            UP_ASSERT_EQUAL(h_cell_np.data[ci(2, 2, 2)], 2);
             UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(2, 2, 2));
+            UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[1].w), ci(2, 2, 2));
+
+            // check cell properties
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 2, 2)].x, 0.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 2, 2)].y, 0.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 2, 2)].z, 0.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 2, 2)].w, 2.0, tol);
+
+            CHECK_CLOSE(h_cell_energy.data[ci(2, 2, 2)], 3.0, tol);
+            CHECK_CLOSE(h_cell_temp.data[ci(2, 2, 2)], 2.0, tol);
             break;
         case 1:
             // global index is (3,2,2), with origin (3,0,0)
             UP_ASSERT_EQUAL(h_cell_np.data[ci(0, 2, 2)], 1);
             UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(0, 2, 2));
+
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 2, 2)].x, 1.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 2, 2)].y, -1.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 2, 2)].z, -1.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 2, 2)].w, 1.0, tol);
+
+            CHECK_CLOSE(h_cell_energy.data[ci(0, 2, 2)], 1.5, tol);
+            CHECK_CLOSE(h_cell_temp.data[ci(0, 2, 2)], 0.0, tol);
             break;
         case 2:
             // global index is (2,3,2), with origin (0,3,0)
             UP_ASSERT_EQUAL(h_cell_np.data[ci(2, 0, 2)], 1);
             UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(2, 0, 2));
+
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 0, 2)].x, -1.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 0, 2)].y, 1.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 0, 2)].z, -1.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 0, 2)].w, 1.0, tol);
+
+            CHECK_CLOSE(h_cell_energy.data[ci(2, 0, 2)], 1.5, tol);
+            CHECK_CLOSE(h_cell_temp.data[ci(2, 0, 2)], 0.0, tol);
             break;
         case 3:
             // global index is (3,3,2), with origin (3,3,0)
             UP_ASSERT_EQUAL(h_cell_np.data[ci(0, 0, 2)], 1);
             UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(0, 0, 2));
+
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 0, 2)].x, 1.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 0, 2)].y, 1.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 0, 2)].z, -1.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 0, 2)].w, 1.0, tol);
+
+            CHECK_CLOSE(h_cell_energy.data[ci(0, 0, 2)], 1.5, tol);
+            CHECK_CLOSE(h_cell_temp.data[ci(0, 0, 2)], 0.0, tol);
             break;
         case 4:
             // global index is (2,2,3), with origin (0,0,3)
             UP_ASSERT_EQUAL(h_cell_np.data[ci(2, 2, 0)], 1);
             UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(2, 2, 0));
+
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 2, 0)].x, -1.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 2, 0)].y, -1.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 2, 0)].z, 1.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 2, 0)].w, 1.0, tol);
+
+            CHECK_CLOSE(h_cell_energy.data[ci(2, 2, 0)], 1.5, tol);
+            CHECK_CLOSE(h_cell_temp.data[ci(2, 2, 0)], 0.0, tol);
             break;
         case 5:
             // global index is (3,2,3), with origin (3,0,3)
             UP_ASSERT_EQUAL(h_cell_np.data[ci(0, 2, 0)], 1);
             UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(0, 2, 0));
+
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 2, 0)].x, 1.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 2, 0)].y, -1.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 2, 0)].z, 1.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 2, 0)].w, 1.0, tol);
+
+            CHECK_CLOSE(h_cell_energy.data[ci(0, 2, 0)], 1.5, tol);
+            CHECK_CLOSE(h_cell_temp.data[ci(0, 2, 0)], 0.0, tol);
             break;
         case 6:
             // global index is (2,3,3), with origin (0,3,3)
             UP_ASSERT_EQUAL(h_cell_np.data[ci(2, 0, 0)], 1);
             UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(2, 0, 0));
+
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 0, 0)].x, -1.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 0, 0)].y, 1.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 0, 0)].z, 1.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 0, 0)].w, 1.0, tol);
+
+            CHECK_CLOSE(h_cell_energy.data[ci(2, 0, 0)], 1.5, tol);
+            CHECK_CLOSE(h_cell_temp.data[ci(2, 0, 0)], 0.0, tol);
             break;
         case 7:
             // global index is (3,3,3), with origin (3,3,3)
             UP_ASSERT_EQUAL(h_cell_np.data[ci(0, 0, 0)], 1);
             UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(0, 0, 0));
+
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 0, 0)].x, 1.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 0, 0)].y, 1.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 0, 0)].z, 1.0, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 0, 0)].w, 1.0, tol);
+
+            CHECK_CLOSE(h_cell_energy.data[ci(0, 0, 0)], 1.5, tol);
+            CHECK_CLOSE(h_cell_temp.data[ci(0, 0, 0)], 0.0, tol);
             break;
             };
         }
+
+    // Check the net stats of the system
+    CHECK_CLOSE(cl->getNetMomentum().x, 1.0, tol);
+    CHECK_CLOSE(cl->getNetMomentum().y, 1.0, tol);
+    CHECK_CLOSE(cl->getNetMomentum().z, 1.0, tol);
+    CHECK_CLOSE(cl->getNetEnergy(), 13.5, tol);
+    CHECK_CLOSE(cl->getTemperature(), 2.0, tol);
 
     // apply a grid shift so that particles move into the same cell (3,3,3)
     // this will cause all the particles to be sent to the same rank as ghosts
@@ -681,6 +776,15 @@ void celllist_basic_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         ArrayHandle<unsigned int> h_cell_np(cl->getCellSizeArray(),
                                             access_location::host,
                                             access_mode::read);
+        ArrayHandle<double4> h_cell_vel(cl->getCellVelocities(),
+                                        access_location::host,
+                                        access_mode::read);
+        ArrayHandle<double> h_cell_energy(cl->getCellEnergies(),
+                                          access_location::host,
+                                          access_mode::read);
+        ArrayHandle<double> h_cell_temp(cl->getCellTemperature(),
+                                        access_location::host,
+                                        access_mode::read);
         Index3D ci = cl->getCellIndexer();
         ArrayHandle<Scalar4> h_vel(pdata->getVelocities(),
                                    access_location::host,
@@ -693,9 +797,17 @@ void celllist_basic_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
             UP_ASSERT_EQUAL(global_cell.x, 3);
             UP_ASSERT_EQUAL(global_cell.y, 3);
             UP_ASSERT_EQUAL(global_cell.z, 3);
-            UP_ASSERT_EQUAL(h_cell_np.data[ci(0, 0, 0)], 8);
-            UP_ASSERT_EQUAL(num_ghosts, 7);
+            UP_ASSERT_EQUAL(h_cell_np.data[ci(0, 0, 0)], 9);
+            UP_ASSERT_EQUAL(num_ghosts, 8);
             UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(0, 0, 0));
+
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 0, 0)].x, 0.111111, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 0, 0)].y, 0.111111, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 0, 0)].z, 0.111111, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 0, 0)].w, 9, tol);
+
+            CHECK_CLOSE(h_cell_energy.data[ci(0, 0, 0)], 13.5, tol);
+            CHECK_CLOSE(h_cell_temp.data[ci(0, 0, 0)], 1.111111, tol);
             }
         else
             {
@@ -704,6 +816,14 @@ void celllist_basic_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
             for (unsigned int c = 0; c < cl->getNCells(); ++c)
                 {
                 UP_ASSERT_EQUAL(h_cell_np.data[c], 0);
+
+                CHECK_CLOSE(h_cell_vel.data[c].x, 0, tol);
+                CHECK_CLOSE(h_cell_vel.data[c].y, 0, tol);
+                CHECK_CLOSE(h_cell_vel.data[c].z, 0, tol);
+                CHECK_CLOSE(h_cell_vel.data[c].w, 0, tol);
+
+                CHECK_CLOSE(h_cell_energy.data[c], 0, tol);
+                CHECK_CLOSE(h_cell_temp.data[c], 0, tol);
                 }
             }
         }
@@ -716,6 +836,15 @@ void celllist_basic_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         ArrayHandle<unsigned int> h_cell_np(cl->getCellSizeArray(),
                                             access_location::host,
                                             access_mode::read);
+        ArrayHandle<double4> h_cell_vel(cl->getCellVelocities(),
+                                        access_location::host,
+                                        access_mode::read);
+        ArrayHandle<double> h_cell_energy(cl->getCellEnergies(),
+                                          access_location::host,
+                                          access_mode::read);
+        ArrayHandle<double> h_cell_temp(cl->getCellTemperature(),
+                                        access_location::host,
+                                        access_mode::read);
         Index3D ci = cl->getCellIndexer();
         ArrayHandle<Scalar4> h_vel(pdata->getVelocities(),
                                    access_location::host,
@@ -728,9 +857,17 @@ void celllist_basic_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
             UP_ASSERT_EQUAL(global_cell.x, 2);
             UP_ASSERT_EQUAL(global_cell.y, 2);
             UP_ASSERT_EQUAL(global_cell.z, 2);
-            UP_ASSERT_EQUAL(h_cell_np.data[ci(2, 2, 2)], 8);
+            UP_ASSERT_EQUAL(h_cell_np.data[ci(2, 2, 2)], 9);
             UP_ASSERT_EQUAL(num_ghosts, 7);
             UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(2, 2, 2));
+
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 2, 2)].x, 0.111111, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 2, 2)].y, 0.111111, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 2, 2)].z, 0.111111, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 2, 2)].w, 9, tol);
+
+            CHECK_CLOSE(h_cell_energy.data[ci(2, 2, 2)], 13.5, tol);
+            CHECK_CLOSE(h_cell_temp.data[ci(2, 2, 2)], 1.111111, tol);
             }
         else
             {
@@ -739,9 +876,24 @@ void celllist_basic_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
             for (unsigned int c = 0; c < cl->getNCells(); ++c)
                 {
                 UP_ASSERT_EQUAL(h_cell_np.data[c], 0);
+
+                CHECK_CLOSE(h_cell_vel.data[c].x, 0, tol);
+                CHECK_CLOSE(h_cell_vel.data[c].y, 0, tol);
+                CHECK_CLOSE(h_cell_vel.data[c].z, 0, tol);
+                CHECK_CLOSE(h_cell_vel.data[c].w, 0, tol);
+
+                CHECK_CLOSE(h_cell_energy.data[c], 0, tol);
+                CHECK_CLOSE(h_cell_temp.data[c], 0, tol);
                 }
             }
         }
+
+    // Check the net stats of the system
+    CHECK_CLOSE(cl->getNetMomentum().x, 1.0, tol);
+    CHECK_CLOSE(cl->getNetMomentum().y, 1.0, tol);
+    CHECK_CLOSE(cl->getNetMomentum().z, 1.0, tol);
+    CHECK_CLOSE(cl->getNetEnergy(), 13.5, tol);
+    CHECK_CLOSE(cl->getTemperature(), 1.111111, tol);
     }
 
 //! Test for correct cell listing of a system with particles on the edges
