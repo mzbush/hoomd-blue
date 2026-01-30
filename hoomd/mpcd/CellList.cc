@@ -499,8 +499,10 @@ void mpcd::CellList::buildCellList()
                              global_bin.y - m_origin_idx.y,
                              global_bin.z - m_origin_idx.z);
         unsigned int bin_idx;
-        if ((0 <= bin.x && bin.x < (int)m_cell_dim.x) && (0 <= bin.y && bin.y < (int)m_cell_dim.y)
-            && (0 <= bin.z && bin.z < (int)m_cell_dim.z))
+        bool islocal = (0 <= bin.x && bin.x < (int)m_cell_dim.x)
+                       && (0 <= bin.y && bin.y < (int)m_cell_dim.y)
+                       && (0 <= bin.z && bin.z < (int)m_cell_dim.z);
+        if (islocal)
             {
             bin_idx = m_cell_indexer(bin.x, bin.y, bin.z);
             }
@@ -537,18 +539,19 @@ void mpcd::CellList::buildCellList()
 
                 unsigned int dir = ((iz + 1) * 3 + (iy + 1)) * 3 + (ix + 1);
                 unsigned int mask = 1 << dir;
-                // add particle data to send buffers
+                // mark particle to be sent to neighboring rank
                 h_mpcd_comm_key.data[cur_p] = make_uint2(mask, cur_p);
                 num_ghosts_send = num_ghosts_send + 1;
+                // set the bin idx to be the global index
                 bin_idx = m_global_cell_indexer(global_bin.x, global_bin.y, global_bin.z);
-                h_vel.data[cur_p].w = __int_as_scalar(bin_idx);
+                bin_idx |= ((unsigned int)1 << (sizeof(bin_idx) * 8 - 1));
                 }
             else
 #endif // ENABLE_MPI
                 {
                 conditions.x = cur_p + 1;
+                continue;
                 }
-            continue;
             }
 
         // stash the current particle bin into the velocity array
@@ -561,6 +564,10 @@ void mpcd::CellList::buildCellList()
             h_embed_cell_ids->data[cur_p - N_mpcd] = bin_idx;
             }
 
+        if (!islocal)
+            {
+            continue;
+            }
         // compute the contribution of the particle to cell velocity
         double4& cell_vel = h_cell_vel.data[bin_idx];
         cell_vel.x += mass_i * vel_i.x;
@@ -723,13 +730,8 @@ void mpcd::CellList::buildCellList()
                 double mass_i = m_mpcd_pdata->getMass();
                 const Scalar4 vel_mass_i = h_mpcd_ghost_vel.data[cur_p];
                 const double3 vel_i = make_double3(vel_mass_i.x, vel_mass_i.y, vel_mass_i.z);
-                const unsigned int global_bin_index = __scalar_as_int(vel_mass_i.w);
-
-                if (std::isnan(global_bin_index))
-                    {
-                    conditions.y = cur_p + 1;
-                    continue;
-                    }
+                unsigned int global_bin_index = __scalar_as_int(vel_mass_i.w);
+                global_bin_index &= ~((unsigned int)0b0111 << (sizeof(global_bin_index) * 8 - 1));
 
                 // turn global bin index back into global bin
                 int3 global_bin = make_int3(0, 0, 0);
