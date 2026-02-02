@@ -1041,6 +1041,70 @@ bool mpcd::CellList::needsEmbedMigrate(uint64_t timestep)
 
     return static_cast<bool>(migrate);
     }
+
+void mpcd::CellList::communicateGhosts()
+    {
+    ArrayHandle<Scalar4> h_mpcd_ghost_vel(m_mpcd_ghost_vel,
+                                          access_location::host,
+                                          access_mode::read);
+    ArrayHandle<Scalar4> h_mpcd_vel_sendbuf(m_mpcd_vel_sendbuf,
+                                            access_location::host,
+                                            access_mode::overwrite);
+    unsigned int nreq = 0;
+    m_reqs.resize(4 * m_num_unique_neigh);
+    unsigned int recvidx = 0;
+    for (unsigned int ineigh = 0; ineigh < m_num_unique_neigh; ++ineigh)
+        {
+        // rank of neighbor processor
+        unsigned int neighbor_map = m_adj_mask[ineigh];
+        unsigned int neighbor = m_neigh_rank_map[neighbor_map];
+        // exchange particle data
+        if (m_num_mpcd_recv_ptls[ineigh])
+            {
+            MPI_Isend(h_mpcd_ghost_vel.data + m_mpcd_offsets[ineigh],
+                      int(m_num_mpcd_recv_ptls[ineigh] * sizeof(Scalar4)),
+                      MPI_BYTE,
+                      neighbor,
+                      2,
+                      m_mpi_comm,
+                      &m_reqs[nreq++]);
+            }
+
+        if (m_num_mpcd_send_ptls[ineigh])
+            {
+            MPI_Irecv(h_mpcd_vel_sendbuf.data + recvidx,
+                      int(m_num_mpcd_send_ptls[ineigh] * sizeof(Scalar4)),
+                      MPI_BYTE,
+                      neighbor,
+                      2,
+                      m_mpi_comm,
+                      &m_reqs[nreq++]);
+            // increment the send index by the amount just transferred
+            recvidx += m_num_mpcd_send_ptls[ineigh];
+            }
+        }
+    MPI_Waitall(nreq, m_reqs.data(), MPI_STATUSES_IGNORE);
+    }
+
+void mpcd::CellList::updateLocalFromGhosts()
+    {
+    ArrayHandle<Scalar4> h_mpcd_vel_sendbuf(m_mpcd_vel_sendbuf,
+                                            access_location::host,
+                                            access_mode::read);
+    ArrayHandle<uint2> h_mpcd_comm_key(m_mpcd_comm_key, access_location::host, access_mode::read);
+    ArrayHandle<Scalar4> h_vel(m_mpcd_pdata->getVelocities(),
+                               access_location::host,
+                               access_mode::readwrite);
+    const unsigned int num_ghosts = m_num_mpcd_ghosts_send;
+    for (unsigned int cur_p = 0; cur_p < num_ghosts; ++cur_p)
+        {
+        const Scalar4 vel_i = h_mpcd_vel_sendbuf.data[cur_p];
+        const double3 new_vel = make_double3(vel_i.x, vel_i.y, vel_i.z);
+        const unsigned int idx = h_mpcd_comm_key.data[cur_p].y;
+        const Scalar4 old_vel = h_vel.data[idx];
+        h_vel.data[cur_p] = make_scalar4(new_vel.x, new_vel.y, new_vel.z, old_vel.w);
+        }
+    }
 #endif // ENABLE_MPI
 
 void mpcd::CellList::updateFlags()

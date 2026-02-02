@@ -171,6 +171,12 @@ class PYBIND11_EXPORT CellList : public Compute
 
     //! Check if communication is occurring along a direction
     bool isCommunicating(mpcd::detail::face dir);
+
+    //! do back communication for ghosts
+    void communicateGhosts();
+
+    //! update the local particles based on the updated ghosts
+    virtual void updateLocalFromGhosts();
 #endif // ENABLE_MPI
 
     //! Get whether grid shifting is enabled
