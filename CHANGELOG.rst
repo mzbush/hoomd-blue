@@ -25,6 +25,7 @@ Next release
 * Table writer no longer errors on ``Inf`` scalar values (#2196).
 
 * Fixed vertex neighbor check in dynamical bonding code (#2202).
+* Fixed Helfrich energy calculation for logging (#2215)
 
 6.0.0 (2025-11-21)
 ^^^^^^^^^^^^^^^^^^^^
