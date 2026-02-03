@@ -44,7 +44,7 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
     snap->mpcd_data.resize(1);
     snap->mpcd_data.type_mapping.push_back("A");
 
-    // configure domain decompsition
+    // configure domain decomposition
     std::vector<Scalar> fx, fy, fz;
     unsigned int n_req_ranks = 1;
     if (mpi_x)
