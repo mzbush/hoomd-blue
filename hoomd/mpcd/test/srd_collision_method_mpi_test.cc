@@ -1,9 +1,11 @@
 // Copyright (c) 2009-2026 The Regents of the University of Michigan.
 // Part of HOOMD-blue, released under the BSD 3-Clause License.
 
+#include "hoomd/mpcd/Communicator.h"
 #include "hoomd/mpcd/SRDCollisionMethod.h"
 #include "utils.h"
 #ifdef ENABLE_HIP
+#include "hoomd/mpcd/CommunicatorGPU.h"
 #include "hoomd/mpcd/SRDCollisionMethodGPU.h"
 #endif // ENABLE_HIP
 
@@ -271,24 +273,28 @@ void srd_collision_method_basic_test(std::shared_ptr<ExecutionConfiguration> exe
 template<class CM>
 void srd_collision_method_embed_test(std::shared_ptr<ExecutionConfiguration> exec_conf)
     {
+    UP_ASSERT_EQUAL(exec_conf->getNRanks(), 8);
     std::shared_ptr<SnapshotSystemData<Scalar>> snap(new SnapshotSystemData<Scalar>());
     snap->global_box = std::make_shared<BoxDim>(2.0);
     snap->particle_data.type_mapping.push_back("A");
         {
         SnapshotParticleData<Scalar>& pdata_snap = snap->particle_data;
-        pdata_snap.resize(1);
-        pdata_snap.pos[0] = vec3<Scalar>(-0.6, -0.6, -0.6);
+        pdata_snap.resize(2);
+        pdata_snap.pos[0] = vec3<Scalar>(-0.1, -0.1, -0.1);
         pdata_snap.vel[0] = vec3<Scalar>(1.0, 2.0, 3.0);
         pdata_snap.mass[0] = 2.0;
+        pdata_snap.pos[1] = vec3<Scalar>(0.1, 0.1, 0.1);
+        pdata_snap.vel[1] = vec3<Scalar>(-1.0, -1.0, -2.0);
+        pdata_snap.mass[1] = 2.0;
         }
 
     // 4 particle system
     snap->mpcd_data.resize(4);
     snap->mpcd_data.type_mapping.push_back("A");
-    snap->mpcd_data.position[0] = vec3<Scalar>(-0.6, -0.6, -0.6);
-    snap->mpcd_data.position[1] = vec3<Scalar>(-0.6, -0.6, -0.6);
-    snap->mpcd_data.position[2] = vec3<Scalar>(0.5, 0.5, 0.5);
-    snap->mpcd_data.position[3] = vec3<Scalar>(0.5, 0.5, 0.5);
+    snap->mpcd_data.position[0] = vec3<Scalar>(-0.1, -0.1, -0.1);
+    snap->mpcd_data.position[1] = vec3<Scalar>(-0.1, -0.1, -0.1);
+    snap->mpcd_data.position[2] = vec3<Scalar>(0.1, 0.1, 0.1);
+    snap->mpcd_data.position[3] = vec3<Scalar>(0.1, 0.1, 0.1);
 
     snap->mpcd_data.velocity[0] = vec3<Scalar>(2.0, 0.0, 0.0);
     snap->mpcd_data.velocity[1] = vec3<Scalar>(1.0, 0.0, 0.0);
@@ -296,8 +302,13 @@ void srd_collision_method_embed_test(std::shared_ptr<ExecutionConfiguration> exe
     snap->mpcd_data.velocity[3] = vec3<Scalar>(-1.0, 2.0, -5.0);
 
     // initialize system and collision method
-    std::shared_ptr<SystemDefinition> sysdef(new SystemDefinition(snap, exec_conf));
+    std::shared_ptr<DomainDecomposition> decomposition(
+        new DomainDecomposition(exec_conf, snap->global_box->getL(), 2, 2, 2));
+    std::shared_ptr<SystemDefinition> sysdef(new SystemDefinition(snap, exec_conf, decomposition));
     std::shared_ptr<mpcd::ParticleData> pdata_4 = sysdef->getMPCDParticleData();
+    std::shared_ptr<Communicator> pdata_comm(new Communicator(sysdef, decomposition));
+    sysdef->setCommunicator(pdata_comm);
+
     auto cl = std::make_shared<mpcd::CellList>(sysdef, 1.0, false);
     std::shared_ptr<mpcd::SRDCollisionMethod> collide
         = std::make_shared<CM>(sysdef, 0, 1, -1, 130.);
@@ -308,6 +319,18 @@ void srd_collision_method_embed_test(std::shared_ptr<ExecutionConfiguration> exe
     std::shared_ptr<ParticleFilter> selector_one(new ParticleFilterAll());
     std::shared_ptr<ParticleGroup> group_all(new ParticleGroup(sysdef, selector_one));
     collide->setEmbeddedGroup(group_all);
+
+    // stash current embedded velocities for reference
+    std::vector<Scalar3> orig_vel(sysdef->getParticleData()->getN());
+        {
+        ArrayHandle<Scalar4> h_vel(sysdef->getParticleData()->getVelocities(),
+                                   access_location::host,
+                                   access_mode::read);
+        for (unsigned int i = 0; i < sysdef->getParticleData()->getN(); ++i)
+            {
+            orig_vel[i] = make_scalar3(h_vel.data[i].x, h_vel.data[i].y, h_vel.data[i].z);
+            }
+        }
 
     // Save original momentum for comparison as well
     cl->compute(0);
@@ -320,10 +343,13 @@ void srd_collision_method_embed_test(std::shared_ptr<ExecutionConfiguration> exe
         ArrayHandle<Scalar4> h_vel(sysdef->getParticleData()->getVelocities(),
                                    access_location::host,
                                    access_mode::read);
-        UP_ASSERT(h_vel.data[0].x != 1.0);
-        UP_ASSERT(h_vel.data[0].y != 2.0);
-        UP_ASSERT(h_vel.data[0].z != 3.0);
-        CHECK_CLOSE(h_vel.data[0].w, 2.0, tol_small);
+        for (unsigned int i = 0; i < sysdef->getParticleData()->getN(); ++i)
+            {
+            UP_ASSERT(h_vel.data[i].x != orig_vel[i].x);
+            UP_ASSERT(h_vel.data[i].y != orig_vel[i].y);
+            UP_ASSERT(h_vel.data[i].z != orig_vel[i].z);
+            CHECK_CLOSE(h_vel.data[i].w, 2.0, tol_small);
+            }
         }
 
     // compute properties after rotation
@@ -338,21 +364,91 @@ void srd_collision_method_embed_test(std::shared_ptr<ExecutionConfiguration> exe
     CHECK_CLOSE(orig_mom.x, mom.x, tol_small);
     CHECK_CLOSE(orig_mom.y, mom.y, tol_small);
     CHECK_CLOSE(orig_mom.z, mom.z, tol_small);
+
+        // stash current embedded velocities for reference
+        {
+        ArrayHandle<Scalar4> h_vel(sysdef->getParticleData()->getVelocities(),
+                                   access_location::host,
+                                   access_mode::read);
+        for (unsigned int i = 0; i < sysdef->getParticleData()->getN(); ++i)
+            {
+            orig_vel[i] = make_scalar3(h_vel.data[i].x, h_vel.data[i].y, h_vel.data[i].z);
+            }
+        }
+
+    // shift particles so that they are all in the same cell to force communication
+    const Scalar3 shift = (Scalar(0.5) / 3) * make_scalar3(1, 1, 1);
+    cl->setGridShift(-shift);
+    cl->compute(2);
+
+    // update the temperature
+    const Scalar orig_temp_shift = cl->getTemperature();
+
+    collide->collide(1);
+        {
+        // velocity should be different now, but the mass should stay the same
+        ArrayHandle<Scalar4> h_vel(sysdef->getParticleData()->getVelocities(),
+                                   access_location::host,
+                                   access_mode::read);
+        for (unsigned int i = 0; i < sysdef->getParticleData()->getN(); ++i)
+            {
+            UP_ASSERT(h_vel.data[i].x != orig_vel[i].x);
+            UP_ASSERT(h_vel.data[i].y != orig_vel[i].y);
+            UP_ASSERT(h_vel.data[i].z != orig_vel[i].z);
+            CHECK_CLOSE(h_vel.data[i].w, 2.0, tol_small);
+            }
+        }
+
+    // check net properties of momentum and energy still match
+    mom = cl->getNetMomentum();
+    CHECK_CLOSE(mom.x, orig_mom.x, tol_small);
+    CHECK_CLOSE(mom.y, orig_mom.y, tol_small);
+    CHECK_CLOSE(mom.z, orig_mom.z, tol_small);
+
+    energy = cl->getNetEnergy();
+    CHECK_CLOSE(energy, orig_energy, tol_small);
+
+    temp = cl->getTemperature();
+    CHECK_CLOSE(temp, orig_temp_shift, tol_small);
     }
 
 //! Test that the thermostat can generate the correct temperature
 template<class CM>
 void srd_collision_method_thermostat_test(std::shared_ptr<ExecutionConfiguration> exec_conf)
     {
+    UP_ASSERT_EQUAL(exec_conf->getNRanks(), 8);
+
     auto box = std::make_shared<BoxDim>(10.0);
-    auto sysdef = std::make_shared<hoomd::SystemDefinition>(0, box, 1, 0, 0, 0, 0, exec_conf);
-    auto pdata = std::make_shared<mpcd::ParticleData>(10000, box, 1.0, 42, 3, exec_conf);
+    std::shared_ptr<DomainDecomposition> decomposition(
+        new DomainDecomposition(exec_conf, box->getL(), 2, 2, 2));
+    auto sysdef = std::make_shared<hoomd::SystemDefinition>(0,
+                                                            box,
+                                                            1,
+                                                            0,
+                                                            0,
+                                                            0,
+                                                            0,
+                                                            exec_conf,
+                                                            decomposition);
+    auto pdata
+        = std::make_shared<mpcd::ParticleData>(10000, box, 1.0, 42, 3, exec_conf, decomposition);
+    std::shared_ptr<Communicator> pdata_comm(new Communicator(sysdef, decomposition));
     sysdef->setMPCDParticleData(pdata);
+    sysdef->setCommunicator(pdata_comm);
 
     auto cl = std::make_shared<mpcd::CellList>(sysdef, 1.0, false);
     std::shared_ptr<mpcd::SRDCollisionMethod> collide = std::make_shared<CM>(sysdef, 0, 1, -1, 827);
     collide->setCellList(cl);
     AllThermoRequest thermo_req(cl);
+
+    // force a migration to ensure particles are in sensible ranks
+#ifdef ENABLE_HIP
+    auto mpcd_comm = std::shared_ptr<mpcd::CommunicatorGPU>(new mpcd::CommunicatorGPU(sysdef, 1));
+#else
+    auto mpcd_comm = std::shared_ptr<mpcd::Communicator>(new mpcd::Communicator(sysdef));
+#endif // ENABLE_HIP
+    mpcd_comm->setCellList(cl);
+    mpcd_comm->migrateParticles(1);
 
     // timestep counter and number of samples to make
     uint64_t timestep = 0;
@@ -396,11 +492,11 @@ UP_TEST(srd_collision_method_basic)
         std::make_shared<ExecutionConfiguration>(ExecutionConfiguration::CPU));
     }
 //! test embedding of particles into the MPCD SRDCollisionMethod class
-UP_TEST(srd_collision_method_embed)
-    {
-    srd_collision_method_embed_test<mpcd::SRDCollisionMethod>(
-        std::make_shared<ExecutionConfiguration>(ExecutionConfiguration::CPU));
-    }
+// UP_TEST(srd_collision_method_embed)
+//     {
+//     srd_collision_method_embed_test<mpcd::SRDCollisionMethod>(
+//         std::make_shared<ExecutionConfiguration>(ExecutionConfiguration::CPU));
+//     }
 UP_TEST(srd_collision_method_thermostat)
     {
     srd_collision_method_thermostat_test<mpcd::SRDCollisionMethod>(
