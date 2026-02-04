@@ -203,7 +203,7 @@ void mpcd::SRDCollisionMethod::rotate(uint64_t timestep)
         unsigned int idx(0);
         double mass(0);
 #ifdef ENABLE_MPI
-        if (cur_p > N_local)
+        if (!(cur_p < N_local))
             {
             const Scalar4 vel_cell = h_vel_ghosts->data[cur_p - N_local];
             vel = make_double3(vel_cell.x, vel_cell.y, vel_cell.z);
@@ -227,8 +227,8 @@ void mpcd::SRDCollisionMethod::rotate(uint64_t timestep)
                 mass = vel_mass.w;
                 cell = h_embed_cell_ids->data[cur_p - N_mpcd];
                 }
-            // check if global cell
 #ifdef ENABLE_MPI
+            // check if global cell
             if ((cell) & (1 << (31)))
                 {
                 continue;
@@ -276,7 +276,7 @@ void mpcd::SRDCollisionMethod::rotate(uint64_t timestep)
 
         // set the new velocity
 #ifdef ENABLE_MPI
-        if (cur_p > N_local)
+        if (!(cur_p < N_local))
             {
             h_vel_ghosts->data[cur_p - N_local]
                 = make_scalar4(new_vel.x, new_vel.y, new_vel.z, __int_as_scalar(cell));
