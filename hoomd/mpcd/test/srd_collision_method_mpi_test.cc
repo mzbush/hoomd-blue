@@ -29,10 +29,10 @@ void srd_collision_method_basic_test(std::shared_ptr<ExecutionConfiguration> exe
     snap->mpcd_data.resize(4);
     snap->mpcd_data.type_mapping.push_back("A");
 
-    snap->mpcd_data.position[0] = vec3<Scalar>(-0.6, -0.6, -0.6);
-    snap->mpcd_data.position[1] = vec3<Scalar>(-0.6, -0.6, -0.6);
-    snap->mpcd_data.position[2] = vec3<Scalar>(0.5, 0.5, 0.5);
-    snap->mpcd_data.position[3] = vec3<Scalar>(0.5, 0.5, 0.5);
+    snap->mpcd_data.position[0] = vec3<Scalar>(-0.1, -0.1, -0.1);
+    snap->mpcd_data.position[1] = vec3<Scalar>(-0.1, -0.1, -0.1);
+    snap->mpcd_data.position[2] = vec3<Scalar>(0.1, 0.1, 0.1);
+    snap->mpcd_data.position[3] = vec3<Scalar>(0.1, 0.1, 0.1);
 
     snap->mpcd_data.velocity[0] = vec3<Scalar>(2.0, 0.0, 0.0);
     snap->mpcd_data.velocity[1] = vec3<Scalar>(1.0, 0.0, 0.0);
@@ -46,6 +46,7 @@ void srd_collision_method_basic_test(std::shared_ptr<ExecutionConfiguration> exe
     std::shared_ptr<mpcd::ParticleData> pdata_4 = sysdef->getMPCDParticleData();
     std::shared_ptr<Communicator> pdata_comm(new Communicator(sysdef, decomposition));
     sysdef->setCommunicator(pdata_comm);
+
     auto cl = std::make_shared<mpcd::CellList>(sysdef, 1.0, false);
     std::shared_ptr<mpcd::SRDCollisionMethod> collide = std::make_shared<CM>(sysdef, 0, 2, 1, 130.);
     collide->setCellList(cl);
@@ -150,18 +151,116 @@ void srd_collision_method_basic_test(std::shared_ptr<ExecutionConfiguration> exe
 
     // recompute net properties, and make sure they are still the same
     cl->compute(2);
-    const Scalar3 mom = cl->getNetMomentum();
+    Scalar3 mom = cl->getNetMomentum();
     CHECK_CLOSE(mom.x, orig_mom.x, tol_small);
     CHECK_CLOSE(mom.y, orig_mom.y, tol_small);
     CHECK_CLOSE(mom.z, orig_mom.z, tol_small);
 
-    const Scalar energy = cl->getNetEnergy();
+    Scalar energy = cl->getNetEnergy();
     CHECK_CLOSE(energy, orig_energy, tol_small);
 
-    const Scalar temp = cl->getTemperature();
+    Scalar temp = cl->getTemperature();
     CHECK_CLOSE(temp, orig_temp, tol_small);
 
-    // \todo create a test that also forces communication to occur
+        // stash current velocities for reference
+        {
+        ArrayHandle<Scalar4> h_vel(pdata_4->getVelocities(),
+                                   access_location::host,
+                                   access_mode::read);
+        for (unsigned int i = 0; i < pdata_4->getN(); ++i)
+            {
+            orig_vel[i] = make_scalar3(h_vel.data[i].x, h_vel.data[i].y, h_vel.data[i].z);
+            }
+        }
+    // shift particles so that they are all in the same cell to force communication
+    const Scalar3 shift = (Scalar(0.5) / 3) * make_scalar3(1, 1, 1);
+    cl->setGridShift(-shift);
+    cl->compute(3);
+
+    // update the temperature
+    const Scalar orig_temp_shift = cl->getTemperature();
+
+    UP_ASSERT(collide->peekCollide(3));
+    collide->collide(3);
+        {
+        const unsigned int num_ghosts = cl->getNGhosts();
+        ArrayHandle<Scalar4> h_vel(pdata_4->getVelocities(),
+                                   access_location::host,
+                                   access_mode::read);
+        ArrayHandle<double3> h_rotvec(collide->getRotationVectors(),
+                                      access_location::host,
+                                      access_mode::read);
+        ArrayHandle<double4> h_cell_vel(cl->getCellVelocities(),
+                                        access_location::host,
+                                        access_mode::read);
+
+        // communicate the rot_vec that is relevant to the particles
+        Scalar3 rot_vec;
+        Scalar3 avg_vel;
+        if (num_ghosts)
+            {
+            rot_vec = make_scalar3(h_rotvec.data[0].x, h_rotvec.data[0].y, h_rotvec.data[0].z);
+            avg_vel
+                = make_scalar3(h_cell_vel.data[0].x, h_cell_vel.data[0].y, h_cell_vel.data[0].z);
+            }
+        else
+            {
+            rot_vec = make_scalar3(0, 0, 0);
+            avg_vel = make_scalar3(0, 0, 0);
+            }
+        MPI_Allreduce(MPI_IN_PLACE,
+                      &rot_vec,
+                      int(sizeof(Scalar3)),
+                      MPI_BYTE,
+                      MPI_SUM,
+                      exec_conf->getMPICommunicator());
+
+        MPI_Allreduce(MPI_IN_PLACE,
+                      &avg_vel,
+                      int(sizeof(Scalar3)),
+                      MPI_BYTE,
+                      MPI_SUM,
+                      exec_conf->getMPICommunicator());
+
+        for (unsigned int i = 0; i < pdata_4->getN(); ++i)
+            {
+            // all rotation vectors should be unit norm
+            CHECK_CLOSE(dot(rot_vec, rot_vec), 1.0, tol_small);
+
+            const Scalar3 vel = make_scalar3(h_vel.data[i].x, h_vel.data[i].y, h_vel.data[i].z);
+
+            // ensure that the velocity is different
+            UP_ASSERT(vel.x != orig_vel[i].x);
+            UP_ASSERT(vel.y != orig_vel[i].y);
+            UP_ASSERT(vel.z != orig_vel[i].z);
+
+            // compute the angle between the two vectors relative to the cell average velocity
+            // which should be the same before and after rotation
+            Scalar3 v1 = vel - avg_vel;
+            Scalar3 v2 = orig_vel[i] - avg_vel;
+            CHECK_CLOSE(dot(v1, rot_vec), dot(v2, rot_vec), tol_small);
+
+            // check the rotation angle of the velocities by projecting the velocities orthogonally
+            // into the plane that the rotation vector is the normal of. Given the plane is through
+            // the origin with normal n, the projection of v is: q = v - dot(v,n) * n
+            Scalar3 q1 = v1 - dot(v1, rot_vec) * rot_vec;
+            Scalar3 q2 = v2 - dot(v2, rot_vec) * rot_vec;
+            Scalar cos_angle = dot(q1, q2) / (sqrt(dot(q1, q1)) * sqrt(dot(q2, q2)));
+            CHECK_CLOSE(cos_angle, slow::cos(collide->getRotationAngle() * M_PI / 180.), tol_small);
+            }
+        }
+
+    // check net properties of momentum and energy still match
+    mom = cl->getNetMomentum();
+    CHECK_CLOSE(mom.x, orig_mom.x, tol_small);
+    CHECK_CLOSE(mom.y, orig_mom.y, tol_small);
+    CHECK_CLOSE(mom.z, orig_mom.z, tol_small);
+
+    energy = cl->getNetEnergy();
+    CHECK_CLOSE(energy, orig_energy, tol_small);
+
+    temp = cl->getTemperature();
+    CHECK_CLOSE(temp, orig_temp_shift, tol_small);
     }
 
 //! Test that embedding a particle keeps conservation
