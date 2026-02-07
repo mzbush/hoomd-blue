@@ -11,10 +11,6 @@ Next release
 
 * Support 2D simulations in ``hoomd.md.pair.friction`` (#2184).
 
-*Changed*
-
-*Deprecated*
-
 *Removed*
 
 * ``SIGTERM`` handler (#2209).
