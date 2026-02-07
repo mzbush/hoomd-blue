@@ -4,16 +4,12 @@ Change Log
 Recent releases
 ---------------
 
-Next release
+6.1.0 (2026-02-07)
 ^^^^^^^^^^^^^^^^^^^^
 
 *Added*
 
 * Support 2D simulations in ``hoomd.md.pair.friction`` (#2184).
-
-*Changed*
-
-*Deprecated*
 
 *Removed*
 
