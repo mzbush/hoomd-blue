@@ -4,7 +4,7 @@ Change Log
 Recent releases
 ---------------
 
-Next release
+6.1.0 (2026-02-07)
 ^^^^^^^^^^^^^^^^^^^^
 
 *Added*
