@@ -563,6 +563,7 @@ def test_rigid_nonparticipatory_zero_mass(small_snap, simulation_factory):
     )
 
     # run simulation
+    # velocities should all stay zero because there is no solvent to collide with
     sim.run(1)
     new_snap = sim.state.get_snapshot()
     if new_snap.communicator.rank == 0:
