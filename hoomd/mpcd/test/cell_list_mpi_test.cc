@@ -782,6 +782,17 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
     snap->mpcd_data.position[5] = scale(vec3<Scalar>(1.0, -1.0, 1.0), ref_box, box);
     snap->mpcd_data.position[6] = scale(vec3<Scalar>(-1.0, 1.0, 1.0), ref_box, box);
     snap->mpcd_data.position[7] = scale(vec3<Scalar>(1.0, 1.0, 1.0), ref_box, box);
+
+    // set velocities for the particles
+    snap->mpcd_data.velocity[0] = vec3<Scalar>(1.0, 0.0, 0.0);
+    snap->mpcd_data.velocity[1] = vec3<Scalar>(2.0, 0.0, 0.0);
+    snap->mpcd_data.velocity[2] = vec3<Scalar>(3.0, 0.0, 0.0);
+    snap->mpcd_data.velocity[3] = vec3<Scalar>(4.0, 0.0, 0.0);
+    snap->mpcd_data.velocity[4] = vec3<Scalar>(5.0, 0.0, 0.0);
+    snap->mpcd_data.velocity[5] = vec3<Scalar>(6.0, 0.0, 0.0);
+    snap->mpcd_data.velocity[6] = vec3<Scalar>(7.0, 0.0, 0.0);
+    snap->mpcd_data.velocity[7] = vec3<Scalar>(8.0, 0.0, 0.0);
+
     std::vector<Scalar> fx {0.5};
     std::vector<Scalar> fy {0.45};
     std::vector<Scalar> fz {0.55};
@@ -881,6 +892,9 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         ArrayHandle<Scalar4> h_mpcd_ghost_vel(cl->getMPCDGhostVelocities(),
                                               access_location::host,
                                               access_mode::read);
+        ArrayHandle<double4> h_cell_vel(cl->getCellVelocities(),
+                                        access_location::host,
+                                        access_mode::read);
         unsigned int num_ghosts = cl->getNGhosts();
 
         std::array<int3, 8> cells_with_particles = {make_int3(2, 2, 2),
@@ -898,6 +912,7 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
                 {
                 const unsigned int local_cell = make_local_cell(cl, cell.x, cell.y, cell.z);
                 UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 1);
+                UP_ASSERT_CLOSE(h_cell_vel.data[local_cell].x, i + 1.0, tol);
                 if (num_ghosts)
                     {
                     // if there are ghosts, either the ghost or the local particle should be in the
@@ -929,6 +944,9 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         ArrayHandle<Scalar4> h_mpcd_ghost_vel(cl->getMPCDGhostVelocities(),
                                               access_location::host,
                                               access_mode::read);
+        ArrayHandle<double4> h_cell_vel(cl->getCellVelocities(),
+                                        access_location::host,
+                                        access_mode::read);
         unsigned int num_ghosts = cl->getNGhosts();
         std::array<int3, 8> cells_with_particles = {make_int3(1, 1, 1),
                                                     make_int3(2, 1, 1),
@@ -945,6 +963,7 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
                 {
                 const unsigned int local_cell = make_local_cell(cl, cell.x, cell.y, cell.z);
                 UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 1);
+                UP_ASSERT_CLOSE(h_cell_vel.data[local_cell].x, i + 1.0, tol);
                 if (num_ghosts)
                     {
                     // if there are ghosts, either the ghost or the local particle should be in the
@@ -963,6 +982,130 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
                     UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), int(local_cell));
                     }
                 }
+            }
+        }
+
+    // test a single rank sending multiple particles at once that are just outside
+    // the box of that rank
+    cl->setGridShift(make_scalar3(0, 0, 0));
+        // migrate particles so they are all in the same rank
+        {
+        ArrayHandle<Scalar4> h_pos(pdata->getPositions(),
+                                   access_location::host,
+                                   access_mode::overwrite);
+        h_pos.data[0] = make_scalar4(1, -2, -1, __int_as_scalar(0));
+        }
+    // force a migration to ensure particles are in sensible ranks
+#ifdef ENABLE_HIP
+    auto mpcd_comm = std::shared_ptr<mpcd::CommunicatorGPU>(new mpcd::CommunicatorGPU(sysdef, 1));
+#else
+    auto mpcd_comm = std::shared_ptr<mpcd::Communicator>(new mpcd::Communicator(sysdef));
+#endif // ENABLE_HIP
+    mpcd_comm->setCellList(cl);
+    mpcd_comm->migrateParticles(2);
+    mpcd_comm->migrateParticles(3);
+
+        // update positions of particles again
+        {
+        ArrayHandle<Scalar4> h_pos(pdata->getPositions(),
+                                   access_location::host,
+                                   access_mode::overwrite);
+        ArrayHandle<Scalar4> h_vel(pdata->getVelocities(),
+                                   access_location::host,
+                                   access_mode::overwrite);
+        if (my_rank == 1)
+            {
+            UP_ASSERT_EQUAL(pdata->getN(), 8);
+
+            h_pos.data[0] = scale(make_scalar4(1.324, 0.1745, -0.845, __int_as_scalar(0)),
+                                  ref_box,
+                                  box); // to rank 3
+            h_pos.data[1] = scale(make_scalar4(2.024, 0.199, -1.279, __int_as_scalar(0)),
+                                  ref_box,
+                                  box); // to rank 3
+            h_pos.data[2] = scale(make_scalar4(1.0635, -1.646, 1.1735, __int_as_scalar(0)),
+                                  ref_box,
+                                  box); // to rank 5
+            h_pos.data[3] = scale(make_scalar4(2.169, 0.109, -0.378, __int_as_scalar(0)),
+                                  ref_box,
+                                  box); // to rank 3
+            h_pos.data[4] = scale(make_scalar4(-0.0925, 0.07, -1.768, __int_as_scalar(0)),
+                                  ref_box,
+                                  box); // to rank 2
+            h_pos.data[5] = scale(make_scalar4(2.2145, -1.4845, 1.199, __int_as_scalar(0)),
+                                  ref_box,
+                                  box); // to rank 5
+            h_pos.data[6] = scale(make_scalar4(-1.1775, -1.4945, -2.068, __int_as_scalar(0)),
+                                  ref_box,
+                                  box); // to rank 0
+            h_pos.data[7] = scale(make_scalar4(1.219, -2.489, 1.0245, __int_as_scalar(0)),
+                                  ref_box,
+                                  box); // to rank 5
+
+            h_vel.data[0] = make_scalar4(1, 0, 0, __int_as_scalar(0));
+            h_vel.data[1] = make_scalar4(2, 0, 0, __int_as_scalar(0));
+            h_vel.data[2] = make_scalar4(3, 0, 0, __int_as_scalar(0));
+            h_vel.data[3] = make_scalar4(4, 0, 0, __int_as_scalar(0));
+            h_vel.data[4] = make_scalar4(5, 0, 0, __int_as_scalar(0));
+            h_vel.data[5] = make_scalar4(6, 0, 0, __int_as_scalar(0));
+            h_vel.data[6] = make_scalar4(7, 0, 0, __int_as_scalar(0));
+            h_vel.data[7] = make_scalar4(8, 0, 0, __int_as_scalar(0));
+            }
+        else
+            {
+            UP_ASSERT_EQUAL(pdata->getN(), 0);
+            }
+        }
+    cl->compute(3);
+        {
+        ArrayHandle<unsigned int> h_cell_np(cl->getCellSizeArray(),
+                                            access_location::host,
+                                            access_mode::read);
+        ArrayHandle<double4> h_cell_vel(cl->getCellVelocities(),
+                                        access_location::host,
+                                        access_mode::read);
+        unsigned int num_ghosts = cl->getNGhosts();
+
+        if (my_rank == 0)
+            {
+            UP_ASSERT_EQUAL(num_ghosts, 1);
+            unsigned int local_cell = make_local_cell(cl, 1, 1, 0);
+            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 1);
+            UP_ASSERT_CLOSE(h_cell_vel.data[local_cell].x, Scalar(7), tol);
+            }
+        else if (my_rank == 2)
+            {
+            UP_ASSERT_EQUAL(num_ghosts, 1);
+            unsigned int local_cell = make_local_cell(cl, 2, 2, 0);
+            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 1);
+            UP_ASSERT_CLOSE(h_cell_vel.data[local_cell].x, Scalar(5), tol);
+            }
+        else if (my_rank == 3)
+            {
+            UP_ASSERT_EQUAL(num_ghosts, 3);
+            unsigned int local_cell = make_local_cell(cl, 3, 2, 1);
+            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 1);
+            UP_ASSERT_CLOSE(h_cell_vel.data[local_cell].x, Scalar(1), tol);
+            local_cell = make_local_cell(cl, 2, 3, 1);
+            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 1);
+            UP_ASSERT_CLOSE(h_cell_vel.data[local_cell].x, Scalar(2), tol);
+            local_cell = make_local_cell(cl, 4, 2, 2);
+            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 1);
+            UP_ASSERT_CLOSE(h_cell_vel.data[local_cell].x, Scalar(4), tol);
+            }
+        else if (my_rank == 5)
+            {
+            UP_ASSERT_EQUAL(num_ghosts, 3);
+            unsigned int local_cell = make_local_cell(cl, 3, 0, 3);
+            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 2);
+            UP_ASSERT_CLOSE(h_cell_vel.data[local_cell].x, Scalar(5.5), tol);
+            local_cell = make_local_cell(cl, 4, 1, 3);
+            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 1);
+            UP_ASSERT_CLOSE(h_cell_vel.data[local_cell].x, Scalar(6), tol);
+            }
+        else
+            {
+            UP_ASSERT_EQUAL(num_ghosts, 0);
             }
         }
     }

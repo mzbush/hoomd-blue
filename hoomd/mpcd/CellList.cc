@@ -690,6 +690,7 @@ void mpcd::CellList::buildCellList()
                 // rank of neighbor processor
                 unsigned int neighbor_map = m_adj_mask[ineigh];
                 unsigned int neighbor = m_neigh_rank_map[neighbor_map];
+
                 // exchange particle data
                 if (m_num_mpcd_send_ptls[ineigh])
                     {
@@ -985,13 +986,18 @@ void mpcd::CellList::initializeCommunicationSetup()
 
                     unsigned int neighbor = h_cart_ranks.data[di(i, j, k)];
                     m_neigh_rank_map.insert({mask, neighbor});
-                    m_adj_mask_map.insert({mask, num_neigh});
                     m_adj_mask.insert(m_adj_mask.end(), mask);
                     num_neigh++;
                     }
                 }
             }
         m_num_unique_neigh = num_neigh;
+        // sort neighbors according to how masks will be sorted
+        sort(m_adj_mask.begin(), m_adj_mask.end(), std::greater<uint>());
+        for (unsigned int i = 0; i < m_adj_mask.size(); i++)
+            {
+            m_adj_mask_map.insert({m_adj_mask[i], i});
+            }
         // reserve per neighbor memory
         m_num_mpcd_send_ptls.resize(m_num_unique_neigh);
         m_num_mpcd_recv_ptls.resize(m_num_unique_neigh);
