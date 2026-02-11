@@ -589,7 +589,7 @@ void mpcd::CellList::buildCellList()
         {
         std::fill(m_num_mpcd_send_ptls.begin(), m_num_mpcd_send_ptls.end(), 0);
         std::fill(m_num_mpcd_recv_ptls.begin(), m_num_mpcd_recv_ptls.end(), 0);
-        std::fill(m_mpcd_offsets.begin(), m_mpcd_offsets.end(), 0);
+        std::fill(m_mpcd_recv_offsets.begin(), m_mpcd_recv_offsets.end(), 0);
         m_mpcd_vel_sendbuf.resize(num_ghosts_send);
         if (num_ghosts_send)
             {
@@ -666,7 +666,7 @@ void mpcd::CellList::buildCellList()
             // sum up receive counts
             for (unsigned int ineigh = 0; ineigh < m_num_unique_neigh; ++ineigh)
                 {
-                m_mpcd_offsets[ineigh] = num_recv_tot;
+                m_mpcd_recv_offsets[ineigh] = num_recv_tot;
                 num_recv_tot += m_num_mpcd_recv_ptls[ineigh];
                 }
             m_num_mpcd_ghosts_recv = num_recv_tot;
@@ -706,7 +706,7 @@ void mpcd::CellList::buildCellList()
 
                 if (m_num_mpcd_recv_ptls[ineigh])
                     {
-                    MPI_Irecv(h_mpcd_ghost_vel.data + m_mpcd_offsets[ineigh],
+                    MPI_Irecv(h_mpcd_ghost_vel.data + m_mpcd_recv_offsets[ineigh],
                               int(m_num_mpcd_recv_ptls[ineigh] * sizeof(Scalar4)),
                               MPI_BYTE,
                               neighbor,
@@ -995,7 +995,7 @@ void mpcd::CellList::initializeCommunicationSetup()
         // reserve per neighbor memory
         m_num_mpcd_send_ptls.resize(m_num_unique_neigh);
         m_num_mpcd_recv_ptls.resize(m_num_unique_neigh);
-        m_mpcd_offsets.resize(m_num_unique_neigh);
+        m_mpcd_recv_offsets.resize(m_num_unique_neigh);
         }
     }
 
@@ -1061,7 +1061,7 @@ void mpcd::CellList::communicateGhosts()
         // exchange particle data
         if (m_num_mpcd_recv_ptls[ineigh])
             {
-            MPI_Isend(h_mpcd_ghost_vel.data + m_mpcd_offsets[ineigh],
+            MPI_Isend(h_mpcd_ghost_vel.data + m_mpcd_recv_offsets[ineigh],
                       int(m_num_mpcd_recv_ptls[ineigh] * sizeof(Scalar4)),
                       MPI_BYTE,
                       neighbor,

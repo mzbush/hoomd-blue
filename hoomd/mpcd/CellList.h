@@ -371,11 +371,11 @@ class PYBIND11_EXPORT CellList : public Compute
 
     std::vector<unsigned int> m_num_mpcd_send_ptls; //!< Number of MPCD particles sent per neighbor
     std::vector<unsigned int>
-        m_num_mpcd_recv_ptls;                 //!< Number of MPCD particles received per neighbor
-    std::vector<unsigned int> m_mpcd_offsets; //!< Offsets for MPCD particle send buffers
-    std::vector<unsigned int> m_unique_neighbors;        //!< Neighbor ranks
-    std::vector<unsigned int> m_adj_mask;                //!< Adjacency mask for every neighbor
-    unsigned int m_num_unique_neigh;                     //!< Number of unique neighbors
+        m_num_mpcd_recv_ptls; //!< Number of MPCD particles received per neighbor
+    std::vector<unsigned int> m_mpcd_recv_offsets; //!< Offsets for MPCD particle receive buffers
+    std::vector<unsigned int> m_unique_neighbors;  //!< Neighbor ranks
+    std::vector<unsigned int> m_adj_mask;          //!< Adjacency mask for every neighbor
+    unsigned int m_num_unique_neigh;               //!< Number of unique neighbors
     std::map<unsigned int, unsigned int> m_adj_mask_map; //!< Mapping of adj mask to number counting
     std::map<unsigned int, unsigned int> m_neigh_rank_map; //!< Mapping of neighbors to MPI rank
 
