@@ -984,6 +984,82 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
                 }
             }
         }
+
+        // test particles if at the edge of periodic boundaries
+        {
+        ArrayHandle<Scalar4> h_pos(pdata->getPositions(),
+                                   access_location::host,
+                                   access_mode::overwrite);
+        switch (my_rank)
+            {
+        case 0:
+            h_pos.data[0]
+                = scale(make_scalar4(-2.45, -2.45, -2.45, __int_as_scalar(0)), ref_box, box);
+            break;
+        case 1:
+            h_pos.data[0]
+                = scale(make_scalar4(2.45, -2.45, -2.45, __int_as_scalar(0)), ref_box, box);
+            break;
+        case 2:
+            h_pos.data[0]
+                = scale(make_scalar4(-2.45, 2.45, -2.45, __int_as_scalar(0)), ref_box, box);
+            break;
+        case 3:
+            h_pos.data[0]
+                = scale(make_scalar4(2.45, 2.45, -2.45, __int_as_scalar(0)), ref_box, box);
+            break;
+        case 4:
+            h_pos.data[0]
+                = scale(make_scalar4(-2.45, -2.45, 2.45, __int_as_scalar(0)), ref_box, box);
+            break;
+        case 5:
+            h_pos.data[0]
+                = scale(make_scalar4(2.45, -2.45, 2.45, __int_as_scalar(0)), ref_box, box);
+            break;
+        case 6:
+            h_pos.data[0]
+                = scale(make_scalar4(-2.45, 2.45, 2.45, __int_as_scalar(0)), ref_box, box);
+            break;
+        case 7:
+            h_pos.data[0] = scale(make_scalar4(2.45, 2.45, 2.45, __int_as_scalar(0)), ref_box, box);
+            break;
+            };
+        }
+    cl->setGridShift(make_scalar3(0.02, -0.02, 0.02));
+    cl->compute(4);
+        {
+        ArrayHandle<unsigned int> h_cell_np(cl->getCellSizeArray(),
+                                            access_location::host,
+                                            access_mode::read);
+        ArrayHandle<Scalar4> h_vel(pdata->getVelocities(),
+                                   access_location::host,
+                                   access_mode::read);
+        ArrayHandle<Scalar4> h_mpcd_ghost_vel(cl->getMPCDGhostVelocities(),
+                                              access_location::host,
+                                              access_mode::read);
+        ArrayHandle<double4> h_cell_vel(cl->getCellVelocities(),
+                                        access_location::host,
+                                        access_mode::read);
+
+        unsigned int num_ghosts = cl->getNGhosts();
+        const int3 cell = make_int3((int)L.x - 1, 0, (int)L.z - 1);
+        if (cl->hasGlobalCell(cell))
+            {
+            const unsigned int local_cell = make_local_cell(cl, cell.x, cell.y, cell.z);
+
+            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 8);
+            UP_ASSERT_EQUAL(num_ghosts, 7);
+            UP_ASSERT_CLOSE(h_cell_vel.data[local_cell].x, 4.5, tol);
+
+            // check that all the particles are in this cell
+            unsigned int particle_in_cell = __scalar_as_int(h_vel.data[0].w) == int(local_cell);
+            for (unsigned int j = 0; j < num_ghosts; j++)
+                {
+                particle_in_cell += __scalar_as_int(h_mpcd_ghost_vel.data[j].w) == int(local_cell);
+                }
+            UP_ASSERT_EQUAL(particle_in_cell, 8);
+            }
+        }
     }
 
 //! Test that the updated velocities are correctly assigned back to particles

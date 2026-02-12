@@ -393,10 +393,15 @@ void mpcd::CellList::buildCellList()
     unsigned int num_ghosts_send = 0;
     // allocate the the number of ranks in each dimension
     uint3 rank_size = make_uint3(0, 0, 0);
+    std::array<bool, 6> periodic_dir = {0, 0, 0, 0, 0, 0};
     if (m_decomposition)
         {
         Index3D di = m_decomposition->getDomainIndexer();
         rank_size = make_uint3(di.getW(), di.getH(), di.getD());
+        for (unsigned int i = 0; i < 6; i++)
+            {
+            periodic_dir[i] = m_decomposition->isAtBoundary(i);
+            }
         }
 
 #endif // ENABLE_MPI
@@ -461,8 +466,7 @@ void mpcd::CellList::buildCellList()
                                     (int)std::floor(fractional_pos_i.z * m_global_cell_dim.z));
 
         // wrap cell back through the boundaries (grid shifting may send +/- 1 outside of range)
-        // this is done using periodic from the "local" box, since this will be periodic
-        // only when there is one rank along the dimension
+        // this is done using periodic from the local box
         if (periodic.x)
             {
             if (global_bin.x == (int)n_global_cells.x)
@@ -484,6 +488,28 @@ void mpcd::CellList::buildCellList()
             else if (global_bin.z == -1)
                 global_bin.z = n_global_cells.z - 1;
             }
+
+        // account for periodic boundaries with domain decomposition
+#ifdef ENABLE_MPI
+        if (m_decomposition)
+            {
+            if (global_bin.x == (int)n_global_cells.x && periodic_dir[0])
+                global_bin.x = 0;
+            else if (global_bin.x == -1 && periodic_dir[1])
+                global_bin.x = n_global_cells.x - 1;
+
+            if (global_bin.y == (int)n_global_cells.y && periodic_dir[2])
+                global_bin.y = 0;
+            else if (global_bin.y == -1 && periodic_dir[3])
+                global_bin.y = n_global_cells.y - 1;
+
+            if (global_bin.z == (int)n_global_cells.z && periodic_dir[4])
+                global_bin.z = 0;
+            else if (global_bin.z == -1 && periodic_dir[5])
+                global_bin.z = n_global_cells.z - 1;
+            }
+
+#endif // ENABLE_MPI
 
         // validate and make sure no particles blew out of the box
         if ((global_bin.x < 0 || global_bin.x >= (int)n_global_cells.x)
