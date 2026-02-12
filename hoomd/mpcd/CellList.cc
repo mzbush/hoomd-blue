@@ -757,7 +757,7 @@ void mpcd::CellList::buildCellList()
                 const Scalar4 vel_mass_i = h_mpcd_ghost_vel.data[cur_p];
                 const double3 vel_i = make_double3(vel_mass_i.x, vel_mass_i.y, vel_mass_i.z);
                 unsigned int global_bin_index = __scalar_as_int(vel_mass_i.w);
-                global_bin_index &= ~((unsigned int)0b0111 << (sizeof(global_bin_index) * 8 - 1));
+                global_bin_index &= ~((unsigned int)0b0001 << (sizeof(global_bin_index) * 8 - 1));
                 // turn global bin index back into global bin
                 int3 global_bin = make_int3(0, 0, 0);
                 global_bin.x = global_bin_index % m_global_cell_dim.x;
