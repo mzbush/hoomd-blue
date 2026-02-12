@@ -648,13 +648,13 @@ void celllist_basic_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
             UP_ASSERT_EQUAL(num_ghosts, 8);
             UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(0, 0, 0));
 
-            CHECK_CLOSE(h_cell_vel.data[ci(0, 0, 0)].x, 0.111111, tol);
-            CHECK_CLOSE(h_cell_vel.data[ci(0, 0, 0)].y, 0.111111, tol);
-            CHECK_CLOSE(h_cell_vel.data[ci(0, 0, 0)].z, 0.111111, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 0, 0)].x, Scalar(1. / 9.), tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 0, 0)].y, Scalar(1. / 9.), tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(0, 0, 0)].z, Scalar(1. / 9.), tol);
             CHECK_CLOSE(h_cell_vel.data[ci(0, 0, 0)].w, 9, tol);
 
             CHECK_CLOSE(h_cell_energy.data[ci(0, 0, 0)], 13.5, tol);
-            CHECK_CLOSE(h_cell_temp.data[ci(0, 0, 0)], 1.111111, tol);
+            CHECK_CLOSE(h_cell_temp.data[ci(0, 0, 0)], Scalar(10. / 9.), tol);
             }
         else
             {
@@ -708,13 +708,13 @@ void celllist_basic_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
             UP_ASSERT_EQUAL(num_ghosts, 7);
             UP_ASSERT_EQUAL(__scalar_as_int(h_vel.data[0].w), ci(2, 2, 2));
 
-            CHECK_CLOSE(h_cell_vel.data[ci(2, 2, 2)].x, 0.111111, tol);
-            CHECK_CLOSE(h_cell_vel.data[ci(2, 2, 2)].y, 0.111111, tol);
-            CHECK_CLOSE(h_cell_vel.data[ci(2, 2, 2)].z, 0.111111, tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 2, 2)].x, Scalar(1. / 9.), tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 2, 2)].y, Scalar(1. / 9.), tol);
+            CHECK_CLOSE(h_cell_vel.data[ci(2, 2, 2)].z, Scalar(1. / 9.), tol);
             CHECK_CLOSE(h_cell_vel.data[ci(2, 2, 2)].w, 9, tol);
 
             CHECK_CLOSE(h_cell_energy.data[ci(2, 2, 2)], 13.5, tol);
-            CHECK_CLOSE(h_cell_temp.data[ci(2, 2, 2)], 1.111111, tol);
+            CHECK_CLOSE(h_cell_temp.data[ci(2, 2, 2)], Scalar(10. / 9.), tol);
             }
         else
             {
@@ -740,7 +740,7 @@ void celllist_basic_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
     CHECK_CLOSE(cl->getNetMomentum().y, 1.0, tol);
     CHECK_CLOSE(cl->getNetMomentum().z, 1.0, tol);
     CHECK_CLOSE(cl->getNetEnergy(), 13.5, tol);
-    CHECK_CLOSE(cl->getTemperature(), 1.111111, tol);
+    CHECK_CLOSE(cl->getTemperature(), Scalar(10. / 9.), tol);
     }
 
 //! Test for correct cell listing of a system with particles on the edges
