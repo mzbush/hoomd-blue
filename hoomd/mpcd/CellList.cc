@@ -358,6 +358,7 @@ bool mpcd::CellList::isCommunicating(mpcd::detail::face dir)
 void mpcd::CellList::buildCellList()
     {
     const BoxDim& box = m_pdata->getBox();
+    const BoxDim& global_box = m_pdata->getGlobalBox();
     const uchar3 periodic = box.getPeriodic();
 
     // zero the cell counter
@@ -428,11 +429,6 @@ void mpcd::CellList::buildCellList()
         N_tot += m_embed_group->getNumMembers();
         }
 
-    // total effective number of cells in the global box
-    uint3 n_global_cells = m_global_cell_dim;
-
-    const BoxDim& global_box = m_pdata->getGlobalBox();
-
     for (unsigned int cur_p = 0; cur_p < N_tot; ++cur_p)
         {
         Scalar4 postype_i;
@@ -469,52 +465,52 @@ void mpcd::CellList::buildCellList()
         // this is done using periodic from the local box
         if (periodic.x)
             {
-            if (global_bin.x == (int)n_global_cells.x)
+            if (global_bin.x == (int)m_global_cell_dim.x)
                 global_bin.x = 0;
             else if (global_bin.x == -1)
-                global_bin.x = n_global_cells.x - 1;
+                global_bin.x = m_global_cell_dim.x - 1;
             }
         if (periodic.y)
             {
-            if (global_bin.y == (int)n_global_cells.y)
+            if (global_bin.y == (int)m_global_cell_dim.y)
                 global_bin.y = 0;
             else if (global_bin.y == -1)
-                global_bin.y = n_global_cells.y - 1;
+                global_bin.y = m_global_cell_dim.y - 1;
             }
         if (periodic.z)
             {
-            if (global_bin.z == (int)n_global_cells.z)
+            if (global_bin.z == (int)m_global_cell_dim.z)
                 global_bin.z = 0;
             else if (global_bin.z == -1)
-                global_bin.z = n_global_cells.z - 1;
+                global_bin.z = m_global_cell_dim.z - 1;
             }
 
         // account for periodic boundaries with domain decomposition
 #ifdef ENABLE_MPI
         if (m_decomposition)
             {
-            if (global_bin.x == (int)n_global_cells.x && periodic_dir[0])
+            if (global_bin.x == (int)m_global_cell_dim.x && periodic_dir[0])
                 global_bin.x = 0;
             else if (global_bin.x == -1 && periodic_dir[1])
-                global_bin.x = n_global_cells.x - 1;
+                global_bin.x = m_global_cell_dim.x - 1;
 
-            if (global_bin.y == (int)n_global_cells.y && periodic_dir[2])
+            if (global_bin.y == (int)m_global_cell_dim.y && periodic_dir[2])
                 global_bin.y = 0;
             else if (global_bin.y == -1 && periodic_dir[3])
-                global_bin.y = n_global_cells.y - 1;
+                global_bin.y = m_global_cell_dim.y - 1;
 
-            if (global_bin.z == (int)n_global_cells.z && periodic_dir[4])
+            if (global_bin.z == (int)m_global_cell_dim.z && periodic_dir[4])
                 global_bin.z = 0;
             else if (global_bin.z == -1 && periodic_dir[5])
-                global_bin.z = n_global_cells.z - 1;
+                global_bin.z = m_global_cell_dim.z - 1;
             }
 
 #endif // ENABLE_MPI
 
         // validate and make sure no particles blew out of the box
-        if ((global_bin.x < 0 || global_bin.x >= (int)n_global_cells.x)
-            || (global_bin.y < 0 || global_bin.y >= (int)n_global_cells.y)
-            || (global_bin.z < 0 || global_bin.z >= (int)n_global_cells.z))
+        if ((global_bin.x < 0 || global_bin.x >= (int)m_global_cell_dim.x)
+            || (global_bin.y < 0 || global_bin.y >= (int)m_global_cell_dim.y)
+            || (global_bin.z < 0 || global_bin.z >= (int)m_global_cell_dim.z))
             {
             conditions.z = cur_p + 1;
             continue;
