@@ -1015,7 +1015,7 @@ void celllist_back_communication_test(std::shared_ptr<ExecutionConfiguration> ex
      * 6: - + +
      * 7: + + +
      */
-    snap->mpcd_data.resize(8);
+    snap->mpcd_data.resize(16);
     snap->mpcd_data.type_mapping.push_back("A");
     snap->mpcd_data.position[0] = scale(vec3<Scalar>(1.0, -1.0, -1.0), ref_box, box);
     snap->mpcd_data.position[1] = scale(vec3<Scalar>(1.0, -1.0, -1.0), ref_box, box);
@@ -1026,6 +1026,15 @@ void celllist_back_communication_test(std::shared_ptr<ExecutionConfiguration> ex
     snap->mpcd_data.position[6] = scale(vec3<Scalar>(1.0, -1.0, -1.0), ref_box, box);
     snap->mpcd_data.position[7] = scale(vec3<Scalar>(1.0, -1.0, -1.0), ref_box, box);
 
+    snap->mpcd_data.position[8] = scale(vec3<Scalar>(-1.0, -1.0, 1.0), ref_box, box);
+    snap->mpcd_data.position[9] = scale(vec3<Scalar>(-1.0, -1.0, 1.0), ref_box, box);
+    snap->mpcd_data.position[10] = scale(vec3<Scalar>(-1.0, -1.0, 1.0), ref_box, box);
+    snap->mpcd_data.position[11] = scale(vec3<Scalar>(-1.0, -1.0, 1.0), ref_box, box);
+    snap->mpcd_data.position[12] = scale(vec3<Scalar>(-1.0, -1.0, 1.0), ref_box, box);
+    snap->mpcd_data.position[13] = scale(vec3<Scalar>(-1.0, -1.0, 1.0), ref_box, box);
+    snap->mpcd_data.position[14] = scale(vec3<Scalar>(-1.0, -1.0, 1.0), ref_box, box);
+    snap->mpcd_data.position[15] = scale(vec3<Scalar>(-1.0, -1.0, 1.0), ref_box, box);
+
     // set velocities for the particles
     snap->mpcd_data.velocity[0] = vec3<Scalar>(1.0, 0.0, 0.0);
     snap->mpcd_data.velocity[1] = vec3<Scalar>(2.5, 0.0, 0.0);
@@ -1035,6 +1044,15 @@ void celllist_back_communication_test(std::shared_ptr<ExecutionConfiguration> ex
     snap->mpcd_data.velocity[5] = vec3<Scalar>(8.5, 0.0, 0.0);
     snap->mpcd_data.velocity[6] = vec3<Scalar>(10.0, 0.0, 0.0);
     snap->mpcd_data.velocity[7] = vec3<Scalar>(11.5, 0.0, 0.0);
+
+    snap->mpcd_data.velocity[8] = vec3<Scalar>(1.0, 0.0, 1.0);
+    snap->mpcd_data.velocity[9] = vec3<Scalar>(2.5, 0.0, 1.0);
+    snap->mpcd_data.velocity[10] = vec3<Scalar>(4.0, 0.0, 1.0);
+    snap->mpcd_data.velocity[11] = vec3<Scalar>(5.5, 0.0, 1.0);
+    snap->mpcd_data.velocity[12] = vec3<Scalar>(7.0, 0.0, 1.0);
+    snap->mpcd_data.velocity[13] = vec3<Scalar>(8.5, 0.0, 1.0);
+    snap->mpcd_data.velocity[14] = vec3<Scalar>(10.0, 0.0, 1.0);
+    snap->mpcd_data.velocity[15] = vec3<Scalar>(11.5, 0.0, 1.0);
 
     std::vector<Scalar> fx {0.5};
     std::vector<Scalar> fy {0.45};
@@ -1055,7 +1073,7 @@ void celllist_back_communication_test(std::shared_ptr<ExecutionConfiguration> ex
         ArrayHandle<Scalar4> h_pos(pdata->getPositions(),
                                    access_location::host,
                                    access_mode::overwrite);
-        if (my_rank == 1)
+        if (my_rank == 1 || my_rank == 4)
             {
             UP_ASSERT_EQUAL(pdata->getN(), 8);
 
@@ -1103,39 +1121,39 @@ void celllist_back_communication_test(std::shared_ptr<ExecutionConfiguration> ex
 
         if (my_rank == 0)
             {
-            UP_ASSERT_EQUAL(num_ghosts, 1);
+            UP_ASSERT_EQUAL(num_ghosts, 2);
             unsigned int local_cell = make_local_cell(cl, 1, 1, 0);
-            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 1);
+            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 2);
             UP_ASSERT_CLOSE(h_cell_vel.data[local_cell].x, Scalar(10), tol);
             }
         else if (my_rank == 2)
             {
-            UP_ASSERT_EQUAL(num_ghosts, 1);
+            UP_ASSERT_EQUAL(num_ghosts, 2);
             unsigned int local_cell = make_local_cell(cl, 2, 2, 0);
-            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 1);
+            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 2);
             UP_ASSERT_CLOSE(h_cell_vel.data[local_cell].x, Scalar(7), tol);
             }
         else if (my_rank == 3)
             {
-            UP_ASSERT_EQUAL(num_ghosts, 3);
+            UP_ASSERT_EQUAL(num_ghosts, 6);
             unsigned int local_cell = make_local_cell(cl, 3, 2, 1);
-            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 1);
+            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 2);
             UP_ASSERT_CLOSE(h_cell_vel.data[local_cell].x, Scalar(1), tol);
             local_cell = make_local_cell(cl, 4, 2, 1);
-            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 1);
+            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 2);
             UP_ASSERT_CLOSE(h_cell_vel.data[local_cell].x, Scalar(2.5), tol);
             local_cell = make_local_cell(cl, 4, 2, 2);
-            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 1);
+            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 2);
             UP_ASSERT_CLOSE(h_cell_vel.data[local_cell].x, Scalar(5.5), tol);
             }
         else if (my_rank == 5)
             {
-            UP_ASSERT_EQUAL(num_ghosts, 3);
+            UP_ASSERT_EQUAL(num_ghosts, 6);
             unsigned int local_cell = make_local_cell(cl, 3, 0, 3);
-            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 2);
+            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 4);
             UP_ASSERT_CLOSE(h_cell_vel.data[local_cell].x, Scalar(7.75), tol);
             local_cell = make_local_cell(cl, 4, 1, 3);
-            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 1);
+            UP_ASSERT_EQUAL(h_cell_np.data[local_cell], 2);
             UP_ASSERT_CLOSE(h_cell_vel.data[local_cell].x, Scalar(8.5), tol);
             }
         else
@@ -1165,7 +1183,6 @@ void celllist_back_communication_test(std::shared_ptr<ExecutionConfiguration> ex
         ArrayHandle<Scalar4> h_vel(pdata->getVelocities(),
                                    access_location::host,
                                    access_mode::read);
-
         if (my_rank == 1)
             {
             UP_ASSERT_CLOSE(h_vel.data[0].x, Scalar(1), tol);
@@ -1185,6 +1202,36 @@ void celllist_back_communication_test(std::shared_ptr<ExecutionConfiguration> ex
             UP_ASSERT_CLOSE(h_vel.data[5].y, Scalar(-3.5), tol);
             UP_ASSERT_CLOSE(h_vel.data[6].y, Scalar(-10), tol);
             UP_ASSERT_CLOSE(h_vel.data[7].y, Scalar(-6.5), tol);
+
+            for (unsigned int i = 0; i < pdata->getN(); i++)
+                {
+                UP_ASSERT_CLOSE(h_vel.data[i].z, Scalar(0), tol);
+                }
+            }
+        else if (my_rank == 4)
+            {
+            UP_ASSERT_CLOSE(h_vel.data[0].x, Scalar(1), tol);
+            UP_ASSERT_CLOSE(h_vel.data[1].x, Scalar(2.5), tol);
+            UP_ASSERT_CLOSE(h_vel.data[2].x, Scalar(4), tol);
+            UP_ASSERT_CLOSE(h_vel.data[3].x, Scalar(5.5), tol);
+            UP_ASSERT_CLOSE(h_vel.data[4].x, Scalar(7), tol);
+            UP_ASSERT_CLOSE(h_vel.data[5].x, Scalar(8.5), tol);
+            UP_ASSERT_CLOSE(h_vel.data[6].x, Scalar(10), tol);
+            UP_ASSERT_CLOSE(h_vel.data[7].x, Scalar(11.5), tol);
+
+            UP_ASSERT_CLOSE(h_vel.data[0].y, Scalar(2), tol);
+            UP_ASSERT_CLOSE(h_vel.data[1].y, Scalar(0.5), tol);
+            UP_ASSERT_CLOSE(h_vel.data[2].y, Scalar(1), tol);
+            UP_ASSERT_CLOSE(h_vel.data[3].y, Scalar(-2.5), tol);
+            UP_ASSERT_CLOSE(h_vel.data[4].y, Scalar(-5), tol);
+            UP_ASSERT_CLOSE(h_vel.data[5].y, Scalar(-3.5), tol);
+            UP_ASSERT_CLOSE(h_vel.data[6].y, Scalar(-10), tol);
+            UP_ASSERT_CLOSE(h_vel.data[7].y, Scalar(-6.5), tol);
+
+            for (unsigned int i = 0; i < pdata->getN(); i++)
+                {
+                UP_ASSERT_CLOSE(h_vel.data[i].z, Scalar(1), tol);
+                }
             }
         }
     }
