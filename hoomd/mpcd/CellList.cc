@@ -385,20 +385,23 @@ void mpcd::CellList::buildCellList()
     unsigned int N_tot = N_mpcd;
 
 #ifdef ENABLE_MPI
-    // allocate space for communication flag
-    m_mpcd_comm_key.resize(N_mpcd);
-    m_mpcd_comm_key.zeroFill();
-    ArrayHandle<uint2> h_mpcd_comm_key(m_mpcd_comm_key,
-                                       access_location::host,
-                                       access_mode::readwrite);
-    unsigned int num_ghosts_send = 0;
-    // allocate the the number of ranks in each dimension
+    std::unique_ptr<ArrayHandle<uint2>> h_mpcd_comm_key;
     uint3 rank_size = make_uint3(0, 0, 0);
     std::array<bool, 6> periodic_dir = {0, 0, 0, 0, 0, 0};
+    unsigned int num_ghosts_send = 0;
     if (m_decomposition)
         {
+        // allocate space for communication flag
+        m_mpcd_comm_key.resize(N_mpcd);
+        m_mpcd_comm_key.zeroFill();
+        h_mpcd_comm_key.reset(
+            new ArrayHandle<uint2>(m_mpcd_comm_key, access_location::host, access_mode::readwrite));
+
+        // allocate the the number of ranks in each dimension
         Index3D di = m_decomposition->getDomainIndexer();
         rank_size = make_uint3(di.getW(), di.getH(), di.getD());
+        // set if a direction is on the periodic boundaries
+
         for (unsigned int i = 0; i < 6; i++)
             {
             periodic_dir[i] = m_decomposition->isAtBoundary(i);
@@ -562,7 +565,7 @@ void mpcd::CellList::buildCellList()
                 unsigned int dir = ((iz + 1) * 3 + (iy + 1)) * 3 + (ix + 1);
                 unsigned int mask = 1 << dir;
                 // mark particle to be sent to neighboring rank
-                h_mpcd_comm_key.data[cur_p] = make_uint2(mask, cur_p);
+                h_mpcd_comm_key->data[cur_p] = make_uint2(mask, cur_p);
                 num_ghosts_send = num_ghosts_send + 1;
                 // set the bin idx to be the global index
                 bin_idx = m_global_cell_indexer(global_bin.x, global_bin.y, global_bin.z);
@@ -616,8 +619,8 @@ void mpcd::CellList::buildCellList()
         if (num_ghosts_send)
             {
             // sort the ghost particles by direction
-            std::sort(h_mpcd_comm_key.data,
-                      h_mpcd_comm_key.data + N_mpcd,
+            std::sort(h_mpcd_comm_key->data,
+                      h_mpcd_comm_key->data + N_mpcd,
                       [](uint2& a, uint2& b) { return a.x > b.x; });
 
                 // add velocity to send buffers and count particle to send per rank
@@ -632,8 +635,8 @@ void mpcd::CellList::buildCellList()
                 unsigned int neigh_index;
                 for (unsigned int i = 0; i < num_ghosts_send; i++)
                     {
-                    const unsigned int comm_mask = h_mpcd_comm_key.data[i].x;
-                    const unsigned int particle_index = h_mpcd_comm_key.data[i].y;
+                    const unsigned int comm_mask = h_mpcd_comm_key->data[i].x;
+                    const unsigned int particle_index = h_mpcd_comm_key->data[i].y;
 
                     // add particle data to send buffers
                     const Scalar4 vel_mass = h_vel.data[particle_index];
