@@ -1108,7 +1108,7 @@ void mpcd::CellList::updateLocalFromGhosts()
         const double3 new_vel = make_double3(vel_i.x, vel_i.y, vel_i.z);
         const unsigned int idx = h_mpcd_comm_key.data[cur_p].y;
         const Scalar4 old_vel = h_vel.data[idx];
-        h_vel.data[cur_p] = make_scalar4(new_vel.x, new_vel.y, new_vel.z, old_vel.w);
+        h_vel.data[idx] = make_scalar4(new_vel.x, new_vel.y, new_vel.z, old_vel.w);
         }
     }
 #endif // ENABLE_MPI
