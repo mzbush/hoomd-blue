@@ -243,6 +243,7 @@ class Force(Compute):
         .. rubric:: Example:
 
         .. code-block::
+
                 with force.cpu_local_force_arrays as arrays:
                     arrays.force[:] = ...
                     arrays.potential_energy[:] = ...
