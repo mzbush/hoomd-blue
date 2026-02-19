@@ -21,6 +21,7 @@ from hoomd.operation import Writer
 import numpy as np
 import json
 import inspect
+import weakref
 
 
 def _array_to_strings(value):
@@ -371,6 +372,7 @@ class GSD(Writer):
         )
 
         self._cpp_obj.log_writer = self.logger
+        self._finalizer = weakref.finalize(self, self.flush)
 
     @staticmethod
     def write(state, filename, filter=All(), mode="wb", logger=None):
@@ -435,13 +437,8 @@ class GSD(Writer):
 
             gsd.flush()
         """
-        if not self._attached:
-            raise RuntimeError(
-                "The GSD file is unavailable until the"
-                "simulation runs for 0 or more steps."
-            )
-
-        self._cpp_obj.flush()
+        if self._attached:
+            self._cpp_obj.flush()
 
 
 def _iterable_is_incomplete(iterable):
