@@ -240,15 +240,23 @@ class Integrator(_DynamicIntegrator):
 
     - `hoomd.md.constrain`
 
-    Examples::
+    .. rubric:: Example:
 
-        nlist = hoomd.md.nlist.Cell()
-        lj = hoomd.md.pair.LJ(nlist=nlist)
-        lj.params.default = dict(epsilon=1.0, sigma=1.0)
-        lj.r_cut[('A', 'A')] = 2**(1/6)
-        nve = hoomd.md.methods.NVE(filter=hoomd.filter.All())
-        integrator = hoomd.md.Integrator(dt=0.001, methods=[nve], forces=[lj])
-        sim.operations.integrator = integrator
+    .. code-block:: python
+
+            cell = hoomd.md.nlist.Cell(buffer=0.4)
+            lj = hoomd.md.pair.LJ(nlist=cell)
+            lj.params[('A', 'A')]  = dict(epsilon=1.0, sigma=1.0)
+            lj.r_cut[('A', 'A')] = 2.5
+            nve = hoomd.md.methods.ConstantVolume(
+                filter=hoomd.filter.All(),
+                thermostat=None,
+                )
+            integrator = hoomd.md.Integrator(dt=0.005,
+                                            methods=[nve],
+                                            forces=[lj],
+                                            )
+
 
     {inherited}
 
