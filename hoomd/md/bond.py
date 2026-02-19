@@ -84,7 +84,7 @@ class Harmonic(Bond):
 
     .. code-block:: python
 
-            harmonic = bond.Harmonic()
+            harmonic = hoomd.md.bond.Harmonic()
             harmonic.params["A-A"] = dict(k=3.0, r0=2.38)
             harmonic.params["A-B"] = dict(k=10.0, r0=1.0)
 
@@ -147,7 +147,7 @@ class FENEWCA(Bond):
 
     .. code-block:: python
 
-            fenewca = bond.FENEWCA()
+            fenewca = hoomd.md.bond.FENEWCA()
             fenewca.params['A-A'] = dict(k=3.0, r0=2.38, epsilon=1.0, sigma=1.0,
                                         delta=0.0)
             fenewca.params['A-B'] = dict(k=10.0, r0=1.0, epsilon=0.8, sigma=1.2,
@@ -346,7 +346,7 @@ class Tether(Bond):
 
     .. code-block:: python
 
-            bond_potential = bond.Tether()
+            bond_potential = hoomd.md.bond.Tether()
             bond_potential.params['A-A'] = dict(k_b=10.0, l_min=0.9, l_c1=1.2,
                                                 l_c0=1.8, l_max=2.1)
 

@@ -37,8 +37,8 @@ class ThermodynamicQuantities(Compute):
 
     .. code-block:: python
 
-            f = filter.Type("A")
-            compute.ThermodynamicQuantities(filter=f)
+            f = hoomd.filter.Type(["A"])
+            hoomd.md.compute.ThermodynamicQuantities(filter=f)
 
     {inherited}
 
@@ -348,8 +348,8 @@ class HarmonicAveragedThermodynamicQuantities(Compute):
 
     .. code-block:: python
 
-            hma = hoomd.compute.HarmonicAveragedThermodynamicQuantities(
-                filter=hoomd.filter.Type("A"), kT=1.0
+            hma = hoomd.md.compute.HarmonicAveragedThermodynamicQuantities(
+                filter=hoomd.filter.Type(["A"]), kT=1.0
             )
 
     {inherited}

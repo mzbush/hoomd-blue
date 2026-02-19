@@ -97,7 +97,7 @@ class Periodic(Dihedral):
 
     .. code-block:: python
 
-            harmonic = dihedral.Periodic()
+            harmonic = hoomd.md.dihedral.Periodic()
             harmonic.params["A-A-A-A"] = dict(k=3.0, d=-1, n=3, phi0=0)
             harmonic.params["A-B-C-D"] = dict(k=100.0, d=1, n=4, phi0=math.pi / 2)
 
@@ -229,7 +229,7 @@ class OPLS(Dihedral):
 
     .. code-block:: python
 
-            opls = dihedral.OPLS()
+            opls = hoomd.md.dihedral.OPLS()
             opls.params["A-A-A-A"] = dict(k1=1.0, k2=1.0, k3=1.0, k4=1.0)
 
     {inherited}

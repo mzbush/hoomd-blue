@@ -101,7 +101,7 @@ class LJ(SpecialPair):
 
     .. code-block:: python
 
-            lj = special_pair.LJ()
+            lj = hoomd.md.special_pair.LJ()
             lj.params['cluster'] = dict(epsilon=3, sigma=0.5)
             lj.r_cut['cluster'] = 5
 
@@ -168,7 +168,7 @@ class Coulomb(SpecialPair):
 
     .. code-block:: python
 
-            coulomb = special_pair.Coulomb()
+            coulomb = hoomd.md.special_pair.Coulomb()
             coulomb.params['cluster'] = dict(alpha=1.0)
             coulomb.r_cut['cluster'] = 2
 

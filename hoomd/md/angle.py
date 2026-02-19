@@ -87,7 +87,7 @@ class Harmonic(Angle):
 
     .. code-block:: python
 
-            harmonic = angle.Harmonic()
+            harmonic = hoomd.md.angle.Harmonic()
             harmonic.params["A-A-A"] = dict(k=3.0, t0=0.7851)
             harmonic.params["A-B-A"] = dict(k=100.0, t0=1.0)
 
@@ -136,7 +136,7 @@ class CosineSquared(Angle):
 
     .. code-block:: python
 
-            cosinesq = angle.CosineSquared()
+            cosinesq = hoomd.md.angle.CosineSquared()
             cosinesq.params["A-A-A"] = dict(k=3.0, t0=0.7851)
             cosinesq.params["A-B-A"] = dict(k=100.0, t0=1.0)
 

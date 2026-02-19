@@ -266,7 +266,7 @@ class NeighborList(Compute):
 
         .. rubric:: Example:
 
-        .. code-block:: python
+        .. code-block::
         
                 with self.cpu_local_nlist_arrays as arrays:
                     nlist_iter = zip(arrays.head_list, arrays.n_neigh)
@@ -306,7 +306,7 @@ class NeighborList(Compute):
 
         .. rubric:: Example:
 
-        .. code-block:: python
+        .. code-block::
 
                 get_local_pairs = cupy.RawKernel(r'''
                 extern "C" __global__
@@ -473,7 +473,7 @@ class Cell(NeighborList):
 
     .. code-block:: python
 
-            cell = nlist.Cell()
+            cell = hoomd.md.nlist.Cell(buffer=0.4)
 
     {inherited}
 
@@ -584,7 +584,7 @@ class Stencil(NeighborList):
 
     .. code-block:: python
 
-            nl_s = nlist.Stencil(cell_width=1.5)
+            nl_s = hoomd.md.nlist.Stencil(cell_width=1.5, buffer=0.4)
 
     Important:
         `M.P. Howard et al. 2016 <https://dx.doi.org/10.1016/j.cpc.2016.02.003>`_
@@ -682,7 +682,7 @@ class Tree(NeighborList):
 
     .. code-block:: python
 
-            nl_t = nlist.Tree(check_dist=False)
+            nl_t = hoomd.md.nlist.Tree(buffer=0.4)
     """
 
     __doc__ = (

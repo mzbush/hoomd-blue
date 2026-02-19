@@ -242,8 +242,8 @@ class Force(Compute):
 
         .. rubric:: Example:
 
-        .. code-block:: python
-                with self.cpu_local_force_arrays as arrays:
+        .. code-block::
+                with force.cpu_local_force_arrays as arrays:
                     arrays.force[:] = ...
                     arrays.potential_energy[:] = ...
                     arrays.torque[:] = ...
@@ -276,9 +276,9 @@ class Force(Compute):
 
         .. rubric:: Example:
 
-        .. code-block:: python
+        .. code-block::
 
-                with self.gpu_local_force_arrays as arrays:
+                with force.gpu_local_force_arrays as arrays:
                     arrays.force[:] = ...
                     arrays.potential_energy[:] = ...
                     arrays.torque[:] = ...
@@ -439,9 +439,9 @@ class Active(Force):
             active.active_force["A", "B"] = (1, 0, 0)
             active.active_torque["A", "B"] = (0, 0, 0)
             rotational_diffusion_updater = active.create_diffusion_updater(
-                trigger=10
+                trigger=10,
+                rotational_diffusion=0.1,
             )
-            sim.operations += rotational_diffusion_updater
 
     Note:
         The energy and virial associated with the active force are 0.
@@ -566,11 +566,10 @@ class ActiveOnManifold(Active):
 
     .. code-block:: python
 
-            all = filter.All()
+            all = hoomd.filter.All()
             sphere = hoomd.md.manifold.Sphere(r=10)
             active = hoomd.md.force.ActiveOnManifold(
                 filter=hoomd.filter.All(),
-                rotation_diff=0.01,
                 manifold_constraint=sphere,
             )
             active.active_force["A", "B"] = (1, 0, 0)
