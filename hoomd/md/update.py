@@ -47,7 +47,7 @@ class ZeroMomentum(Updater):
     .. rubric:: Example:
 
     .. code-block:: python
-    
+
             zero_momentum = hoomd.md.update.ZeroMomentum(
                 hoomd.trigger.Periodic(100)
             )

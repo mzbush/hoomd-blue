@@ -267,7 +267,7 @@ class NeighborList(Compute):
         .. rubric:: Example:
 
         .. code-block::
-        
+
                 with self.cpu_local_nlist_arrays as arrays:
                     nlist_iter = zip(arrays.head_list, arrays.n_neigh)
                     for i, (head, nn) in enumerate(nlist_iter):
