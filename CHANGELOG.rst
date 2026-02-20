@@ -17,6 +17,11 @@ Next release
 
 *Fixed*
 
+6.1.1 (2026-02-19)
+^^^^^^^^^^^^^^^^^^^^
+
+*Fixed*
+
 * Divide by zero with MPCD if rigid body has constituent with zero mass (#2228).
 * Ensure that GSD files are always flushed on exit (#2236).
 * Code examples in ``md.nlist``, ``md.angle``, ``md.bond``, ``md.special_pair``, ``md.compute``,
