@@ -506,25 +506,23 @@ void mpcd::CellList::buildCellList()
             if (m_decomposition && cur_p < N_mpcd)
                 {
                 // determine from the bin which rank the particle's cell belongs to
-               int ix = 0;
+                int ix = 0;
                 if (bin.x >= (int)m_cell_dim.x)
                     ix = (rank_size.x > 2) ? 1 : -1;
                 else if (bin.x < 0)
                     ix = -1;
 
+                int iy = 0;
                 if (bin.y >= (int)m_cell_dim.y)
-                    iy = (rank_size.y == 2) ? -1 : 1;
+                    iy = (rank_size.y > 2) ? 1 : -1;
                 else if (bin.y < 0)
                     iy = -1;
-                else
-                    iy = 0;
 
+                int iz = 0;
                 if (bin.z >= (int)m_cell_dim.z)
-                    iz = (rank_size.z == 2) ? -1 : 1;
+                    iz = (rank_size.z > 2) ? 1 : -1;
                 else if (bin.z < 0)
                     iz = -1;
-                else
-                    iz = 0;
 
                 unsigned int dir = ((iz + 1) * 3 + (iy + 1)) * 3 + (ix + 1);
                 unsigned int mask = 1 << dir;
