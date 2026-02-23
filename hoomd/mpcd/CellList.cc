@@ -300,6 +300,19 @@ void mpcd::CellList::computeDimensions()
     m_global_cell_indexer = Index3D(m_global_cell_dim.x, m_global_cell_dim.y, m_global_cell_dim.z);
     m_cell_indexer = Index3D(m_cell_dim.x, m_cell_dim.y, m_cell_dim.z);
 
+#ifdef ENABLE_MPI
+    if (m_decomposition)
+        {
+        const unsigned int num_cells = m_global_cell_indexer.getNumElements();
+        if (num_cells >= (~(1 << 31)))
+            {
+            m_exec_conf->msg->errorAllRanks()
+                << "Number of global cells exceeds size allotted." << std::endl;
+            throw std::runtime_error("Error computing cell list size");
+            }
+        }
+#endif // ENABLE_MPI
+
     // reallocate per-cell memory
     reallocate();
 
@@ -529,7 +542,7 @@ void mpcd::CellList::buildCellList()
                 // mark particle to be sent to neighboring rank
                 h_mpcd_comm_key->data[cur_p] = make_uint2(mask, cur_p);
                 ++num_ghosts_send;
-                // set the bin idx to be the global index
+                // set the bin idx to ~(1 << 31)be the global index
                 bin_idx = m_global_cell_indexer(global_bin.x, global_bin.y, global_bin.z);
                 bin_idx |= 1 << 31;
                 }
