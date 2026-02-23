@@ -615,7 +615,7 @@ void mpcd::CellList::buildCellList()
                             }
                         cur_mask_index_start = i;
                         cur_mask = comm_mask;
-                        num_unique_neigh = num_unique_neigh + 1;
+                        ++num_unique_neigh;
                         }
                     }
                 neigh_index = m_adj_mask_map[cur_mask];
