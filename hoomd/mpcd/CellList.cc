@@ -398,7 +398,8 @@ void mpcd::CellList::buildCellList()
     std::unique_ptr<ArrayHandle<uint2>> h_mpcd_comm_key;
     uint3 rank_size = make_uint3(0, 0, 0);
     unsigned int num_ghosts_send = 0;
-    if (m_decomposition)
+    const bool is_decomposition = bool(m_decomposition);
+    if (is_decomposition)
         {
         // allocate space for communication flag
         m_mpcd_comm_key.resize(N_mpcd);
@@ -516,7 +517,7 @@ void mpcd::CellList::buildCellList()
             {
 #ifdef ENABLE_MPI
             // mark the particle for sending to the correct rank
-            if (m_decomposition && cur_p < N_mpcd)
+            if (is_decomposition && cur_p < N_mpcd)
                 {
                 // determine from the bin which rank the particle's cell belongs to
                 int ix = 0;
