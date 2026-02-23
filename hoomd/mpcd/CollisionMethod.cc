@@ -143,7 +143,7 @@ void mpcd::CollisionMethod::collide(uint64_t timestep)
     rule(timestep);
 
 #ifdef ENABLE_MPI
-    m_cl->communicateGhosts();
+    m_cl->recommunicateGhosts();
     m_cl->updateLocalFromGhosts();
 #endif // ENABLE_MPI
     // apply collisions to rigid bodies

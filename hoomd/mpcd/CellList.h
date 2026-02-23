@@ -173,7 +173,7 @@ class PYBIND11_EXPORT CellList : public Compute
     bool isCommunicating(mpcd::detail::face dir);
 
     //! do back communication for ghosts
-    void communicateGhosts();
+    void recommunicateGhosts();
 
     //! update the local particles based on the updated ghosts
     virtual void updateLocalFromGhosts();

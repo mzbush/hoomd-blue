@@ -1249,7 +1249,7 @@ void celllist_back_communication_test(std::shared_ptr<ExecutionConfiguration> ex
         }
 
     // do back communication
-    cl->communicateGhosts();
+    cl->recommunicateGhosts();
     cl->updateLocalFromGhosts();
 
         // check updated velocities

@@ -1056,7 +1056,7 @@ bool mpcd::CellList::needsEmbedMigrate(uint64_t timestep)
     return static_cast<bool>(migrate);
     }
 
-void mpcd::CellList::communicateGhosts()
+void mpcd::CellList::recommunicateGhosts()
     {
     ArrayHandle<Scalar4> h_mpcd_ghost_vel(m_mpcd_ghost_vel,
                                           access_location::host,
