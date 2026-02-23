@@ -904,7 +904,6 @@ void mpcd::CellList::fillGhostBufferArray()
                                                 access_location::host,
                                                 access_mode::readwrite);
         // get number of neighbors and how many particles to send them
-        unsigned int num_unique_neigh = 0;
         unsigned int cur_mask = 0;
         unsigned int cur_mask_index_start = 0;
         unsigned int neigh_index;
@@ -927,7 +926,6 @@ void mpcd::CellList::fillGhostBufferArray()
                     }
                 cur_mask_index_start = i;
                 cur_mask = comm_mask;
-                ++num_unique_neigh;
                 }
             }
         neigh_index = m_adj_mask_map[cur_mask];
