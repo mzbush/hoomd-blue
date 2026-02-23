@@ -111,7 +111,7 @@ class PYBIND11_EXPORT CellList : public Compute
 
     void setGlobalDim(const uint3& global_cell_dim);
 
-    const int3& getOriginIndex() const
+    const uint3& getOriginIndex() const
         {
         return m_origin_idx;
         }
@@ -344,7 +344,7 @@ class PYBIND11_EXPORT CellList : public Compute
     GPUVector<unsigned int> m_embed_cell_ids; //!< Cell ids of the embedded particles
     GPUFlags<uint3> m_conditions; //!< Detect conditions that might fail building cell list
 
-    int3 m_origin_idx; //!< Origin as a global index
+    uint3 m_origin_idx; //!< Origin as a global index
 
     GPUVector<double4> m_cell_vel;     //!< Average velocity of a cell + cell mass
     GPUVector<double> m_cell_energy;   //!< Kinetic energy

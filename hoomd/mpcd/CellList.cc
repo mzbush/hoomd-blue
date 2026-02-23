@@ -30,7 +30,7 @@ mpcd::CellList::CellList(std::shared_ptr<SystemDefinition> sysdef, Scalar cell_s
     m_net_properties.swap(net_properties);
 
     setCellSize(cell_size);
-    m_origin_idx = make_int3(0, 0, 0);
+    m_origin_idx = make_uint3(0, 0, 0);
     m_cell_dim = make_uint3(0, 0, 0);
 
     m_enable_grid_shift = shift;
@@ -73,7 +73,7 @@ mpcd::CellList::CellList(std::shared_ptr<SystemDefinition> sysdef,
     m_net_properties.swap(net_properties);
 
     setGlobalDim(global_cell_dim);
-    m_origin_idx = make_int3(0, 0, 0);
+    m_origin_idx = make_uint3(0, 0, 0);
     m_cell_dim = make_uint3(0, 0, 0);
 
     m_enable_grid_shift = shift;
@@ -213,9 +213,10 @@ void mpcd::CellList::computeDimensions()
                            m_decomposition->getCumulativeFraction(2, grid_pos.z + 1));
 
         // setup lo bin
-        int3 my_lo_bin = make_int3((int)std::round(fractional_lo.x * m_global_cell_dim.x),
-                                   (int)std::round(fractional_lo.y * m_global_cell_dim.y),
-                                   (int)std::round(fractional_lo.z * m_global_cell_dim.z));
+        uint3 my_lo_bin
+            = make_uint3(static_cast<uint>(std::round(fractional_lo.x * m_global_cell_dim.x)),
+                         static_cast<uint>(std::round(fractional_lo.y * m_global_cell_dim.y)),
+                         static_cast<uint>(std::round(fractional_lo.z * m_global_cell_dim.z)));
 
         const Scalar3 fractional_lo_shifted_down = fractional_lo - m_max_grid_shift;
         int3 cover_lo_bin
@@ -224,9 +225,10 @@ void mpcd::CellList::computeDimensions()
                         (int)std::floor(fractional_lo_shifted_down.z * m_global_cell_dim.z));
 
         // setup hi bin
-        int3 my_hi_bin = make_int3((int)std::round(fractional_hi.x * m_global_cell_dim.x),
-                                   (int)std::round(fractional_hi.y * m_global_cell_dim.y),
-                                   (int)std::round(fractional_hi.z * m_global_cell_dim.z));
+        uint3 my_hi_bin
+            = make_uint3(static_cast<uint>(std::round(fractional_hi.x * m_global_cell_dim.x)),
+                         static_cast<uint>(std::round(fractional_hi.y * m_global_cell_dim.y)),
+                         static_cast<uint>(std::round(fractional_hi.z * m_global_cell_dim.z)));
 
         const Scalar3 fractional_hi_shifted_up = fractional_hi + m_max_grid_shift;
         int3 cover_hi_bin
@@ -236,7 +238,7 @@ void mpcd::CellList::computeDimensions()
         // initially size the grid assuming one rank in each direction, and then resize based on
         // communication
         m_cell_dim = m_global_cell_dim;
-        m_origin_idx = make_int3(0, 0, 0);
+        m_origin_idx = make_uint3(0, 0, 0);
 
         // Compute size of the box with diffusion layer
         const BoxDim& global_box = m_pdata->getGlobalBox();
@@ -291,7 +293,7 @@ void mpcd::CellList::computeDimensions()
 #endif // ENABLE_MPI
         {
         m_cell_dim = m_global_cell_dim;
-        m_origin_idx = make_int3(0, 0, 0);
+        m_origin_idx = make_uint3(0, 0, 0);
         }
 
     // resize the cell indexers and per-cell counter

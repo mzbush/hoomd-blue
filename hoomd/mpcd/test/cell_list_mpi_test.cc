@@ -87,7 +87,7 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
     if (is_orthorhombic)
         {
         // check domain origins
-        const int3 origin = cl->getOriginIndex();
+        const uint3 origin = cl->getOriginIndex();
         const uint3 pos = decomposition->getGridPos();
         if (mpi_x)
             {
@@ -262,7 +262,7 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
     if (is_orthorhombic)
         {
         // check domain origins
-        const int3 origin = cl->getOriginIndex();
+        const uint3 origin = cl->getOriginIndex();
         const uint3 pos = decomposition->getGridPos();
         if (mpi_x)
             {
