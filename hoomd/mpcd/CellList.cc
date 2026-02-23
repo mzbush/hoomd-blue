@@ -48,6 +48,8 @@ mpcd::CellList::CellList(std::shared_ptr<SystemDefinition> sysdef, Scalar cell_s
     m_mpcd_vel_sendbuf.swap(mpcd_vel_sendbuf);
     GPUVector<Scalar4> mpcd_ghost_vel(m_exec_conf);
     m_mpcd_ghost_vel.swap(mpcd_ghost_vel);
+    m_num_mpcd_ghosts_recv = 0;
+    m_num_mpcd_ghosts_send = 0;
     m_num_unique_neigh = 0;
     initializeCommunicationSetup();
 #endif // ENABLE_MPI
@@ -91,6 +93,8 @@ mpcd::CellList::CellList(std::shared_ptr<SystemDefinition> sysdef,
     m_mpcd_vel_sendbuf.swap(mpcd_vel_sendbuf);
     GPUVector<Scalar4> mpcd_ghost_vel(m_exec_conf);
     m_mpcd_ghost_vel.swap(mpcd_ghost_vel);
+    m_num_mpcd_ghosts_recv = 0;
+    m_num_mpcd_ghosts_send = 0;
     m_num_unique_neigh = 0;
     initializeCommunicationSetup();
 #endif // ENABLE_MPI
@@ -585,6 +589,7 @@ void mpcd::CellList::buildCellList()
         ++h_cell_np.data[bin_idx];
         }
 #ifdef ENABLE_MPI
+    m_num_mpcd_ghosts_send = num_ghosts_send;
     if (m_decomposition)
         {
         std::fill(m_num_mpcd_send_ptls.begin(), m_num_mpcd_send_ptls.end(), 0);
@@ -636,7 +641,7 @@ void mpcd::CellList::buildCellList()
             }
 
         // communicate how many particles are being sent
-        unsigned int num_mpcd_recv_tot = 0;
+        unsigned int num_recv_tot = 0;
             {
             unsigned int nreq = 0;
             m_reqs.resize(2 * m_num_unique_neigh);
@@ -666,13 +671,14 @@ void mpcd::CellList::buildCellList()
             // sum up receive counts
             for (unsigned int ineigh = 0; ineigh < m_num_unique_neigh; ++ineigh)
                 {
-                m_mpcd_recv_offsets[ineigh] = num_mpcd_recv_tot;
-                num_mpcd_recv_tot += m_num_mpcd_recv_ptls[ineigh];
+                m_mpcd_recv_offsets[ineigh] = num_recv_tot;
+                num_recv_tot += m_num_mpcd_recv_ptls[ineigh];
                 }
+            m_num_mpcd_ghosts_recv = num_recv_tot;
             }
         // communicate ghost particles
         // resize ghost arrays to fit the particles being received
-        m_mpcd_ghost_vel.resize(num_mpcd_recv_tot);
+        m_mpcd_ghost_vel.resize(num_recv_tot);
             {
             ArrayHandle<Scalar4> h_mpcd_ghost_vel(m_mpcd_ghost_vel,
                                                   access_location::host,
@@ -719,13 +725,13 @@ void mpcd::CellList::buildCellList()
             }
 
         // add contributions of ghost particles to cell properties
-        if (num_mpcd_recv_tot)
+        if (m_num_mpcd_ghosts_recv)
             {
             ArrayHandle<Scalar4> h_mpcd_ghost_vel(m_mpcd_ghost_vel,
                                                   access_location::host,
                                                   access_mode::readwrite);
 
-            for (unsigned int cur_p = 0; cur_p < num_mpcd_recv_tot; ++cur_p)
+            for (unsigned int cur_p = 0; cur_p < m_num_mpcd_ghosts_recv; ++cur_p)
                 {
                 double mass_i = m_mpcd_pdata->getMass();
                 const Scalar4 vel_mass_i = h_mpcd_ghost_vel.data[cur_p];
@@ -1103,8 +1109,7 @@ void mpcd::CellList::updateLocalFromGhosts()
     ArrayHandle<Scalar4> h_vel(m_mpcd_pdata->getVelocities(),
                                access_location::host,
                                access_mode::readwrite);
-    const unsigned int num_ghosts
-        = accumulate(m_num_mpcd_send_ptls.begin(), m_num_mpcd_send_ptls.end(), 0);
+    const unsigned int num_ghosts = m_num_mpcd_ghosts_send;
     for (unsigned int cur_p = 0; cur_p < num_ghosts; ++cur_p)
         {
         const Scalar4 vel_i = h_mpcd_vel_sendbuf.data[cur_p];

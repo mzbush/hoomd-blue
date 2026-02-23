@@ -154,7 +154,7 @@ class PYBIND11_EXPORT CellList : public Compute
     //! Get the number of ghost particles
     const unsigned int getNGhosts() const
         {
-        return accumulate(m_num_mpcd_recv_ptls.begin(), m_num_mpcd_recv_ptls.end(), 0);
+        return m_num_mpcd_ghosts_recv;
         }
 
     //! Get the ghost velocities
@@ -363,6 +363,8 @@ class PYBIND11_EXPORT CellList : public Compute
     GPUVector<Scalar3> m_mpcd_ghost_pos;            //!< position of MPCD ghost particles received
     GPUVector<Scalar4> m_mpcd_vel_sendbuf;          //!< Buffer for MPCD ghost velocity sent
     GPUVector<Scalar3> m_mpcd_pos_sendbuf;          //!< Buffer for MPCD ghost position sent
+    unsigned int m_num_mpcd_ghosts_recv;            //!< number of ghost particles received
+    unsigned int m_num_mpcd_ghosts_send;            //!< number of ghost particles sent
     GPUVector<unsigned int> m_embed_ghost_cell_ids; //!< Cell ids of the embedded ghost particles
     std::vector<MPI_Request> m_reqs;                //!< MPI requests
     MPI_Comm m_mpi_comm;                            //!< MPI communicator
