@@ -108,8 +108,7 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
 
         if (mpi_y)
             {
-            // hight rank gets middle cell due to domain decomp pushback -> 0 and 2
-            // biased to lower edge -> upper domains need extra cell
+            // biased to lower edge -> higher indexed domains get middle cell
             if (pos.y)
                 {
                 UP_ASSERT_EQUAL(origin.y, 2);
@@ -162,8 +161,7 @@ void celllist_dimension_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
 
         if (mpi_y)
             {
-            // higher rank gets middle cell due to domain decomp pushback
-            // biased to lower edge -> upper domains need extra cell
+            // biased to lower edge -> higher indexed domains get middle cell
             if (pos.y)
                 {
                 UP_ASSERT_EQUAL(dim.y, 3);
