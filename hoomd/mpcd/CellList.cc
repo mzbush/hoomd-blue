@@ -530,7 +530,7 @@ void mpcd::CellList::buildCellList()
                 unsigned int mask = 1 << dir;
                 // mark particle to be sent to neighboring rank
                 h_mpcd_comm_key->data[cur_p] = make_uint2(mask, cur_p);
-                num_ghosts_send = num_ghosts_send + 1;
+                ++num_ghosts_send;
                 // set the bin idx to be the global index
                 bin_idx = m_global_cell_indexer(global_bin.x, global_bin.y, global_bin.z);
                 bin_idx |= ((unsigned int)1 << (sizeof(bin_idx) * 8 - 1));
