@@ -384,6 +384,15 @@ class PYBIND11_EXPORT CellList : public Compute
 
     //! Determine if embedded particles require migration
     virtual bool needsEmbedMigrate(uint64_t timestep);
+
+    //! Fills ghost buffer arrays and determine where to send them
+    virtual void fillGhostBufferArray();
+
+    //! Communicate ghosts
+    void communicateGhosts();
+
+    //! Add ghost contribution to cell properties
+    virtual void addGhostsToCells();
 #endif // ENABLE_MPI
 
     //! Updates the requested optional flags

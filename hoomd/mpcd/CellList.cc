@@ -167,6 +167,12 @@ void mpcd::CellList::compute(uint64_t timestep)
         // bin particles and compute cell properties
         buildCellList();
         checkConditions();
+#ifdef ENABLE_MPI
+        fillGhostBufferArray();
+        communicateGhosts();
+        addGhostsToCells();
+        checkConditions();
+#endif // ENABLE_MPI
         finishComputeProperties();
 
         // we are finished building, explicitly mark everything (rather than using shouldCompute)
@@ -590,201 +596,6 @@ void mpcd::CellList::buildCellList()
         }
 #ifdef ENABLE_MPI
     m_num_mpcd_ghosts_send = num_ghosts_send;
-    if (m_decomposition)
-        {
-        std::fill(m_num_mpcd_send_ptls.begin(), m_num_mpcd_send_ptls.end(), 0);
-        std::fill(m_num_mpcd_recv_ptls.begin(), m_num_mpcd_recv_ptls.end(), 0);
-        std::fill(m_mpcd_recv_offsets.begin(), m_mpcd_recv_offsets.end(), 0);
-        m_mpcd_vel_sendbuf.resize(num_ghosts_send);
-        if (num_ghosts_send)
-            {
-            // sort the ghost particles by direction
-            std::sort(h_mpcd_comm_key->data,
-                      h_mpcd_comm_key->data + N_mpcd,
-                      [](uint2& a, uint2& b) { return a.x > b.x; });
-
-                // add velocity to send buffers and count particle to send per rank
-                {
-                ArrayHandle<Scalar4> h_mpcd_vel_sendbuf(m_mpcd_vel_sendbuf,
-                                                        access_location::host,
-                                                        access_mode::readwrite);
-                // get number of neighbors and how many particles to send them
-                unsigned int num_unique_neigh = 0;
-                unsigned int cur_mask = 0;
-                unsigned int cur_mask_index_start = 0;
-                unsigned int neigh_index;
-                for (unsigned int i = 0; i < num_ghosts_send; i++)
-                    {
-                    const unsigned int comm_mask = h_mpcd_comm_key->data[i].x;
-                    const unsigned int particle_index = h_mpcd_comm_key->data[i].y;
-
-                    // add particle data to send buffers
-                    const Scalar4 vel_mass = h_vel.data[particle_index];
-                    h_mpcd_vel_sendbuf.data[i] = vel_mass;
-
-                    // count the number of neighbors and how many particles for each
-                    if (comm_mask != cur_mask)
-                        {
-                        if (i != 0)
-                            {
-                            neigh_index = m_adj_mask_map[cur_mask];
-                            m_num_mpcd_send_ptls[neigh_index] = i - cur_mask_index_start;
-                            }
-                        cur_mask_index_start = i;
-                        cur_mask = comm_mask;
-                        ++num_unique_neigh;
-                        }
-                    }
-                neigh_index = m_adj_mask_map[cur_mask];
-                m_num_mpcd_send_ptls[neigh_index] = num_ghosts_send - cur_mask_index_start;
-                }
-            }
-
-        // communicate how many particles are being sent
-        unsigned int num_recv_tot = 0;
-            {
-            unsigned int nreq = 0;
-            m_reqs.resize(2 * m_num_unique_neigh);
-
-            for (unsigned int ineigh = 0; ineigh < m_num_unique_neigh; ++ineigh)
-                {
-                // rank of neighbor processor
-                unsigned int neighbor_map = m_adj_mask[ineigh];
-                unsigned int neighbor = m_neigh_rank_map[neighbor_map];
-
-                MPI_Isend(&m_num_mpcd_send_ptls[ineigh],
-                          1,
-                          MPI_UNSIGNED,
-                          neighbor,
-                          0,
-                          m_mpi_comm,
-                          &m_reqs[nreq++]);
-                MPI_Irecv(&m_num_mpcd_recv_ptls[ineigh],
-                          1,
-                          MPI_UNSIGNED,
-                          neighbor,
-                          0,
-                          m_mpi_comm,
-                          &m_reqs[nreq++]);
-                } // end neighbor loop
-            MPI_Waitall(nreq, m_reqs.data(), MPI_STATUSES_IGNORE);
-            // sum up receive counts
-            for (unsigned int ineigh = 0; ineigh < m_num_unique_neigh; ++ineigh)
-                {
-                m_mpcd_recv_offsets[ineigh] = num_recv_tot;
-                num_recv_tot += m_num_mpcd_recv_ptls[ineigh];
-                }
-            m_num_mpcd_ghosts_recv = num_recv_tot;
-            }
-        // communicate ghost particles
-        // resize ghost arrays to fit the particles being received
-        m_mpcd_ghost_vel.resize(num_recv_tot);
-            {
-            ArrayHandle<Scalar4> h_mpcd_ghost_vel(m_mpcd_ghost_vel,
-                                                  access_location::host,
-                                                  access_mode::overwrite);
-            ArrayHandle<Scalar4> h_mpcd_vel_sendbuf(m_mpcd_vel_sendbuf,
-                                                    access_location::host,
-                                                    access_mode::read);
-            // loop over neighbors
-            unsigned int nreq = 0;
-            m_reqs.resize(4 * m_num_unique_neigh);
-            unsigned int sendidx = 0;
-            for (unsigned int ineigh = 0; ineigh < m_num_unique_neigh; ++ineigh)
-                {
-                // rank of neighbor processor
-                unsigned int neighbor_map = m_adj_mask[ineigh];
-                unsigned int neighbor = m_neigh_rank_map[neighbor_map];
-
-                // exchange particle data
-                if (m_num_mpcd_send_ptls[ineigh])
-                    {
-                    MPI_Isend(h_mpcd_vel_sendbuf.data + sendidx,
-                              int(m_num_mpcd_send_ptls[ineigh] * sizeof(Scalar4)),
-                              MPI_BYTE,
-                              neighbor,
-                              2,
-                              m_mpi_comm,
-                              &m_reqs[nreq++]);
-                    // increment the send index by the amount just transferred
-                    sendidx += m_num_mpcd_send_ptls[ineigh];
-                    }
-
-                if (m_num_mpcd_recv_ptls[ineigh])
-                    {
-                    MPI_Irecv(h_mpcd_ghost_vel.data + m_mpcd_recv_offsets[ineigh],
-                              int(m_num_mpcd_recv_ptls[ineigh] * sizeof(Scalar4)),
-                              MPI_BYTE,
-                              neighbor,
-                              2,
-                              m_mpi_comm,
-                              &m_reqs[nreq++]);
-                    }
-                }
-            MPI_Waitall(nreq, m_reqs.data(), MPI_STATUSES_IGNORE);
-            }
-
-        // add contributions of ghost particles to cell properties
-        if (m_num_mpcd_ghosts_recv)
-            {
-            ArrayHandle<Scalar4> h_mpcd_ghost_vel(m_mpcd_ghost_vel,
-                                                  access_location::host,
-                                                  access_mode::readwrite);
-
-            for (unsigned int cur_p = 0; cur_p < m_num_mpcd_ghosts_recv; ++cur_p)
-                {
-                double mass_i = m_mpcd_pdata->getMass();
-                const Scalar4 vel_mass_i = h_mpcd_ghost_vel.data[cur_p];
-                const double3 vel_i = make_double3(vel_mass_i.x, vel_mass_i.y, vel_mass_i.z);
-
-                // unset the highest bit of the global bin index
-                unsigned int global_bin_index = __scalar_as_int(vel_mass_i.w);
-                global_bin_index &= ~(1 << 31);
-
-                // turn global bin index back into global bin
-                int3 global_bin = make_int3(0, 0, 0);
-                global_bin.x = global_bin_index % m_global_cell_dim.x;
-                global_bin.y = (global_bin_index / m_global_cell_dim.x) % m_global_cell_dim.y;
-                global_bin.z = int(global_bin_index / (m_global_cell_dim.x * m_global_cell_dim.y));
-
-                // compute the local cell
-                int3 bin = make_int3(global_bin.x - m_origin_idx.x,
-                                     global_bin.y - m_origin_idx.y,
-                                     global_bin.z - m_origin_idx.z);
-                unsigned int bin_idx;
-                if ((0 <= bin.x && bin.x < (int)m_cell_dim.x)
-                    && (0 <= bin.y && bin.y < (int)m_cell_dim.y)
-                    && (0 <= bin.z && bin.z < (int)m_cell_dim.z))
-                    {
-                    bin_idx = m_cell_indexer(bin.x, bin.y, bin.z);
-                    }
-                else
-                    {
-                    conditions.x = cur_p + 1;
-                    continue;
-                    }
-
-                // stash the current particle bin into the velocity array
-                h_mpcd_ghost_vel.data[cur_p].w = __int_as_scalar(bin_idx);
-
-                // compute the contribution of the particle to cell velocity
-                double4& cell_vel = h_cell_vel.data[bin_idx];
-                cell_vel.x += mass_i * vel_i.x;
-                cell_vel.y += mass_i * vel_i.y;
-                cell_vel.z += mass_i * vel_i.z;
-                cell_vel.w += mass_i;
-                // compute optional cell properties
-                if (m_flags[mpcd::detail::thermo_options::energy])
-                    {
-                    h_cell_energy.data[bin_idx]
-                        += 0.5 * mass_i
-                           * (vel_i.x * vel_i.x + vel_i.y * vel_i.y + vel_i.z * vel_i.z);
-                    }
-                // increment the counter always
-                ++h_cell_np.data[bin_idx];
-                }
-            }
-        }
 #endif // ENABLE_MPI
     // write out the conditions
     m_conditions.resetFlags(conditions);
@@ -1054,6 +865,237 @@ bool mpcd::CellList::needsEmbedMigrate(uint64_t timestep)
     MPI_Allreduce(MPI_IN_PLACE, &migrate, 1, MPI_CHAR, MPI_MAX, m_exec_conf->getMPICommunicator());
 
     return static_cast<bool>(migrate);
+    }
+
+void mpcd::CellList::fillGhostBufferArray()
+    {
+    if (!m_decomposition)
+        {
+        return;
+        }
+
+    // resize and fill arrays
+    std::fill(m_num_mpcd_send_ptls.begin(), m_num_mpcd_send_ptls.end(), 0);
+    std::fill(m_num_mpcd_recv_ptls.begin(), m_num_mpcd_recv_ptls.end(), 0);
+    std::fill(m_mpcd_recv_offsets.begin(), m_mpcd_recv_offsets.end(), 0);
+    m_mpcd_vel_sendbuf.resize(m_num_mpcd_ghosts_send);
+
+    if (!m_num_mpcd_ghosts_send)
+        {
+        return;
+        }
+
+    ArrayHandle<Scalar4> h_vel(m_mpcd_pdata->getVelocities(),
+                               access_location::host,
+                               access_mode::readwrite);
+    ArrayHandle<uint2> h_mpcd_comm_key(m_mpcd_comm_key,
+                                       access_location::host,
+                                       access_mode::readwrite);
+    unsigned int N_mpcd = m_mpcd_pdata->getN() + m_mpcd_pdata->getNVirtual();
+
+    // sort the ghost particles by direction
+    std::sort(h_mpcd_comm_key.data,
+              h_mpcd_comm_key.data + N_mpcd,
+              [](uint2& a, uint2& b) { return a.x > b.x; });
+
+        // add velocity to send buffers and count particle to send per rank
+        {
+        ArrayHandle<Scalar4> h_mpcd_vel_sendbuf(m_mpcd_vel_sendbuf,
+                                                access_location::host,
+                                                access_mode::readwrite);
+        // get number of neighbors and how many particles to send them
+        unsigned int num_unique_neigh = 0;
+        unsigned int cur_mask = 0;
+        unsigned int cur_mask_index_start = 0;
+        unsigned int neigh_index;
+        for (unsigned int i = 0; i < m_num_mpcd_ghosts_send; i++)
+            {
+            const unsigned int comm_mask = h_mpcd_comm_key.data[i].x;
+            const unsigned int particle_index = h_mpcd_comm_key.data[i].y;
+
+            // add particle data to send buffers
+            const Scalar4 vel_mass = h_vel.data[particle_index];
+            h_mpcd_vel_sendbuf.data[i] = vel_mass;
+
+            // count the number of neighbors and how many particles for each
+            if (comm_mask != cur_mask)
+                {
+                if (i != 0)
+                    {
+                    neigh_index = m_adj_mask_map[cur_mask];
+                    m_num_mpcd_send_ptls[neigh_index] = i - cur_mask_index_start;
+                    }
+                cur_mask_index_start = i;
+                cur_mask = comm_mask;
+                ++num_unique_neigh;
+                }
+            }
+        neigh_index = m_adj_mask_map[cur_mask];
+        m_num_mpcd_send_ptls[neigh_index] = m_num_mpcd_ghosts_send - cur_mask_index_start;
+        }
+    }
+
+void mpcd::CellList::communicateGhosts()
+    {
+    if (!m_decomposition)
+        {
+        return;
+        }
+
+    // communicate how many particles are being sent
+    unsigned int num_recv_tot = 0;
+        {
+        unsigned int nreq = 0;
+        m_reqs.resize(2 * m_num_unique_neigh);
+
+        for (unsigned int ineigh = 0; ineigh < m_num_unique_neigh; ++ineigh)
+            {
+            // rank of neighbor processor
+            unsigned int neighbor_map = m_adj_mask[ineigh];
+            unsigned int neighbor = m_neigh_rank_map[neighbor_map];
+
+            MPI_Isend(&m_num_mpcd_send_ptls[ineigh],
+                      1,
+                      MPI_UNSIGNED,
+                      neighbor,
+                      0,
+                      m_mpi_comm,
+                      &m_reqs[nreq++]);
+            MPI_Irecv(&m_num_mpcd_recv_ptls[ineigh],
+                      1,
+                      MPI_UNSIGNED,
+                      neighbor,
+                      0,
+                      m_mpi_comm,
+                      &m_reqs[nreq++]);
+            } // end neighbor loop
+        MPI_Waitall(nreq, m_reqs.data(), MPI_STATUSES_IGNORE);
+        // sum up receive counts
+        for (unsigned int ineigh = 0; ineigh < m_num_unique_neigh; ++ineigh)
+            {
+            m_mpcd_recv_offsets[ineigh] = num_recv_tot;
+            num_recv_tot += m_num_mpcd_recv_ptls[ineigh];
+            }
+        m_num_mpcd_ghosts_recv = num_recv_tot;
+        }
+    // communicate ghost particles
+    // resize ghost arrays to fit the particles being received
+    m_mpcd_ghost_vel.resize(m_num_mpcd_ghosts_recv);
+        {
+        ArrayHandle<Scalar4> h_mpcd_ghost_vel(m_mpcd_ghost_vel,
+                                              access_location::host,
+                                              access_mode::overwrite);
+        ArrayHandle<Scalar4> h_mpcd_vel_sendbuf(m_mpcd_vel_sendbuf,
+                                                access_location::host,
+                                                access_mode::read);
+        // loop over neighbors
+        unsigned int nreq = 0;
+        m_reqs.resize(4 * m_num_unique_neigh);
+        unsigned int sendidx = 0;
+        for (unsigned int ineigh = 0; ineigh < m_num_unique_neigh; ++ineigh)
+            {
+            // rank of neighbor processor
+            unsigned int neighbor_map = m_adj_mask[ineigh];
+            unsigned int neighbor = m_neigh_rank_map[neighbor_map];
+
+            // exchange particle data
+            if (m_num_mpcd_send_ptls[ineigh])
+                {
+                MPI_Isend(h_mpcd_vel_sendbuf.data + sendidx,
+                          int(m_num_mpcd_send_ptls[ineigh] * sizeof(Scalar4)),
+                          MPI_BYTE,
+                          neighbor,
+                          2,
+                          m_mpi_comm,
+                          &m_reqs[nreq++]);
+                // increment the send index by the amount just transferred
+                sendidx += m_num_mpcd_send_ptls[ineigh];
+                }
+
+            if (m_num_mpcd_recv_ptls[ineigh])
+                {
+                MPI_Irecv(h_mpcd_ghost_vel.data + m_mpcd_recv_offsets[ineigh],
+                          int(m_num_mpcd_recv_ptls[ineigh] * sizeof(Scalar4)),
+                          MPI_BYTE,
+                          neighbor,
+                          2,
+                          m_mpi_comm,
+                          &m_reqs[nreq++]);
+                }
+            }
+        MPI_Waitall(nreq, m_reqs.data(), MPI_STATUSES_IGNORE);
+        }
+    }
+
+void mpcd::CellList::addGhostsToCells()
+    {
+    if (!m_num_mpcd_ghosts_recv)
+        {
+        return;
+        }
+
+    ArrayHandle<unsigned int> h_cell_np(m_cell_np, access_location::host, access_mode::readwrite);
+    ArrayHandle<double4> h_cell_vel(m_cell_vel, access_location::host, access_mode::readwrite);
+    ArrayHandle<double> h_cell_energy(m_cell_energy, access_location::host, access_mode::readwrite);
+
+    uint3 conditions = make_uint3(0, 0, 0);
+
+    ArrayHandle<Scalar4> h_mpcd_ghost_vel(m_mpcd_ghost_vel,
+                                          access_location::host,
+                                          access_mode::readwrite);
+
+    for (unsigned int cur_p = 0; cur_p < m_num_mpcd_ghosts_recv; ++cur_p)
+        {
+        double mass_i = m_mpcd_pdata->getMass();
+        const Scalar4 vel_mass_i = h_mpcd_ghost_vel.data[cur_p];
+        const double3 vel_i = make_double3(vel_mass_i.x, vel_mass_i.y, vel_mass_i.z);
+
+        // unset the highest bit of the global bin index
+        unsigned int global_bin_index = __scalar_as_int(vel_mass_i.w);
+        global_bin_index &= ~(1 << 31);
+
+        // turn global bin index back into global bin
+        int3 global_bin = make_int3(0, 0, 0);
+        global_bin.x = global_bin_index % m_global_cell_dim.x;
+        global_bin.y = (global_bin_index / m_global_cell_dim.x) % m_global_cell_dim.y;
+        global_bin.z = int(global_bin_index / (m_global_cell_dim.x * m_global_cell_dim.y));
+
+        // compute the local cell
+        int3 bin = make_int3(global_bin.x - m_origin_idx.x,
+                             global_bin.y - m_origin_idx.y,
+                             global_bin.z - m_origin_idx.z);
+        unsigned int bin_idx;
+        if ((0 <= bin.x && bin.x < (int)m_cell_dim.x) && (0 <= bin.y && bin.y < (int)m_cell_dim.y)
+            && (0 <= bin.z && bin.z < (int)m_cell_dim.z))
+            {
+            bin_idx = m_cell_indexer(bin.x, bin.y, bin.z);
+            }
+        else
+            {
+            conditions.x = cur_p + 1;
+            continue;
+            }
+
+        // stash the current particle bin into the velocity array
+        h_mpcd_ghost_vel.data[cur_p].w = __int_as_scalar(bin_idx);
+
+        // compute the contribution of the particle to cell velocity
+        double4& cell_vel = h_cell_vel.data[bin_idx];
+        cell_vel.x += mass_i * vel_i.x;
+        cell_vel.y += mass_i * vel_i.y;
+        cell_vel.z += mass_i * vel_i.z;
+        cell_vel.w += mass_i;
+        // compute optional cell properties
+        if (m_flags[mpcd::detail::thermo_options::energy])
+            {
+            h_cell_energy.data[bin_idx]
+                += 0.5 * mass_i * (vel_i.x * vel_i.x + vel_i.y * vel_i.y + vel_i.z * vel_i.z);
+            }
+        // increment the counter always
+        ++h_cell_np.data[bin_idx];
+        }
+    // write out the conditions
+    m_conditions.resetFlags(conditions);
     }
 
 void mpcd::CellList::recommunicateGhosts()
