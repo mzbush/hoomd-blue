@@ -554,7 +554,7 @@ void mpcd::CellList::buildCellList()
                     iz = -1;
 
                 // get shifted direction index
-                unsigned int dir = ((iz + 1) * 3 + (iy + 1)) * 3 + (ix + 1);
+                int dir = ((iz + 1) * 3 + (iy + 1)) * 3 + (ix + 1);
                 dir = dir + ((ix == 1) ? -2 : 1) + ((iy == 1) ? -6 : 3) + ((iz == 1) ? -12 : 9);
                 // mark particle to be sent to neighboring rank
                 h_mpcd_comm_key->data[cur_p] = make_uint2(dir, cur_p);
