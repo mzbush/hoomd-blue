@@ -413,9 +413,8 @@ void mpcd::CellList::buildCellList()
         {
         // allocate space for communication flag
         m_mpcd_comm_key.resize(N_mpcd);
-        m_mpcd_comm_key.zeroFill();
         h_mpcd_comm_key.reset(
-            new ArrayHandle<uint2>(m_mpcd_comm_key, access_location::host, access_mode::readwrite));
+            new ArrayHandle<uint2>(m_mpcd_comm_key, access_location::host, access_mode::overwrite));
 
         // allocate the the number of ranks in each dimension
         Index3D di = m_decomposition->getDomainIndexer();
@@ -522,6 +521,12 @@ void mpcd::CellList::buildCellList()
         if (islocal)
             {
             bin_idx = m_cell_indexer(bin.x, bin.y, bin.z);
+#ifdef ENABLE_MPI
+            if (is_decomposition && cur_p < N_mpcd)
+                {
+                h_mpcd_comm_key->data[cur_p] = make_uint2(0xffffffff, cur_p);
+                }
+#endif // ENABLE_MPI
             }
         else
             {
@@ -812,7 +817,7 @@ void mpcd::CellList::initializeCommunicationSetup()
             }
         m_num_unique_neigh = num_neigh;
         // sort neighbors according to how masks will be sorted
-        sort(m_adj_mask.begin(), m_adj_mask.end(), std::greater<uint>());
+        sort(m_adj_mask.begin(), m_adj_mask.end(), std::less<uint>());
         for (unsigned int i = 0; i < m_adj_mask.size(); i++)
             {
             m_adj_mask_map.insert({m_adj_mask[i], i});
@@ -896,7 +901,7 @@ void mpcd::CellList::fillGhostBufferArray()
     // sort the ghost particles by direction
     std::sort(h_mpcd_comm_key.data,
               h_mpcd_comm_key.data + N_mpcd,
-              [](uint2& a, uint2& b) { return a.x > b.x; });
+              [](uint2& a, uint2& b) { return a.x < b.x; });
 
         // add velocity to send buffers and count particle to send per rank
         {
@@ -904,7 +909,7 @@ void mpcd::CellList::fillGhostBufferArray()
                                                 access_location::host,
                                                 access_mode::readwrite);
         // get number of neighbors and how many particles to send them
-        unsigned int cur_mask = 0;
+        unsigned int cur_mask = 0xffffffff;
         unsigned int cur_mask_index_start = 0;
         unsigned int neigh_index;
         for (unsigned int i = 0; i < m_num_mpcd_ghosts_send; i++)
