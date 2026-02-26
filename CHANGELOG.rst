@@ -17,7 +17,7 @@ Next release
 
 *Fixed*
 
-* Fixed Helfrich equation in the docs
+* Fixed Helfrich equation in the docs (#2242)
 
 6.1.1 (2026-02-19)
 ^^^^^^^^^^^^^^^^^^^^
