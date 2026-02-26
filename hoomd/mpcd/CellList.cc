@@ -553,10 +553,11 @@ void mpcd::CellList::buildCellList()
                 else if (bin.z < 0)
                     iz = -1;
 
+                // get shifted direction index
                 unsigned int dir = ((iz + 1) * 3 + (iy + 1)) * 3 + (ix + 1);
-                unsigned int mask = 1 << dir;
+                dir = dir + ((ix == 1) ? -2 : 1) + ((iy == 1) ? -6 : 3) + ((iz == 1) ? -12 : 9);
                 // mark particle to be sent to neighboring rank
-                h_mpcd_comm_key->data[cur_p] = make_uint2(mask, cur_p);
+                h_mpcd_comm_key->data[cur_p] = make_uint2(dir, cur_p);
                 ++num_ghosts_send;
                 // set the bin idx to ~(1 << 31)be the global index
                 bin_idx = m_global_cell_indexer(global_bin.x, global_bin.y, global_bin.z);
@@ -746,6 +747,15 @@ void mpcd::CellList::initializeCommunicationSetup()
         ArrayHandle<unsigned int> h_cart_ranks(m_decomposition->getCartRanks(),
                                                access_location::host,
                                                access_mode::read);
+
+        // reserve per neighbor memory
+        m_num_mpcd_send_ptls.resize(27);
+        m_num_mpcd_recv_ptls.resize(27);
+        m_mpcd_recv_offsets.resize(27);
+        m_mpcd_send_index.resize(27);
+        m_neigh_rank.resize(26);
+        std::fill(m_neigh_rank.begin(), m_neigh_rank.end(), 0xffffffff);
+
         int l = mypos.x;
         int m = mypos.y;
         int n = mypos.z;
@@ -806,26 +816,19 @@ void mpcd::CellList::initializeCommunicationSetup()
                         continue;
 
                     unsigned int dir = ((iz + 1) * 3 + (iy + 1)) * 3 + (ix + 1);
-                    unsigned int mask = 1 << dir;
+                    // shift so not moving is last index
+                    dir = dir + ((ix == 1) ? -2 : 1) + ((iy == 1) ? -6 : 3) + ((iz == 1) ? -12 : 9);
 
                     unsigned int neighbor = h_cart_ranks.data[di(i, j, k)];
-                    m_neigh_rank_map.insert({mask, neighbor});
-                    m_adj_mask.insert(m_adj_mask.end(), mask);
+                    m_adj_dir.insert(m_adj_dir.end(), dir);
+                    m_neigh_rank[dir] = neighbor;
                     num_neigh++;
                     }
                 }
             }
         m_num_unique_neigh = num_neigh;
-        // sort neighbors according to how masks will be sorted
-        sort(m_adj_mask.begin(), m_adj_mask.end(), std::less<uint>());
-        for (unsigned int i = 0; i < m_adj_mask.size(); i++)
-            {
-            m_adj_mask_map.insert({m_adj_mask[i], i});
-            }
-        // reserve per neighbor memory
-        m_num_mpcd_send_ptls.resize(m_num_unique_neigh);
-        m_num_mpcd_recv_ptls.resize(m_num_unique_neigh);
-        m_mpcd_recv_offsets.resize(m_num_unique_neigh);
+        // sort neighbors according to how directions will be sorted
+        sort(m_adj_dir.begin(), m_adj_dir.end(), std::less<uint>());
         }
     }
 
@@ -883,6 +886,7 @@ void mpcd::CellList::fillGhostBufferArray()
     std::fill(m_num_mpcd_send_ptls.begin(), m_num_mpcd_send_ptls.end(), 0);
     std::fill(m_num_mpcd_recv_ptls.begin(), m_num_mpcd_recv_ptls.end(), 0);
     std::fill(m_mpcd_recv_offsets.begin(), m_mpcd_recv_offsets.end(), 0);
+    std::fill(m_mpcd_send_index.begin(), m_mpcd_send_index.end(), 0xffffffff);
     m_mpcd_vel_sendbuf.resize(m_num_mpcd_ghosts_send);
 
     if (!m_num_mpcd_ghosts_send)
@@ -909,12 +913,12 @@ void mpcd::CellList::fillGhostBufferArray()
                                                 access_location::host,
                                                 access_mode::readwrite);
         // get number of neighbors and how many particles to send them
-        unsigned int cur_mask = 0xffffffff;
-        unsigned int cur_mask_index_start = 0;
-        unsigned int neigh_index;
+        unsigned int cur_dir = 0xffffffff;
+        unsigned int cur_dir_index_start = 0;
+        unsigned int comm_dir = 0;
         for (unsigned int i = 0; i < m_num_mpcd_ghosts_send; i++)
             {
-            const unsigned int comm_mask = h_mpcd_comm_key.data[i].x;
+            comm_dir = h_mpcd_comm_key.data[i].x;
             const unsigned int particle_index = h_mpcd_comm_key.data[i].y;
 
             // add particle data to send buffers
@@ -922,19 +926,18 @@ void mpcd::CellList::fillGhostBufferArray()
             h_mpcd_vel_sendbuf.data[i] = vel_mass;
 
             // count the number of neighbors and how many particles for each
-            if (comm_mask != cur_mask)
+            if (comm_dir != cur_dir)
                 {
                 if (i != 0)
                     {
-                    neigh_index = m_adj_mask_map[cur_mask];
-                    m_num_mpcd_send_ptls[neigh_index] = i - cur_mask_index_start;
+                    m_num_mpcd_send_ptls[cur_dir] = i - cur_dir_index_start;
                     }
-                cur_mask_index_start = i;
-                cur_mask = comm_mask;
+                m_mpcd_send_index[comm_dir] = i;
+                cur_dir_index_start = i;
+                cur_dir = comm_dir;
                 }
             }
-        neigh_index = m_adj_mask_map[cur_mask];
-        m_num_mpcd_send_ptls[neigh_index] = m_num_mpcd_ghosts_send - cur_mask_index_start;
+        m_num_mpcd_send_ptls[comm_dir] = m_num_mpcd_ghosts_send - cur_dir_index_start;
         }
     }
 
@@ -944,27 +947,25 @@ void mpcd::CellList::communicateGhosts()
         {
         return;
         }
-
     // communicate how many particles are being sent
     unsigned int num_recv_tot = 0;
         {
         unsigned int nreq = 0;
         m_reqs.resize(2 * m_num_unique_neigh);
-
         for (unsigned int ineigh = 0; ineigh < m_num_unique_neigh; ++ineigh)
             {
             // rank of neighbor processor
-            unsigned int neighbor_map = m_adj_mask[ineigh];
-            unsigned int neighbor = m_neigh_rank_map[neighbor_map];
+            unsigned int dir = m_adj_dir[ineigh];
+            unsigned int neighbor = m_neigh_rank[dir];
 
-            MPI_Isend(&m_num_mpcd_send_ptls[ineigh],
+            MPI_Isend(&m_num_mpcd_send_ptls[dir],
                       1,
                       MPI_UNSIGNED,
                       neighbor,
                       0,
                       m_mpi_comm,
                       &m_reqs[nreq++]);
-            MPI_Irecv(&m_num_mpcd_recv_ptls[ineigh],
+            MPI_Irecv(&m_num_mpcd_recv_ptls[dir],
                       1,
                       MPI_UNSIGNED,
                       neighbor,
@@ -976,8 +977,9 @@ void mpcd::CellList::communicateGhosts()
         // sum up receive counts
         for (unsigned int ineigh = 0; ineigh < m_num_unique_neigh; ++ineigh)
             {
-            m_mpcd_recv_offsets[ineigh] = num_recv_tot;
-            num_recv_tot += m_num_mpcd_recv_ptls[ineigh];
+            unsigned int dir = m_adj_dir[ineigh];
+            m_mpcd_recv_offsets[dir] = num_recv_tot;
+            num_recv_tot += m_num_mpcd_recv_ptls[dir];
             }
         m_num_mpcd_ghosts_recv = num_recv_tot;
         }
@@ -994,31 +996,28 @@ void mpcd::CellList::communicateGhosts()
         // loop over neighbors
         unsigned int nreq = 0;
         m_reqs.resize(4 * m_num_unique_neigh);
-        unsigned int sendidx = 0;
         for (unsigned int ineigh = 0; ineigh < m_num_unique_neigh; ++ineigh)
             {
             // rank of neighbor processor
-            unsigned int neighbor_map = m_adj_mask[ineigh];
-            unsigned int neighbor = m_neigh_rank_map[neighbor_map];
+            unsigned int dir = m_adj_dir[ineigh];
+            unsigned int neighbor = m_neigh_rank[dir];
 
             // exchange particle data
-            if (m_num_mpcd_send_ptls[ineigh])
+            if (m_num_mpcd_send_ptls[dir])
                 {
-                MPI_Isend(h_mpcd_vel_sendbuf.data + sendidx,
-                          int(m_num_mpcd_send_ptls[ineigh] * sizeof(Scalar4)),
+                MPI_Isend(h_mpcd_vel_sendbuf.data + m_mpcd_send_index[dir],
+                          int(m_num_mpcd_send_ptls[dir] * sizeof(Scalar4)),
                           MPI_BYTE,
                           neighbor,
                           2,
                           m_mpi_comm,
                           &m_reqs[nreq++]);
-                // increment the send index by the amount just transferred
-                sendidx += m_num_mpcd_send_ptls[ineigh];
                 }
 
-            if (m_num_mpcd_recv_ptls[ineigh])
+            if (m_num_mpcd_recv_ptls[dir])
                 {
-                MPI_Irecv(h_mpcd_ghost_vel.data + m_mpcd_recv_offsets[ineigh],
-                          int(m_num_mpcd_recv_ptls[ineigh] * sizeof(Scalar4)),
+                MPI_Irecv(h_mpcd_ghost_vel.data + m_mpcd_recv_offsets[dir],
+                          int(m_num_mpcd_recv_ptls[dir] * sizeof(Scalar4)),
                           MPI_BYTE,
                           neighbor,
                           2,
@@ -1110,18 +1109,18 @@ void mpcd::CellList::recommunicateGhosts()
                                             access_location::host,
                                             access_mode::overwrite);
     unsigned int nreq = 0;
-    m_reqs.resize(4 * m_num_unique_neigh);
-    unsigned int recvidx = 0;
+    m_reqs.resize(2 * m_num_unique_neigh);
     for (unsigned int ineigh = 0; ineigh < m_num_unique_neigh; ++ineigh)
         {
         // rank of neighbor processor
-        unsigned int neighbor_map = m_adj_mask[ineigh];
-        unsigned int neighbor = m_neigh_rank_map[neighbor_map];
+        unsigned int dir = m_adj_dir[ineigh];
+        unsigned int neighbor = m_neigh_rank[dir];
+
         // exchange particle data
-        if (m_num_mpcd_recv_ptls[ineigh])
+        if (m_num_mpcd_recv_ptls[dir])
             {
-            MPI_Isend(h_mpcd_ghost_vel.data + m_mpcd_recv_offsets[ineigh],
-                      int(m_num_mpcd_recv_ptls[ineigh] * sizeof(Scalar4)),
+            MPI_Isend(h_mpcd_ghost_vel.data + m_mpcd_recv_offsets[dir],
+                      int(m_num_mpcd_recv_ptls[dir] * sizeof(Scalar4)),
                       MPI_BYTE,
                       neighbor,
                       2,
@@ -1129,17 +1128,15 @@ void mpcd::CellList::recommunicateGhosts()
                       &m_reqs[nreq++]);
             }
 
-        if (m_num_mpcd_send_ptls[ineigh])
+        if (m_num_mpcd_send_ptls[dir])
             {
-            MPI_Irecv(h_mpcd_vel_sendbuf.data + recvidx,
-                      int(m_num_mpcd_send_ptls[ineigh] * sizeof(Scalar4)),
+            MPI_Irecv(h_mpcd_vel_sendbuf.data + m_mpcd_send_index[dir],
+                      int(m_num_mpcd_send_ptls[dir] * sizeof(Scalar4)),
                       MPI_BYTE,
                       neighbor,
                       2,
                       m_mpi_comm,
                       &m_reqs[nreq++]);
-            // increment the send index by the amount just transferred
-            recvidx += m_num_mpcd_send_ptls[ineigh];
             }
         }
     MPI_Waitall(nreq, m_reqs.data(), MPI_STATUSES_IGNORE);
