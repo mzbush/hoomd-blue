@@ -374,7 +374,6 @@ class PYBIND11_EXPORT CellList : public Compute
         m_num_mpcd_recv_ptls;                    //!< Number of MPCD particles received per neighbor
     std::vector<unsigned int> m_mpcd_send_index; //!< Starting index of MPCD particles sent
     std::vector<unsigned int> m_mpcd_recv_offsets; //!< Offsets for MPCD particle receive buffers
-    std::vector<unsigned int> m_unique_neighbors;  //!< Neighbor ranks
     std::vector<unsigned int> m_adj_dir;           //!< List of adjacent neighbors
     unsigned int m_num_unique_neigh;               //!< Number of unique neighbors
     std::vector<unsigned int> m_neigh_rank;        //!< adjacent neighbors to MPI rank
