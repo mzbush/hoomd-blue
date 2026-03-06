@@ -169,7 +169,7 @@ void mpcd::CellList::compute(uint64_t timestep)
         checkConditions();
 #ifdef ENABLE_MPI
         fillGhostBufferArray();
-        communicateGhosts();
+        sendGhosts();
         addGhostsToCells();
         checkConditions();
 #endif // ENABLE_MPI
@@ -941,7 +941,7 @@ void mpcd::CellList::fillGhostBufferArray()
         }
     }
 
-void mpcd::CellList::communicateGhosts()
+void mpcd::CellList::sendGhosts()
     {
     if (!m_decomposition)
         {
@@ -1100,7 +1100,7 @@ void mpcd::CellList::addGhostsToCells()
     m_conditions.resetFlags(conditions);
     }
 
-void mpcd::CellList::recommunicateGhosts()
+void mpcd::CellList::reverseSendGhosts()
     {
     ArrayHandle<Scalar4> h_mpcd_ghost_vel(m_mpcd_ghost_vel,
                                           access_location::host,
