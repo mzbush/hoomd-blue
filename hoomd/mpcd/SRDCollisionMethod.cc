@@ -164,7 +164,7 @@ void mpcd::SRDCollisionMethod::rotate(uint64_t timestep)
         }
     unsigned int N_local = N_tot;
 #ifdef ENABLE_MPI
-    unsigned int N_ghosts = m_cl->getNGhosts();
+    unsigned int N_ghosts = m_cl->getNMPCDGhosts();
     std::unique_ptr<ArrayHandle<Scalar4>> h_vel_ghosts;
     if (N_ghosts)
         {

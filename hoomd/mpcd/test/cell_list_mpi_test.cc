@@ -634,7 +634,7 @@ void celllist_basic_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         ArrayHandle<Scalar4> h_vel(pdata->getVelocities(),
                                    access_location::host,
                                    access_mode::read);
-        unsigned int num_ghosts = cl->getNGhosts();
+        unsigned int num_ghosts = cl->getNMPCDGhosts();
         if (my_rank == 7)
             {
             // global index is (3,3,3), with origin (3,3,3)
@@ -694,7 +694,7 @@ void celllist_basic_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         ArrayHandle<Scalar4> h_vel(pdata->getVelocities(),
                                    access_location::host,
                                    access_mode::read);
-        unsigned int num_ghosts = cl->getNGhosts();
+        unsigned int num_ghosts = cl->getNMPCDGhosts();
         if (my_rank == 0)
             {
             // global index is (2,2,2), with origin (0,0,0)
@@ -853,7 +853,7 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         ArrayHandle<Scalar4> h_mpcd_ghost_vel(cl->getMPCDGhostVelocities(),
                                               access_location::host,
                                               access_mode::read);
-        unsigned int num_ghosts = cl->getNGhosts();
+        unsigned int num_ghosts = cl->getNMPCDGhosts();
         if (cl->hasGlobalCell(make_int3(2, 2, 2)))
             {
             const unsigned int local_cell = make_local_cell(cl, 2, 2, 2);
@@ -893,7 +893,7 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         ArrayHandle<double4> h_cell_vel(cl->getCellVelocities(),
                                         access_location::host,
                                         access_mode::read);
-        unsigned int num_ghosts = cl->getNGhosts();
+        unsigned int num_ghosts = cl->getNMPCDGhosts();
 
         std::array<int3, 8> cells_with_particles = {make_int3(2, 2, 2),
                                                     make_int3(3, 2, 2),
@@ -945,7 +945,7 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         ArrayHandle<double4> h_cell_vel(cl->getCellVelocities(),
                                         access_location::host,
                                         access_mode::read);
-        unsigned int num_ghosts = cl->getNGhosts();
+        unsigned int num_ghosts = cl->getNMPCDGhosts();
         std::array<int3, 8> cells_with_particles = {make_int3(1, 1, 1),
                                                     make_int3(2, 1, 1),
                                                     make_int3(1, 2, 1),
@@ -1039,7 +1039,7 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
                                         access_location::host,
                                         access_mode::read);
 
-        unsigned int num_ghosts = cl->getNGhosts();
+        unsigned int num_ghosts = cl->getNMPCDGhosts();
         const int3 cell = make_int3((int)L.x - 1, 0, (int)L.z - 1);
         if (cl->hasGlobalCell(cell))
             {
@@ -1191,7 +1191,7 @@ void celllist_back_communication_test(std::shared_ptr<ExecutionConfiguration> ex
         ArrayHandle<double4> h_cell_vel(cl->getCellVelocities(),
                                         access_location::host,
                                         access_mode::read);
-        unsigned int num_ghosts = cl->getNGhosts();
+        unsigned int num_ghosts = cl->getNMPCDGhosts();
 
         if (my_rank == 0)
             {
@@ -1238,7 +1238,7 @@ void celllist_back_communication_test(std::shared_ptr<ExecutionConfiguration> ex
 
         // update ghost velocities
         {
-        unsigned int num_ghosts = cl->getNGhosts();
+        unsigned int num_ghosts = cl->getNMPCDGhosts();
         ArrayHandle<Scalar4> h_mpcd_ghost_vel(cl->getMPCDGhostVelocities(),
                                               access_location::host,
                                               access_mode::overwrite);

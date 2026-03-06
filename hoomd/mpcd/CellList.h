@@ -152,7 +152,7 @@ class PYBIND11_EXPORT CellList : public Compute
 #ifdef ENABLE_MPI
 
     //! Get the number of ghost particles
-    const unsigned int getNGhosts() const
+    const unsigned int getNMPCDGhosts() const
         {
         return m_num_mpcd_ghosts_recv;
         }

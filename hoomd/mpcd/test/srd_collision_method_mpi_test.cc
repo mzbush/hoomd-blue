@@ -185,7 +185,7 @@ void srd_collision_method_basic_test(std::shared_ptr<ExecutionConfiguration> exe
     UP_ASSERT(collide->peekCollide(3));
     collide->collide(3);
         {
-        const unsigned int num_ghosts = cl->getNGhosts();
+        const unsigned int num_ghosts = cl->getNMPCDGhosts();
         ArrayHandle<Scalar4> h_vel(pdata_4->getVelocities(),
                                    access_location::host,
                                    access_mode::read);
