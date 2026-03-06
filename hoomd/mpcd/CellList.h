@@ -163,6 +163,12 @@ class PYBIND11_EXPORT CellList : public Compute
         return m_mpcd_ghost_vel;
         }
 
+    //! Get the ghost velocities
+    const GPUArray<Scalar3>& getMPCDGhostPositions() const
+        {
+        return m_mpcd_ghost_pos;
+        }
+
     //! Get the ghost cell ids
     const GPUArray<unsigned int>& getEmbedGhostCellIds() const
         {
