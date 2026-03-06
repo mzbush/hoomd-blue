@@ -385,7 +385,7 @@ class PYBIND11_EXPORT CellList : public Compute
     virtual bool needsEmbedMigrate(uint64_t timestep);
 
     //! Fills ghost buffer arrays and determine where to send them
-    virtual void fillGhostBufferArray();
+    virtual void fillGhostBuffers();
 
     //! Communicate ghosts
     void sendGhosts();

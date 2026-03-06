@@ -168,7 +168,7 @@ void mpcd::CellList::compute(uint64_t timestep)
         buildCellList();
         checkConditions();
 #ifdef ENABLE_MPI
-        fillGhostBufferArray();
+        fillGhostBuffers();
         sendGhosts();
         addGhostsToCells();
         checkConditions();
@@ -875,7 +875,7 @@ bool mpcd::CellList::needsEmbedMigrate(uint64_t timestep)
     return static_cast<bool>(migrate);
     }
 
-void mpcd::CellList::fillGhostBufferArray()
+void mpcd::CellList::fillGhostBuffers()
     {
     if (!m_decomposition)
         {
