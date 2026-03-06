@@ -42,15 +42,6 @@ mpcd::CellList::CellList(std::shared_ptr<SystemDefinition> sysdef, Scalar cell_s
     m_decomposition = m_pdata->getDomainDecomposition();
     m_cover_box = m_pdata->getBox();
     m_mpi_comm = m_exec_conf->getMPICommunicator();
-
-    // create buffer and ghost arrays
-    GPUVector<Scalar4> mpcd_vel_sendbuf(m_exec_conf);
-    m_mpcd_vel_sendbuf.swap(mpcd_vel_sendbuf);
-    GPUVector<Scalar4> mpcd_ghost_vel(m_exec_conf);
-    m_mpcd_ghost_vel.swap(mpcd_ghost_vel);
-    m_num_mpcd_ghosts_recv = 0;
-    m_num_mpcd_ghosts_send = 0;
-    m_num_unique_neigh = 0;
     initializeCommunicationSetup();
 #endif // ENABLE_MPI
 
@@ -87,15 +78,6 @@ mpcd::CellList::CellList(std::shared_ptr<SystemDefinition> sysdef,
     m_decomposition = m_pdata->getDomainDecomposition();
     m_cover_box = m_pdata->getBox();
     m_mpi_comm = m_exec_conf->getMPICommunicator();
-
-    // create buffer and ghost arrays
-    GPUVector<Scalar4> mpcd_vel_sendbuf(m_exec_conf);
-    m_mpcd_vel_sendbuf.swap(mpcd_vel_sendbuf);
-    GPUVector<Scalar4> mpcd_ghost_vel(m_exec_conf);
-    m_mpcd_ghost_vel.swap(mpcd_ghost_vel);
-    m_num_mpcd_ghosts_recv = 0;
-    m_num_mpcd_ghosts_send = 0;
-    m_num_unique_neigh = 0;
     initializeCommunicationSetup();
 #endif // ENABLE_MPI
 
@@ -742,6 +724,15 @@ void mpcd::CellList::initializeCommunicationSetup()
     {
     if (m_decomposition)
         {
+        // create buffer and ghost arrays
+        GPUVector<Scalar4> mpcd_vel_sendbuf(m_exec_conf);
+        m_mpcd_vel_sendbuf.swap(mpcd_vel_sendbuf);
+        GPUVector<Scalar4> mpcd_ghost_vel(m_exec_conf);
+        m_mpcd_ghost_vel.swap(mpcd_ghost_vel);
+        m_num_mpcd_ghosts_recv = 0;
+        m_num_mpcd_ghosts_send = 0;
+        m_num_unique_neigh = 0;
+
         Index3D di = m_decomposition->getDomainIndexer();
         uint3 mypos = m_decomposition->getGridPos();
         ArrayHandle<unsigned int> h_cart_ranks(m_decomposition->getCartRanks(),
