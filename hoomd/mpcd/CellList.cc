@@ -871,17 +871,17 @@ void mpcd::CellList::fillGhostBuffers()
         return;
         }
 
-    // resize and fill arrays
+    // fill arrays for sending
     std::fill(m_num_mpcd_send_ptls.begin(), m_num_mpcd_send_ptls.end(), 0);
-    std::fill(m_num_mpcd_recv_ptls.begin(), m_num_mpcd_recv_ptls.end(), 0);
-    std::fill(m_mpcd_recv_offsets.begin(), m_mpcd_recv_offsets.end(), 0);
     std::fill(m_mpcd_send_index.begin(), m_mpcd_send_index.end(), 0xffffffff);
-    m_mpcd_vel_sendbuf.resize(m_num_mpcd_ghosts_send);
 
     if (!m_num_mpcd_ghosts_send)
         {
         return;
         }
+
+    // resize buffer array
+    m_mpcd_vel_sendbuf.resize(m_num_mpcd_ghosts_send);
 
     ArrayHandle<Scalar4> h_vel(m_mpcd_pdata->getVelocities(),
                                access_location::host,
@@ -936,6 +936,11 @@ void mpcd::CellList::sendGhosts()
         {
         return;
         }
+
+    // fill receive arrays
+    std::fill(m_num_mpcd_recv_ptls.begin(), m_num_mpcd_recv_ptls.end(), 0);
+    std::fill(m_mpcd_recv_offsets.begin(), m_mpcd_recv_offsets.end(), 0);
+
     // communicate how many particles are being sent
     unsigned int num_recv_tot = 0;
         {
