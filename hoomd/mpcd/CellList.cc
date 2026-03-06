@@ -298,9 +298,7 @@ void mpcd::CellList::computeDimensions()
         const unsigned int num_cells = m_global_cell_indexer.getNumElements();
         if (num_cells >= (~(1 << 31)))
             {
-            m_exec_conf->msg->errorAllRanks()
-                << "Number of global cells exceeds size allotted." << std::endl;
-            throw std::runtime_error("Error computing cell list size");
+            throw std::runtime_error("Number of global cells exceeds size allotted.");
             }
         }
 #endif // ENABLE_MPI
