@@ -461,24 +461,24 @@ void mpcd::CellList::buildCellList()
         // this is done using periodic from the global box
         if (periodic.x)
             {
-            if (global_bin.x == (int)m_global_cell_dim.x)
-                global_bin.x = 0;
-            else if (global_bin.x == -1)
-                global_bin.x = m_global_cell_dim.x - 1;
+            if (global_bin.x >= (int)m_global_cell_dim.x)
+                global_bin.x -= m_global_cell_dim.x;
+            else if (global_bin.x < 0)
+                global_bin.x += m_global_cell_dim.x;
             }
         if (periodic.y)
             {
-            if (global_bin.y == (int)m_global_cell_dim.y)
-                global_bin.y = 0;
-            else if (global_bin.y == -1)
-                global_bin.y = m_global_cell_dim.y - 1;
+            if (global_bin.y >= (int)m_global_cell_dim.y)
+                global_bin.y -= m_global_cell_dim.y;
+            else if (global_bin.y < 0)
+                global_bin.y += m_global_cell_dim.y;
             }
         if (periodic.z)
             {
-            if (global_bin.z == (int)m_global_cell_dim.z)
-                global_bin.z = 0;
-            else if (global_bin.z == -1)
-                global_bin.z = m_global_cell_dim.z - 1;
+            if (global_bin.z >= (int)m_global_cell_dim.z)
+                global_bin.z -= m_global_cell_dim.z;
+            else if (global_bin.z < 0)
+                global_bin.z += m_global_cell_dim.z;
             }
 
         // validate and make sure no particles blew out of the box
