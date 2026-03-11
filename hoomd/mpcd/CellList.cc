@@ -987,6 +987,7 @@ void mpcd::CellList::sendGhosts()
         ArrayHandle<Scalar4> h_mpcd_vel_sendbuf(m_mpcd_vel_sendbuf,
                                                 access_location::host,
                                                 access_mode::read);
+        const MPI_Datatype mpi_scalar4 = m_exec_conf->getMPIConfig()->getScalar4Datatype();
         // loop over neighbors
         unsigned int nreq = 0;
         m_reqs.resize(4 * m_num_unique_neigh);
@@ -1000,8 +1001,8 @@ void mpcd::CellList::sendGhosts()
             if (m_num_mpcd_send_ptls[dir])
                 {
                 MPI_Isend(h_mpcd_vel_sendbuf.data + m_mpcd_send_index[dir],
-                          int(m_num_mpcd_send_ptls[dir] * sizeof(Scalar4)),
-                          MPI_BYTE,
+                          (int)m_num_mpcd_send_ptls[dir],
+                          mpi_scalar4,
                           neighbor,
                           2,
                           m_mpi_comm,
@@ -1011,8 +1012,8 @@ void mpcd::CellList::sendGhosts()
             if (m_num_mpcd_recv_ptls[dir])
                 {
                 MPI_Irecv(h_mpcd_ghost_vel.data + m_mpcd_recv_offsets[dir],
-                          int(m_num_mpcd_recv_ptls[dir] * sizeof(Scalar4)),
-                          MPI_BYTE,
+                          (int)m_num_mpcd_recv_ptls[dir],
+                          mpi_scalar4,
                           neighbor,
                           2,
                           m_mpi_comm,
@@ -1102,6 +1103,7 @@ void mpcd::CellList::reverseSendGhosts()
     ArrayHandle<Scalar4> h_mpcd_vel_sendbuf(m_mpcd_vel_sendbuf,
                                             access_location::host,
                                             access_mode::overwrite);
+    const MPI_Datatype mpi_scalar4 = m_exec_conf->getMPIConfig()->getScalar4Datatype();
     unsigned int nreq = 0;
     m_reqs.resize(2 * m_num_unique_neigh);
     for (unsigned int ineigh = 0; ineigh < m_num_unique_neigh; ++ineigh)
@@ -1114,8 +1116,8 @@ void mpcd::CellList::reverseSendGhosts()
         if (m_num_mpcd_recv_ptls[dir])
             {
             MPI_Isend(h_mpcd_ghost_vel.data + m_mpcd_recv_offsets[dir],
-                      int(m_num_mpcd_recv_ptls[dir] * sizeof(Scalar4)),
-                      MPI_BYTE,
+                      (int)m_num_mpcd_recv_ptls[dir],
+                      mpi_scalar4,
                       neighbor,
                       2,
                       m_mpi_comm,
@@ -1125,8 +1127,8 @@ void mpcd::CellList::reverseSendGhosts()
         if (m_num_mpcd_send_ptls[dir])
             {
             MPI_Irecv(h_mpcd_vel_sendbuf.data + m_mpcd_send_index[dir],
-                      int(m_num_mpcd_send_ptls[dir] * sizeof(Scalar4)),
-                      MPI_BYTE,
+                      (int)m_num_mpcd_send_ptls[dir],
+                      mpi_scalar4,
                       neighbor,
                       2,
                       m_mpi_comm,
