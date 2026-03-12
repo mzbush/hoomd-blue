@@ -891,7 +891,7 @@ void mpcd::CellList::fillGhostBuffers()
                                        access_mode::readwrite);
     unsigned int N_mpcd = m_mpcd_pdata->getN() + m_mpcd_pdata->getNVirtual();
 
-    // sort the ghost particles by direction
+    // sort the ghost particles by direction, least to greatest
     std::sort(h_mpcd_comm_key.data,
               h_mpcd_comm_key.data + N_mpcd,
               [](uint2& a, uint2& b) { return a.x < b.x; });
