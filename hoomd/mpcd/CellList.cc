@@ -741,7 +741,7 @@ void mpcd::CellList::initializeCommunicationSetup()
         m_num_mpcd_send_ptls.resize(27);
         m_num_mpcd_recv_ptls.resize(27);
         m_mpcd_recv_offsets.resize(27);
-        m_mpcd_send_index.resize(27);
+        m_mpcd_send_offsets.resize(27);
         m_neigh_rank.resize(26);
         std::fill(m_neigh_rank.begin(), m_neigh_rank.end(), 0xffffffff);
 
@@ -873,7 +873,7 @@ void mpcd::CellList::fillGhostBuffers()
 
     // fill arrays for sending
     std::fill(m_num_mpcd_send_ptls.begin(), m_num_mpcd_send_ptls.end(), 0);
-    std::fill(m_mpcd_send_index.begin(), m_mpcd_send_index.end(), 0xffffffff);
+    std::fill(m_mpcd_send_offsets.begin(), m_mpcd_send_offsets.end(), 0xffffffff);
 
     if (!m_num_mpcd_ghosts_send)
         {
@@ -921,7 +921,7 @@ void mpcd::CellList::fillGhostBuffers()
                     {
                     m_num_mpcd_send_ptls[cur_dir] = i - cur_dir_index_start;
                     }
-                m_mpcd_send_index[comm_dir] = i;
+                m_mpcd_send_offsets[comm_dir] = i;
                 cur_dir_index_start = i;
                 cur_dir = comm_dir;
                 }
@@ -1000,7 +1000,7 @@ void mpcd::CellList::sendGhosts()
             // exchange particle data
             if (m_num_mpcd_send_ptls[dir])
                 {
-                MPI_Isend(h_mpcd_vel_sendbuf.data + m_mpcd_send_index[dir],
+                MPI_Isend(h_mpcd_vel_sendbuf.data + m_mpcd_send_offsets[dir],
                           (int)m_num_mpcd_send_ptls[dir],
                           mpi_scalar4,
                           neighbor,
@@ -1126,7 +1126,7 @@ void mpcd::CellList::reverseSendGhosts()
 
         if (m_num_mpcd_send_ptls[dir])
             {
-            MPI_Irecv(h_mpcd_vel_sendbuf.data + m_mpcd_send_index[dir],
+            MPI_Irecv(h_mpcd_vel_sendbuf.data + m_mpcd_send_offsets[dir],
                       (int)m_num_mpcd_send_ptls[dir],
                       mpi_scalar4,
                       neighbor,

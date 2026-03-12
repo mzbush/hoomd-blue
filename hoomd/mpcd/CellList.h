@@ -369,20 +369,19 @@ class PYBIND11_EXPORT CellList : public Compute
     GPUVector<Scalar3> m_mpcd_ghost_pos;            //!< position of MPCD ghost particles received
     GPUVector<Scalar4> m_mpcd_vel_sendbuf;          //!< Buffer for MPCD ghost velocity sent
     GPUVector<Scalar3> m_mpcd_pos_sendbuf;          //!< Buffer for MPCD ghost position sent
-    unsigned int m_num_mpcd_ghosts_recv;            //!< number of ghost particles received
-    unsigned int m_num_mpcd_ghosts_send;            //!< number of ghost particles sent
+    unsigned int m_num_mpcd_ghosts_recv;            //!< total MPCD ghost particles received
+    unsigned int m_num_mpcd_ghosts_send;            //!< total MPCD ghost particles sent
     GPUVector<unsigned int> m_embed_ghost_cell_ids; //!< Cell ids of the embedded ghost particles
     std::vector<MPI_Request> m_reqs;                //!< MPI requests
     MPI_Comm m_mpi_comm;                            //!< MPI communicator
 
-    std::vector<unsigned int> m_num_mpcd_send_ptls; //!< Number of MPCD particles sent per neighbor
-    std::vector<unsigned int>
-        m_num_mpcd_recv_ptls;                    //!< Number of MPCD particles received per neighbor
-    std::vector<unsigned int> m_mpcd_send_index; //!< Starting index of MPCD particles sent
-    std::vector<unsigned int> m_mpcd_recv_offsets; //!< Offsets for MPCD particle receive buffers
-    std::vector<unsigned int> m_adj_dir;           //!< List of adjacent neighbors
-    unsigned int m_num_unique_neigh;               //!< Number of unique neighbors
-    std::vector<unsigned int> m_neigh_rank;        //!< adjacent neighbors to MPI rank
+    std::vector<unsigned int> m_num_mpcd_send_ptls; //!< Number of MPCD ghosts sent per neighbor
+    std::vector<unsigned int> m_num_mpcd_recv_ptls; //!< Number of MPCD ghosts received per neighbor
+    std::vector<unsigned int> m_mpcd_send_offsets;  //!< Starting index of MPCD ghosts sent
+    std::vector<unsigned int> m_mpcd_recv_offsets;  //!< Offsets for MPCD ghost receive buffers
+    std::vector<unsigned int> m_adj_dir;            //!< List of adjacent neighbors
+    unsigned int m_num_unique_neigh;                //!< Number of unique neighbors
+    std::vector<unsigned int> m_neigh_rank;         //!< adjacent neighbors to MPI rank
 
     //! Generate a mapping of unique neighbors for ghost communication
     void initializeCommunicationSetup();
