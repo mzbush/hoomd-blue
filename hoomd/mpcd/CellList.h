@@ -377,8 +377,8 @@ class PYBIND11_EXPORT CellList : public Compute
 
     std::vector<unsigned int> m_num_mpcd_send_ptls; //!< Number of MPCD ghosts sent per neighbor
     std::vector<unsigned int> m_num_mpcd_recv_ptls; //!< Number of MPCD ghosts received per neighbor
-    std::vector<unsigned int> m_mpcd_send_offsets;  //!< Offsets for MPCD ghost send buffers
-    std::vector<unsigned int> m_mpcd_recv_offsets;  //!< Offsets for MPCD ghost receive buffers
+    GPUArray<unsigned int> m_mpcd_send_offsets;     //!< Offsets for MPCD ghost send buffers
+    GPUArray<unsigned int> m_mpcd_recv_offsets;     //!< Offsets for MPCD ghost receive buffers
     std::vector<unsigned int> m_adj_dir;            //!< List of adjacent neighbors
     unsigned int m_num_unique_neigh;                //!< Number of unique neighbors
     std::vector<unsigned int> m_neigh_rank;         //!< adjacent neighbors to MPI rank

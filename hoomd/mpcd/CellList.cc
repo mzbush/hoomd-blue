@@ -740,8 +740,10 @@ void mpcd::CellList::initializeCommunicationSetup()
         // reserve per neighbor memory
         m_num_mpcd_send_ptls.resize(27);
         m_num_mpcd_recv_ptls.resize(27);
-        m_mpcd_recv_offsets.resize(27);
-        m_mpcd_send_offsets.resize(27);
+        GPUVector<unsigned int> mpcd_send_offsets(27, m_exec_conf);
+        m_mpcd_send_offsets.swap(mpcd_send_offsets);
+        GPUVector<unsigned int> mpcd_recv_offsets(27, m_exec_conf);
+        m_mpcd_recv_offsets.swap(mpcd_recv_offsets);
         m_neigh_rank.resize(26);
         std::fill(m_neigh_rank.begin(), m_neigh_rank.end(), 0xffffffff);
 
@@ -871,9 +873,17 @@ void mpcd::CellList::fillGhostBuffers()
         return;
         }
 
-    // fill arrays for sending
-    std::fill(m_num_mpcd_send_ptls.begin(), m_num_mpcd_send_ptls.end(), 0);
-    std::fill(m_mpcd_send_offsets.begin(), m_mpcd_send_offsets.end(), 0xffffffff);
+        // fill arrays for sending
+        {
+        ArrayHandle<unsigned int> h_mpcd_send_offsets(m_mpcd_send_offsets,
+                                                      access_location::host,
+                                                      access_mode::overwrite);
+        for (unsigned int i = 0; i < m_mpcd_send_offsets.getNumElements(); i++)
+            {
+            m_num_mpcd_send_ptls[i] = 0;
+            h_mpcd_send_offsets.data[i] = 0xffffffff;
+            }
+        }
 
     if (!m_num_mpcd_ghosts_send)
         {
@@ -901,6 +911,9 @@ void mpcd::CellList::fillGhostBuffers()
         ArrayHandle<Scalar4> h_mpcd_vel_sendbuf(m_mpcd_vel_sendbuf,
                                                 access_location::host,
                                                 access_mode::readwrite);
+        ArrayHandle<unsigned int> h_mpcd_send_offsets(m_mpcd_send_offsets,
+                                                      access_location::host,
+                                                      access_mode::readwrite);
         // get number of neighbors and how many particles to send them
         unsigned int cur_dir = 0xffffffff;
         unsigned int cur_dir_index_start = 0;
@@ -921,7 +934,7 @@ void mpcd::CellList::fillGhostBuffers()
                     {
                     m_num_mpcd_send_ptls[cur_dir] = i - cur_dir_index_start;
                     }
-                m_mpcd_send_offsets[comm_dir] = i;
+                h_mpcd_send_offsets.data[comm_dir] = i;
                 cur_dir_index_start = i;
                 cur_dir = comm_dir;
                 }
@@ -937,13 +950,20 @@ void mpcd::CellList::sendGhosts()
         return;
         }
 
-    // fill receive arrays
-    std::fill(m_num_mpcd_recv_ptls.begin(), m_num_mpcd_recv_ptls.end(), 0);
-    std::fill(m_mpcd_recv_offsets.begin(), m_mpcd_recv_offsets.end(), 0);
-
     // communicate how many particles are being sent
     unsigned int num_recv_tot = 0;
         {
+        // fill receive arrays
+        ArrayHandle<unsigned int> h_mpcd_recv_offsets(m_mpcd_recv_offsets,
+                                                      access_location::host,
+                                                      access_mode::readwrite);
+        for (unsigned int i = 0; i < m_mpcd_recv_offsets.getNumElements(); i++)
+            {
+            m_num_mpcd_recv_ptls[i] = 0;
+            h_mpcd_recv_offsets.data[i] = 0;
+            }
+
+        // do communication
         unsigned int nreq = 0;
         m_reqs.resize(2 * m_num_unique_neigh);
         for (unsigned int ineigh = 0; ineigh < m_num_unique_neigh; ++ineigh)
@@ -972,7 +992,7 @@ void mpcd::CellList::sendGhosts()
         for (unsigned int ineigh = 0; ineigh < m_num_unique_neigh; ++ineigh)
             {
             unsigned int dir = m_adj_dir[ineigh];
-            m_mpcd_recv_offsets[dir] = num_recv_tot;
+            h_mpcd_recv_offsets.data[dir] = num_recv_tot;
             num_recv_tot += m_num_mpcd_recv_ptls[dir];
             }
         m_num_mpcd_ghosts_recv = num_recv_tot;
@@ -987,6 +1007,12 @@ void mpcd::CellList::sendGhosts()
         ArrayHandle<Scalar4> h_mpcd_vel_sendbuf(m_mpcd_vel_sendbuf,
                                                 access_location::host,
                                                 access_mode::read);
+        ArrayHandle<unsigned int> h_mpcd_recv_offsets(m_mpcd_recv_offsets,
+                                                      access_location::host,
+                                                      access_mode::read);
+        ArrayHandle<unsigned int> h_mpcd_send_offsets(m_mpcd_send_offsets,
+                                                      access_location::host,
+                                                      access_mode::read);
         const MPI_Datatype mpi_scalar4 = m_exec_conf->getMPIConfig()->getScalar4Datatype();
         // loop over neighbors
         unsigned int nreq = 0;
@@ -1000,7 +1026,7 @@ void mpcd::CellList::sendGhosts()
             // exchange particle data
             if (m_num_mpcd_send_ptls[dir])
                 {
-                MPI_Isend(h_mpcd_vel_sendbuf.data + m_mpcd_send_offsets[dir],
+                MPI_Isend(h_mpcd_vel_sendbuf.data + h_mpcd_send_offsets.data[dir],
                           (int)m_num_mpcd_send_ptls[dir],
                           mpi_scalar4,
                           neighbor,
@@ -1011,7 +1037,7 @@ void mpcd::CellList::sendGhosts()
 
             if (m_num_mpcd_recv_ptls[dir])
                 {
-                MPI_Irecv(h_mpcd_ghost_vel.data + m_mpcd_recv_offsets[dir],
+                MPI_Irecv(h_mpcd_ghost_vel.data + h_mpcd_recv_offsets.data[dir],
                           (int)m_num_mpcd_recv_ptls[dir],
                           mpi_scalar4,
                           neighbor,
@@ -1103,6 +1129,12 @@ void mpcd::CellList::reverseSendGhosts()
     ArrayHandle<Scalar4> h_mpcd_vel_sendbuf(m_mpcd_vel_sendbuf,
                                             access_location::host,
                                             access_mode::overwrite);
+    ArrayHandle<unsigned int> h_mpcd_recv_offsets(m_mpcd_recv_offsets,
+                                                  access_location::host,
+                                                  access_mode::read);
+    ArrayHandle<unsigned int> h_mpcd_send_offsets(m_mpcd_send_offsets,
+                                                  access_location::host,
+                                                  access_mode::read);
     const MPI_Datatype mpi_scalar4 = m_exec_conf->getMPIConfig()->getScalar4Datatype();
     unsigned int nreq = 0;
     m_reqs.resize(2 * m_num_unique_neigh);
@@ -1115,7 +1147,7 @@ void mpcd::CellList::reverseSendGhosts()
         // exchange particle data
         if (m_num_mpcd_recv_ptls[dir])
             {
-            MPI_Isend(h_mpcd_ghost_vel.data + m_mpcd_recv_offsets[dir],
+            MPI_Isend(h_mpcd_ghost_vel.data + h_mpcd_recv_offsets.data[dir],
                       (int)m_num_mpcd_recv_ptls[dir],
                       mpi_scalar4,
                       neighbor,
@@ -1126,7 +1158,7 @@ void mpcd::CellList::reverseSendGhosts()
 
         if (m_num_mpcd_send_ptls[dir])
             {
-            MPI_Irecv(h_mpcd_vel_sendbuf.data + m_mpcd_send_offsets[dir],
+            MPI_Irecv(h_mpcd_vel_sendbuf.data + h_mpcd_send_offsets.data[dir],
                       (int)m_num_mpcd_send_ptls[dir],
                       mpi_scalar4,
                       neighbor,
