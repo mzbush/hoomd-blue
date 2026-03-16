@@ -880,7 +880,6 @@ void mpcd::CellList::fillGhostBuffers()
                                                       access_mode::overwrite);
         for (unsigned int i = 0; i < m_mpcd_send_offsets.getNumElements(); i++)
             {
-            m_num_mpcd_send_ptls[i] = 0;
             h_mpcd_send_offsets.data[i] = 0xffffffff;
             }
         }
@@ -916,7 +915,6 @@ void mpcd::CellList::fillGhostBuffers()
                                                       access_mode::readwrite);
         // get number of neighbors and how many particles to send them
         unsigned int cur_dir = 0xffffffff;
-        unsigned int cur_dir_index_start = 0;
         unsigned int comm_dir = 0;
         for (unsigned int i = 0; i < m_num_mpcd_ghosts_send; i++)
             {
@@ -930,16 +928,10 @@ void mpcd::CellList::fillGhostBuffers()
             // count the number of neighbors and how many particles for each
             if (comm_dir != cur_dir)
                 {
-                if (i != 0)
-                    {
-                    m_num_mpcd_send_ptls[cur_dir] = i - cur_dir_index_start;
-                    }
                 h_mpcd_send_offsets.data[comm_dir] = i;
-                cur_dir_index_start = i;
                 cur_dir = comm_dir;
                 }
             }
-        m_num_mpcd_send_ptls[comm_dir] = m_num_mpcd_ghosts_send - cur_dir_index_start;
         }
     }
 
@@ -948,6 +940,36 @@ void mpcd::CellList::sendGhosts()
     if (!m_decomposition)
         {
         return;
+        }
+
+        // determine number of particles being sent per neighbor
+        {
+        ArrayHandle<unsigned int> h_mpcd_send_offsets(m_mpcd_send_offsets,
+                                                      access_location::host,
+                                                      access_mode::read);
+        unsigned int last_start_offset = 0xffffffff;
+        unsigned int last_start_dir = 0xffffffff;
+        for (unsigned int i = 0; i < m_mpcd_send_offsets.getNumElements(); i++)
+            {
+            if (h_mpcd_send_offsets.data[i] == 0xffffffff)
+                {
+                m_num_mpcd_send_ptls[i] = 0;
+                }
+            else
+                {
+                if (last_start_dir != 0xffffffff)
+                    {
+                    m_num_mpcd_send_ptls[last_start_dir]
+                        = h_mpcd_send_offsets.data[i] - last_start_offset;
+                    }
+                last_start_offset = h_mpcd_send_offsets.data[i];
+                last_start_dir = i;
+                }
+            }
+        if (m_num_mpcd_ghosts_send)
+            {
+            m_num_mpcd_send_ptls[last_start_dir] = m_num_mpcd_ghosts_send - last_start_offset;
+            }
         }
 
     // communicate how many particles are being sent
@@ -999,6 +1021,7 @@ void mpcd::CellList::sendGhosts()
         }
     // communicate ghost particles
     // resize ghost arrays to fit the particles being received
+    std::cout << "After communicate number of particles" << std::endl;
     m_mpcd_ghost_vel.resize(m_num_mpcd_ghosts_recv);
         {
         ArrayHandle<Scalar4> h_mpcd_ghost_vel(m_mpcd_ghost_vel,
