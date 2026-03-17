@@ -11,6 +11,8 @@ Next release
 
 *Changed*
 
+* Use tabs in binary installation documentation (#2246).
+
 *Deprecated*
 
 *Removed*
