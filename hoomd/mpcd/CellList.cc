@@ -1021,7 +1021,6 @@ void mpcd::CellList::sendGhosts()
         }
     // communicate ghost particles
     // resize ghost arrays to fit the particles being received
-    std::cout << "After communicate number of particles" << std::endl;
     m_mpcd_ghost_vel.resize(m_num_mpcd_ghosts_recv);
         {
         ArrayHandle<Scalar4> h_mpcd_ghost_vel(m_mpcd_ghost_vel,
