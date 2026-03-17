@@ -726,6 +726,8 @@ void mpcd::CellList::initializeCommunicationSetup()
     if (m_decomposition)
         {
         // create buffer and ghost arrays
+        GPUVector<uint2> mpcd_comm_key(m_exec_conf);
+        m_mpcd_comm_key.swap(mpcd_comm_key);
         GPUVector<Scalar4> mpcd_vel_sendbuf(m_exec_conf);
         m_mpcd_vel_sendbuf.swap(mpcd_vel_sendbuf);
         GPUVector<Scalar4> mpcd_ghost_vel(m_exec_conf);
