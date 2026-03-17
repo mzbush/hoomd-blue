@@ -539,7 +539,7 @@ void mpcd::CellList::buildCellList()
                 // mark particle to be sent to neighboring rank
                 h_mpcd_comm_key->data[cur_p] = make_uint2(dir, cur_p);
                 ++num_ghosts_send;
-                // set the bin idx to ~(1 << 31)be the global index
+                // set the bin idx to be the global index with highest bit set to 1
                 bin_idx = m_global_cell_indexer(global_bin.x, global_bin.y, global_bin.z);
                 bin_idx |= 1 << 31;
                 }
