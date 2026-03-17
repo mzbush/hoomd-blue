@@ -84,75 +84,180 @@ void mpcd::CellListGPU::buildCellList()
     const unsigned int N_mpcd = m_mpcd_pdata->getN() + m_mpcd_pdata->getNVirtual();
     unsigned int N_tot = N_mpcd;
 
-    if (m_embed_group)
+    // get communcation variables
+    uint3 rank_size = make_uint3(0, 0, 0);
+#ifdef ENABLE_MPI
+    if (m_decomposition)
         {
-        ArrayHandle<unsigned int> d_embed_cell_ids(m_embed_cell_ids,
-                                                   access_location::device,
-                                                   access_mode::overwrite);
-        ArrayHandle<Scalar4> d_pos_embed(m_pdata->getPositions(),
-                                         access_location::device,
-                                         access_mode::read);
-        ArrayHandle<Scalar4> d_vel_embed(m_pdata->getVelocities(),
-                                         access_location::device,
-                                         access_mode::read);
-        ArrayHandle<unsigned int> d_embed_member_idx(m_embed_group->getIndexArray(),
-                                                     access_location::device,
-                                                     access_mode::read);
-        N_tot += m_embed_group->getNumMembers();
+        // allocate space for communication flag
+        m_mpcd_comm_key.resize(N_mpcd);
+        ArrayHandle<uint2> d_mpcd_comm_key(m_mpcd_comm_key,
+                                           access_location::device,
+                                           access_mode::overwrite);
+        // allocate the the number of ranks in each dimension
+        Index3D di = m_decomposition->getDomainIndexer();
+        rank_size = make_uint3(di.getW(), di.getH(), di.getD());
 
-        m_tuner_cell->begin();
-        mpcd::gpu::compute_cell_list(d_cell_np.data,
-                                     d_cell_vel.data,
-                                     d_cell_energy.data,
-                                     m_conditions.getDeviceFlags(),
-                                     d_vel.data,
-                                     m_mpcd_pdata->getMass(),
-                                     d_embed_cell_ids.data,
-                                     d_pos.data,
-                                     d_pos_embed.data,
-                                     d_vel_embed.data,
-                                     d_embed_member_idx.data,
-                                     m_pdata->getBox().getPeriodic(),
-                                     m_origin_idx,
-                                     m_grid_shift,
-                                     m_pdata->getGlobalBox(),
-                                     m_global_cell_dim,
-                                     m_cell_indexer,
-                                     N_mpcd,
-                                     N_tot,
-                                     m_flags[mpcd::detail::thermo_options::energy],
-                                     m_tuner_cell->getParam()[0]);
-        if (m_exec_conf->isCUDAErrorCheckingEnabled())
-            CHECK_CUDA_ERROR();
-        m_tuner_cell->end();
+        if (m_embed_group)
+            {
+            ArrayHandle<unsigned int> d_embed_cell_ids(m_embed_cell_ids,
+                                                       access_location::device,
+                                                       access_mode::overwrite);
+            ArrayHandle<Scalar4> d_pos_embed(m_pdata->getPositions(),
+                                             access_location::device,
+                                             access_mode::read);
+            ArrayHandle<Scalar4> d_vel_embed(m_pdata->getVelocities(),
+                                             access_location::device,
+                                             access_mode::read);
+            ArrayHandle<unsigned int> d_embed_member_idx(m_embed_group->getIndexArray(),
+                                                         access_location::device,
+                                                         access_mode::read);
+            N_tot += m_embed_group->getNumMembers();
+
+            m_tuner_cell->begin();
+            mpcd::gpu::compute_cell_list(d_cell_np.data,
+                                         d_cell_vel.data,
+                                         d_cell_energy.data,
+                                         m_conditions.getDeviceFlags(),
+                                         d_vel.data,
+                                         m_mpcd_pdata->getMass(),
+                                         d_embed_cell_ids.data,
+                                         d_pos.data,
+                                         d_pos_embed.data,
+                                         d_vel_embed.data,
+                                         d_embed_member_idx.data,
+                                         m_pdata->getBox().getPeriodic(),
+                                         m_origin_idx,
+                                         m_grid_shift,
+                                         m_pdata->getGlobalBox(),
+                                         m_global_cell_dim,
+                                         m_cell_indexer,
+                                         m_global_cell_indexer,
+                                         d_mpcd_comm_key.data,
+                                         rank_size,
+                                         true,
+                                         N_mpcd,
+                                         N_tot,
+                                         m_flags[mpcd::detail::thermo_options::energy],
+                                         m_tuner_cell->getParam()[0]);
+            if (m_exec_conf->isCUDAErrorCheckingEnabled())
+                CHECK_CUDA_ERROR();
+            m_tuner_cell->end();
+            }
+        else
+            {
+            m_tuner_cell->begin();
+            mpcd::gpu::compute_cell_list(d_cell_np.data,
+                                         d_cell_vel.data,
+                                         d_cell_energy.data,
+                                         m_conditions.getDeviceFlags(),
+                                         d_vel.data,
+                                         m_mpcd_pdata->getMass(),
+                                         NULL,
+                                         d_pos.data,
+                                         NULL,
+                                         NULL,
+                                         NULL,
+                                         m_pdata->getBox().getPeriodic(),
+                                         m_origin_idx,
+                                         m_grid_shift,
+                                         m_pdata->getGlobalBox(),
+                                         m_global_cell_dim,
+                                         m_cell_indexer,
+                                         m_global_cell_indexer,
+                                         d_mpcd_comm_key.data,
+                                         rank_size,
+                                         true,
+                                         N_mpcd,
+                                         N_tot,
+                                         m_flags[mpcd::detail::thermo_options::energy],
+                                         m_tuner_cell->getParam()[0]);
+            if (m_exec_conf->isCUDAErrorCheckingEnabled())
+                CHECK_CUDA_ERROR();
+            m_tuner_cell->end();
+            }
         }
     else
+#endif // ENABLE_MPI
         {
-        m_tuner_cell->begin();
-        mpcd::gpu::compute_cell_list(d_cell_np.data,
-                                     d_cell_vel.data,
-                                     d_cell_energy.data,
-                                     m_conditions.getDeviceFlags(),
-                                     d_vel.data,
-                                     m_mpcd_pdata->getMass(),
-                                     NULL,
-                                     d_pos.data,
-                                     NULL,
-                                     NULL,
-                                     NULL,
-                                     m_pdata->getBox().getPeriodic(),
-                                     m_origin_idx,
-                                     m_grid_shift,
-                                     m_pdata->getGlobalBox(),
-                                     m_global_cell_dim,
-                                     m_cell_indexer,
-                                     N_mpcd,
-                                     N_tot,
-                                     m_flags[mpcd::detail::thermo_options::energy],
-                                     m_tuner_cell->getParam()[0]);
-        if (m_exec_conf->isCUDAErrorCheckingEnabled())
-            CHECK_CUDA_ERROR();
-        m_tuner_cell->end();
+        if (m_embed_group)
+            {
+            ArrayHandle<unsigned int> d_embed_cell_ids(m_embed_cell_ids,
+                                                       access_location::device,
+                                                       access_mode::overwrite);
+            ArrayHandle<Scalar4> d_pos_embed(m_pdata->getPositions(),
+                                             access_location::device,
+                                             access_mode::read);
+            ArrayHandle<Scalar4> d_vel_embed(m_pdata->getVelocities(),
+                                             access_location::device,
+                                             access_mode::read);
+            ArrayHandle<unsigned int> d_embed_member_idx(m_embed_group->getIndexArray(),
+                                                         access_location::device,
+                                                         access_mode::read);
+            N_tot += m_embed_group->getNumMembers();
+
+            m_tuner_cell->begin();
+            mpcd::gpu::compute_cell_list(d_cell_np.data,
+                                         d_cell_vel.data,
+                                         d_cell_energy.data,
+                                         m_conditions.getDeviceFlags(),
+                                         d_vel.data,
+                                         m_mpcd_pdata->getMass(),
+                                         d_embed_cell_ids.data,
+                                         d_pos.data,
+                                         d_pos_embed.data,
+                                         d_vel_embed.data,
+                                         d_embed_member_idx.data,
+                                         m_pdata->getBox().getPeriodic(),
+                                         m_origin_idx,
+                                         m_grid_shift,
+                                         m_pdata->getGlobalBox(),
+                                         m_global_cell_dim,
+                                         m_cell_indexer,
+                                         m_global_cell_indexer,
+                                         NULL,
+                                         rank_size,
+                                         false,
+                                         N_mpcd,
+                                         N_tot,
+                                         m_flags[mpcd::detail::thermo_options::energy],
+                                         m_tuner_cell->getParam()[0]);
+            if (m_exec_conf->isCUDAErrorCheckingEnabled())
+                CHECK_CUDA_ERROR();
+            m_tuner_cell->end();
+            }
+        else
+            {
+            m_tuner_cell->begin();
+            mpcd::gpu::compute_cell_list(d_cell_np.data,
+                                         d_cell_vel.data,
+                                         d_cell_energy.data,
+                                         m_conditions.getDeviceFlags(),
+                                         d_vel.data,
+                                         m_mpcd_pdata->getMass(),
+                                         NULL,
+                                         d_pos.data,
+                                         NULL,
+                                         NULL,
+                                         NULL,
+                                         m_pdata->getBox().getPeriodic(),
+                                         m_origin_idx,
+                                         m_grid_shift,
+                                         m_pdata->getGlobalBox(),
+                                         m_global_cell_dim,
+                                         m_cell_indexer,
+                                         m_global_cell_indexer,
+                                         NULL,
+                                         rank_size,
+                                         false,
+                                         N_mpcd,
+                                         N_tot,
+                                         m_flags[mpcd::detail::thermo_options::energy],
+                                         m_tuner_cell->getParam()[0]);
+            if (m_exec_conf->isCUDAErrorCheckingEnabled())
+                CHECK_CUDA_ERROR();
+            m_tuner_cell->end();
+            }
         }
     }
 

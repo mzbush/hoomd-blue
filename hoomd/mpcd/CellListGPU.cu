@@ -36,6 +36,10 @@ namespace kernel
  * \param global_box Global simulation box
  * \param global_cell_dim Global cell dimensions, no padding
  * \param cell_indexer 3D indexer for cell id
+ * \param cell_indexer 3D indexer for global cell id
+ * \param d_mpcd_comm_key directions to send MPCD particles as ghosts
+ * \param rank_size the size of the local rank
+ * \param is_decomposition whether there is domain decomposition
  * \param N_mpcd Number of MPCD particles
  * \param N_tot Total number of particle (MPCD + embedded)
  * \param need_energy True if computing the energy
@@ -65,6 +69,10 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
                                   const BoxDim global_box,
                                   const uint3 global_cell_dim,
                                   const Index3D cell_indexer,
+                                  const Index3D global_cell_indexer,
+                                  uint2* d_mpcd_comm_key,
+                                  const uint3 rank_size,
+                                  const bool is_decomposition,
                                   const unsigned int N_mpcd,
                                   const unsigned int N_tot,
                                   const bool need_energy)
@@ -128,44 +136,80 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
             global_bin.z += global_cell_dim.z;
         }
 
-    // compute the local cell
-    int3 bin = make_int3(global_bin.x - origin_idx.x,
-                         global_bin.y - origin_idx.y,
-                         global_bin.z - origin_idx.z);
-    // these checks guard against round-off errors with domain decomposition
-    if (!periodic.x)
-        {
-        if (bin.x == -1)
-            bin.x = 0;
-        else if (bin.x == (int)cell_indexer.getW())
-            bin.x = cell_indexer.getW() - 1;
-        }
-    if (!periodic.y)
-        {
-        if (bin.y == -1)
-            bin.y = 0;
-        else if (bin.y == (int)cell_indexer.getH())
-            bin.y = cell_indexer.getH() - 1;
-        }
-    if (!periodic.z)
-        {
-        if (bin.z == -1)
-            bin.z = 0;
-        else if (bin.z == (int)cell_indexer.getD())
-            bin.z = cell_indexer.getD() - 1;
-        }
-
-    // validate and make sure no particles blew out of the box
-    if ((bin.x < 0 || bin.x >= (int)cell_indexer.getW())
-        || (bin.y < 0 || bin.y >= (int)cell_indexer.getH())
-        || (bin.z < 0 || bin.z >= (int)cell_indexer.getD()))
+    // validate and make sure no particles blew out of the global box
+    if ((global_bin.x < 0 || global_bin.x >= (int)global_cell_dim.x)
+        || (global_bin.y < 0 || global_bin.y >= (int)global_cell_dim.y)
+        || (global_bin.z < 0 || global_bin.z >= (int)global_cell_dim.z))
         {
         (*d_conditions).z = idx + 1;
         return;
         }
 
-    const unsigned int bin_idx = cell_indexer(bin.x, bin.y, bin.z);
-    const unsigned int offset = atomicInc(&d_cell_np[bin_idx], 0xffffffff);
+    // compute the local cell
+    int3 bin = make_int3(global_bin.x - origin_idx.x,
+                         global_bin.y - origin_idx.y,
+                         global_bin.z - origin_idx.z);
+
+    // check if the particle is still in the local box
+    const bool is_local = ((bin.x >= 0 && bin.x < (int)cell_indexer.getW())
+                           && (bin.y >= 0 && bin.y < (int)cell_indexer.getH())
+                           && (bin.z >= 0 && bin.z < (int)cell_indexer.getD()));
+
+    // check if particles outside the local box is allowed
+    if (!is_local && !is_decomposition)
+        {
+        (*d_conditions).z = idx + 1;
+        return;
+        }
+
+    unsigned int bin_idx;
+    if (is_local)
+        {
+        bin_idx = cell_indexer(bin.x, bin.y, bin.z);
+        // set the MPI communication flag
+#ifdef ENABLE_MPI
+        if (is_decomposition && idx < N_mpcd)
+            {
+            d_mpcd_comm_key[idx] = make_uint2(0xffffffff, idx);
+            }
+#endif // ENABLE_MPI
+        }
+#ifdef ENABLE_MPI
+    else
+        {
+        if (is_decomposition && idx < N_mpcd)
+            {
+            // determine from the bin which rank the particle's cell belongs to
+            int ix = 0;
+            if (bin.x >= (int)cell_indexer.getW())
+                ix = (rank_size.x > 2) ? 1 : -1;
+            else if (bin.x < 0)
+                ix = -1;
+
+            int iy = 0;
+            if (bin.y >= (int)cell_indexer.getH())
+                iy = (rank_size.y > 2) ? 1 : -1;
+            else if (bin.y < 0)
+                iy = -1;
+
+            int iz = 0;
+            if (bin.z >= (int)cell_indexer.getD())
+                iz = (rank_size.z > 2) ? 1 : -1;
+            else if (bin.z < 0)
+                iz = -1;
+
+            // get shifted direction index
+            int dir = ((iz + 1) * 3 + (iy + 1)) * 3 + (ix + 1);
+            dir = dir + ((ix == 1) ? -2 : 1) + ((iy == 1) ? -6 : 3) + ((iz == 1) ? -12 : 9);
+            // mark particle to be sent to neighboring rank
+            d_mpcd_comm_key[idx] = make_uint2(dir, idx);
+
+            // set the bin idx to be the global index with highest bit set to 1
+            bin_idx = global_cell_indexer(global_bin.x, global_bin.y, global_bin.z);
+            bin_idx |= 1 << 31;
+            }
+        }
+#endif // ENABLE_MPI
 
     // stash the current particle bin into the velocity array
     if (idx < N_mpcd)
@@ -177,7 +221,13 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
         d_embed_cell_ids[idx - N_mpcd] = bin_idx;
         }
 
+    if (!is_local)
+        {
+        return;
+        }
+
     // compute the contribution of the particle to cell properties
+    const unsigned int offset = atomicInc(&d_cell_np[bin_idx], 0xffffffff);
     double4& cell_vel = d_cell_vel[bin_idx];
     atomicAdd(&cell_vel.x, vel_i.x * mass_i);
     atomicAdd(&cell_vel.y, vel_i.y * mass_i);
@@ -395,6 +445,10 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
                                          const BoxDim& global_box,
                                          const uint3& global_cell_dim,
                                          const Index3D& cell_indexer,
+                                         const Index3D& global_cell_indexer,
+                                         uint2* d_mpcd_comm_key,
+                                         const uint3& rank_size,
+                                         const bool is_decomposition,
                                          const unsigned int N_mpcd,
                                          const unsigned int N_tot,
                                          const bool need_energy,
@@ -441,6 +495,10 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
                                                                    global_box,
                                                                    global_cell_dim,
                                                                    cell_indexer,
+                                                                   global_cell_indexer,
+                                                                   d_mpcd_comm_key,
+                                                                   rank_size,
+                                                                   is_decomposition,
                                                                    N_mpcd,
                                                                    N_tot,
                                                                    need_energy);
