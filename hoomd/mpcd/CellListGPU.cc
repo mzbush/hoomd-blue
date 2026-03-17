@@ -84,9 +84,6 @@ void mpcd::CellListGPU::buildCellList()
     const unsigned int N_mpcd = m_mpcd_pdata->getN() + m_mpcd_pdata->getNVirtual();
     unsigned int N_tot = N_mpcd;
 
-    // total effective number of cells in the global box
-    uint3 n_global_cells = m_global_cell_dim;
-
     if (m_embed_group)
         {
         ArrayHandle<unsigned int> d_embed_cell_ids(m_embed_cell_ids,
@@ -119,7 +116,6 @@ void mpcd::CellListGPU::buildCellList()
                                      m_origin_idx,
                                      m_grid_shift,
                                      m_pdata->getGlobalBox(),
-                                     n_global_cells,
                                      m_global_cell_dim,
                                      m_cell_indexer,
                                      N_mpcd,
@@ -148,7 +144,6 @@ void mpcd::CellListGPU::buildCellList()
                                      m_origin_idx,
                                      m_grid_shift,
                                      m_pdata->getGlobalBox(),
-                                     n_global_cells,
                                      m_global_cell_dim,
                                      m_cell_indexer,
                                      N_mpcd,

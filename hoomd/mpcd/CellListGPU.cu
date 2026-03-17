@@ -34,7 +34,6 @@ namespace kernel
  * \param origin_idx Global origin index for the local box
  * \param grid_shift Random grid shift vector
  * \param global_box Global simulation box
- * \param n_global_cell Global dimensions of the cell list, including padding
  * \param global_cell_dim Global cell dimensions, no padding
  * \param cell_indexer 3D indexer for cell id
  * \param N_mpcd Number of MPCD particles
@@ -64,7 +63,6 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
                                   const uint3 origin_idx,
                                   const Scalar3 grid_shift,
                                   const BoxDim global_box,
-                                  const uint3 n_global_cell,
                                   const uint3 global_cell_dim,
                                   const Index3D cell_indexer,
                                   const unsigned int N_mpcd,
@@ -107,28 +105,27 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
                                 (int)std::floor(fractional_pos_i.z * global_cell_dim.z));
 
     // wrap cell back through the boundaries (grid shifting may send +/- 1 outside of range)
-    // this is done using periodic from the "local" box, since this will be periodic
-    // only when there is one rank along the dimension
+    // this is done using periodic from the global box
     if (periodic.x)
         {
-        if (global_bin.x == (int)n_global_cell.x)
-            global_bin.x = 0;
-        else if (global_bin.x == -1)
-            global_bin.x = n_global_cell.x - 1;
+        if (global_bin.x >= (int)global_cell_dim.x)
+            global_bin.x -= global_cell_dim.x;
+        else if (global_bin.x < 0)
+            global_bin.x += global_cell_dim.x;
         }
     if (periodic.y)
         {
-        if (global_bin.y == (int)n_global_cell.y)
-            global_bin.y = 0;
-        else if (global_bin.y == -1)
-            global_bin.y = n_global_cell.y - 1;
+        if (global_bin.y >= (int)global_cell_dim.y)
+            global_bin.y -= global_cell_dim.y;
+        else if (global_bin.y < 0)
+            global_bin.y += global_cell_dim.y;
         }
     if (periodic.z)
         {
-        if (global_bin.z == (int)n_global_cell.z)
-            global_bin.z = 0;
-        else if (global_bin.z == -1)
-            global_bin.z = n_global_cell.z - 1;
+        if (global_bin.z >= (int)global_cell_dim.z)
+            global_bin.z -= global_cell_dim.z;
+        else if (global_bin.z < 0)
+            global_bin.z += global_cell_dim.z;
         }
 
     // compute the local cell
@@ -372,7 +369,6 @@ __global__ void cell_check_migrate_embed(unsigned int* d_migrate_flag,
  * \param origin_idx Global origin index for the local box
  * \param grid_shift Random grid shift vector
  * \param global_box Global simulation box
- * \param n_global_cell Global dimensions of the cell list, including padding
  * \param global_cell_dim Global cell dimensions, no padding
  * \param cell_indexer 3D indexer for cell id
  * \param N_mpcd Number of MPCD particles
@@ -397,7 +393,6 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
                                          const uint3& origin_idx,
                                          const Scalar3& grid_shift,
                                          const BoxDim& global_box,
-                                         const uint3& n_global_cell,
                                          const uint3& global_cell_dim,
                                          const Index3D& cell_indexer,
                                          const unsigned int N_mpcd,
@@ -444,7 +439,6 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
                                                                    origin_idx,
                                                                    grid_shift,
                                                                    global_box,
-                                                                   n_global_cell,
                                                                    global_cell_dim,
                                                                    cell_indexer,
                                                                    N_mpcd,
