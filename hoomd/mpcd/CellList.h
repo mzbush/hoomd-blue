@@ -362,6 +362,7 @@ class PYBIND11_EXPORT CellList : public Compute
     mpcd::detail::ThermoFlags m_flags;                       //!< Requested thermo flags
 
 #ifdef ENABLE_MPI
+    std::shared_ptr<DomainDecomposition> m_decomposition;
     BoxDim m_cover_box; //!< Box covered by the cell list
 
     GPUVector<uint2> m_mpcd_comm_key;               //!< directions to send MPCD ghosts
@@ -448,10 +449,6 @@ class PYBIND11_EXPORT CellList : public Compute
 
     //! Update global simulation box and check that cell list is compatible with it
     void updateGlobalBox();
-
-#ifdef ENABLE_MPI
-    std::shared_ptr<DomainDecomposition> m_decomposition;
-#endif // ENABLE_MPI
     };
     } // end namespace mpcd
     } // end namespace hoomd
