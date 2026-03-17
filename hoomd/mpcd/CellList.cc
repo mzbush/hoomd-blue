@@ -78,9 +78,7 @@ mpcd::CellList::CellList(std::shared_ptr<SystemDefinition> sysdef,
     m_decomposition = m_pdata->getDomainDecomposition();
     m_cover_box = m_pdata->getBox();
     m_mpi_comm = m_exec_conf->getMPICommunicator();
-    std::cout << "Received ghosts is " << m_num_mpcd_ghosts_recv << std::endl;
     initializeCommunicationSetup();
-    std::cout << "Received ghosts is now " << m_num_mpcd_ghosts_recv << std::endl;
 #endif // ENABLE_MPI
 
     m_mpcd_pdata->getNumVirtualSignal().connect<mpcd::CellList, &mpcd::CellList::slotNumVirtual>(
