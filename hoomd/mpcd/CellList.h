@@ -364,7 +364,7 @@ class PYBIND11_EXPORT CellList : public Compute
 #ifdef ENABLE_MPI
     BoxDim m_cover_box; //!< Box covered by the cell list
 
-    GPUVector<uint2> m_mpcd_comm_key;               //!< Buffer for direction to send MPCD ghosts
+    GPUVector<uint2> m_mpcd_comm_key;               //!< directions to send MPCD ghosts
     GPUVector<Scalar4> m_mpcd_ghost_vel;            //!< velocity of MPCD ghost particles received
     GPUVector<Scalar3> m_mpcd_ghost_pos;            //!< position of MPCD ghost particles received
     GPUVector<Scalar4> m_mpcd_vel_sendbuf;          //!< Buffer for MPCD ghost velocity sent
