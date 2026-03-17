@@ -78,7 +78,9 @@ mpcd::CellList::CellList(std::shared_ptr<SystemDefinition> sysdef,
     m_decomposition = m_pdata->getDomainDecomposition();
     m_cover_box = m_pdata->getBox();
     m_mpi_comm = m_exec_conf->getMPICommunicator();
+    std::cout << "Received ghosts is " << m_num_mpcd_ghosts_recv << std::endl;
     initializeCommunicationSetup();
+    std::cout << "Received ghosts is now " << m_num_mpcd_ghosts_recv << std::endl;
 #endif // ENABLE_MPI
 
     m_mpcd_pdata->getNumVirtualSignal().connect<mpcd::CellList, &mpcd::CellList::slotNumVirtual>(
@@ -720,6 +722,9 @@ void mpcd::CellList::computeNetProperties()
 #ifdef ENABLE_MPI
 void mpcd::CellList::initializeCommunicationSetup()
     {
+    m_num_mpcd_ghosts_recv = 0;
+    m_num_mpcd_ghosts_send = 0;
+    m_num_unique_neigh = 0;
     if (m_decomposition)
         {
         // create buffer and ghost arrays
@@ -727,9 +732,6 @@ void mpcd::CellList::initializeCommunicationSetup()
         m_mpcd_vel_sendbuf.swap(mpcd_vel_sendbuf);
         GPUVector<Scalar4> mpcd_ghost_vel(m_exec_conf);
         m_mpcd_ghost_vel.swap(mpcd_ghost_vel);
-        m_num_mpcd_ghosts_recv = 0;
-        m_num_mpcd_ghosts_send = 0;
-        m_num_unique_neigh = 0;
 
         Index3D di = m_decomposition->getDomainIndexer();
         uint3 mypos = m_decomposition->getGridPos();
@@ -1074,6 +1076,10 @@ void mpcd::CellList::sendGhosts()
 
 void mpcd::CellList::addGhostsToCells()
     {
+    if (!m_decomposition)
+        {
+        return;
+        }
     if (!m_num_mpcd_ghosts_recv)
         {
         return;
