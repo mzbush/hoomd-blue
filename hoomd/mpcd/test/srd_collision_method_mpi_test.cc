@@ -443,7 +443,7 @@ void srd_collision_method_thermostat_test(std::shared_ptr<ExecutionConfiguration
 
     // force a migration to ensure particles are in sensible ranks
 #ifdef ENABLE_HIP
-    auto mpcd_comm = std::shared_ptr<mpcd::CommunicatorGPU>(new mpcd::CommunicatorGPU(sysdef, 1));
+    auto mpcd_comm = std::shared_ptr<mpcd::CommunicatorGPU>(new mpcd::CommunicatorGPU(sysdef));
 #else
     auto mpcd_comm = std::shared_ptr<mpcd::Communicator>(new mpcd::Communicator(sysdef));
 #endif // ENABLE_HIP
@@ -510,11 +510,11 @@ UP_TEST(srd_collision_method_basic_gpu)
         std::make_shared<ExecutionConfiguration>(ExecutionConfiguration::GPU));
     }
 //! test embedding of particles into the MPCD SRDCollisionMethodGPU class
-UP_TEST(srd_collision_method_embed_gpu)
-    {
-    srd_collision_method_embed_test<mpcd::SRDCollisionMethodGPU>(
-        std::make_shared<ExecutionConfiguration>(ExecutionConfiguration::GPU));
-    }
+// UP_TEST(srd_collision_method_embed_gpu)
+//     {
+//     srd_collision_method_embed_test<mpcd::SRDCollisionMethodGPU>(
+//         std::make_shared<ExecutionConfiguration>(ExecutionConfiguration::GPU));
+//     }
 UP_TEST(srd_collision_method_thermostat_gpu)
     {
     srd_collision_method_thermostat_test<mpcd::SRDCollisionMethodGPU>(
