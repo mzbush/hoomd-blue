@@ -30,7 +30,18 @@ mpcd::CellListGPU::CellListGPU(std::shared_ptr<SystemDefinition> sysdef,
     m_tuner_embed_migrate.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
                                                  m_exec_conf,
                                                  "mpcd_cell_embed_migrate"));
-    m_autotuners.push_back(m_tuner_embed_migrate);
+    m_tuner_buffer.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                          m_exec_conf,
+                                          "mpcd_cell_buffer"));
+    m_tuner_ghost_cell.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                              m_exec_conf,
+                                              "mpcd_cell_ghost_property"));
+    m_tuner_ghost_update.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                                m_exec_conf,
+                                                "mpcd_cell_ghost_update"));
+    m_autotuners.insert(
+        m_autotuners.end(),
+        {m_tuner_embed_migrate, m_tuner_buffer, m_tuner_ghost_cell, m_tuner_ghost_update});
 
     GPUFlags<unsigned int> migrate_flag(m_exec_conf);
     m_migrate_flag.swap(migrate_flag);
@@ -58,7 +69,18 @@ mpcd::CellListGPU::CellListGPU(std::shared_ptr<SystemDefinition> sysdef,
     m_tuner_embed_migrate.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
                                                  m_exec_conf,
                                                  "mpcd_cell_embed_migrate"));
-    m_autotuners.push_back(m_tuner_embed_migrate);
+    m_tuner_buffer.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                          m_exec_conf,
+                                          "mpcd_cell_buffer"));
+    m_tuner_ghost_cell.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                              m_exec_conf,
+                                              "mpcd_cell_ghost_property"));
+    m_tuner_ghost_update.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                                m_exec_conf,
+                                                "mpcd_cell_ghost_update"));
+    m_autotuners.insert(
+        m_autotuners.end(),
+        {m_tuner_embed_migrate, m_tuner_buffer, m_tuner_ghost_cell, m_tuner_ghost_update});
 
     GPUFlags<unsigned int> migrate_flag(m_exec_conf);
     m_migrate_flag.swap(migrate_flag);

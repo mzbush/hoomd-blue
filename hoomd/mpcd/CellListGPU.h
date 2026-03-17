@@ -66,6 +66,15 @@ class PYBIND11_EXPORT CellListGPU : public mpcd::CellList
 #ifdef ENABLE_MPI
     /// Autotuner for checking embedded migration.
     std::shared_ptr<Autotuner<1>> m_tuner_embed_migrate;
+
+    /// Autotuner for filling ghost send buffer.
+    std::shared_ptr<Autotuner<1>> m_tuner_buffer;
+
+    /// Autotuner for adding ghosts in cell property calculation.
+    std::shared_ptr<Autotuner<1>> m_tuner_ghost_cell;
+
+    /// Autotuner for updating local particles with ghosts.
+    std::shared_ptr<Autotuner<1>> m_tuner_ghost_update;
 #endif // ENABLE_MPI
     };
     } // end namespace mpcd
