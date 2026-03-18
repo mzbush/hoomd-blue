@@ -125,7 +125,7 @@ jobs:
     - name: Clean HOME
       run: ( shopt -s dotglob nullglob; rm -rf $HOME/* )
     - name: Install git
-      if: ${{ startsWith(needs.prepare.outputs.image, 'nvidia') }}
+      if: ${{ startsWith(needs.prepare.outputs.image, 'nvidia') || startsWith(needs.prepare.outputs.image, 'rocm') }}
       run: |
         apt-get update
         apt-get install git --yes
@@ -213,6 +213,7 @@ jobs:
 
   test:
     needs: [prepare, build]
+    if: ${{ inputs.compiler_family != 'rocm' }}
     runs-on: ${{ fromJson(needs.prepare.outputs.test_runner) }}
     container:
       image: ${{ needs.prepare.outputs.image }}
