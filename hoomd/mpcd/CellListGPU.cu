@@ -433,10 +433,6 @@ __global__ void find_num_ghost_send(uint2* d_mpcd_comm_key,
             {
             d_mpcd_send_offsets[dir] = 0;
             }
-        else
-            {
-            num_mpcd_ghosts_send = 0;
-            }
         return;
         }
 
@@ -807,7 +803,7 @@ cudaError_t mpcd::gpu::find_num_ghost_send(uint2* d_mpcd_comm_key,
  * \param num_mpcd_ghosts_send the total number of MPCD particles being sent
  * \param block_size Number of threads per block
  *
- * \sa mpcd::gpu::kernel::find_num_ghost_send
+ * \sa mpcd::gpu::kernel::fill_buffer
  */
 cudaError_t mpcd::gpu::fill_buffer(uint2* d_mpcd_comm_key,
                                    Scalar4* d_vel,
