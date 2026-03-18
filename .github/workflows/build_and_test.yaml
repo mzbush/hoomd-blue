@@ -170,7 +170,7 @@ jobs:
                                -DENABLE_GPU=${ENABLE_GPU:-"OFF"} \
                                -DENABLE_MPI=${ENABLE_MPI:-"OFF"} \
                                -DBUILD_MD=${BUILD_MD:-"ON"} \
-                               -DBUILD_MPCD=${BUILD_MD:-"ON"} \
+                               -DBUILD_MPCD=${BUILD_MPCD:-"ON"} \
                                -DBUILD_METAL=${BUILD_MD:-"ON"} \
                                -DBUILD_HPMC=${BUILD_HPMC:-"ON"} \
                                -DHOOMD_GPU_PLATFORM=${HOOMD_GPU_PLATFORM} \
@@ -181,6 +181,7 @@ jobs:
         ENABLE_GPU: ${{ contains(inputs.config, 'cuda') || contains(inputs.config, 'rocm') }}
         ENABLE_MPI: ${{ contains(inputs.config, 'mpi') }}
         BUILD_MD: ${{ !contains(inputs.config, 'nomd') }}
+        BUILD_MPCD: ${{ !contains(inputs.config, 'nomd') && inputs.compiler_family != 'rocm' }}
         BUILD_HPMC: ${{ !contains(inputs.config, 'nohpmc') }}
         BUILD_DEBUG: ${{ contains(inputs.config, 'debug') }}
         HOOMD_GPU_PLATFORM: ${{ inputs.compiler_family == 'rocm' && 'HIP' || 'CUDA' }}
