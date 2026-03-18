@@ -488,10 +488,11 @@ void mpcd::CellListGPU::fillGhostBuffers()
             CHECK_CUDA_ERROR();
         m_tuner_send_num->end();
         }
-
+    if (!m_num_mpcd_ghosts_send)
         {
-        // Including this section causes a floating point exception error
-        // due to Integer divide-by-zero
+        return;
+        }
+        {
         m_mpcd_vel_sendbuf.resize(m_num_mpcd_ghosts_send);
         ArrayHandle<uint2> d_mpcd_comm_key(m_mpcd_comm_key,
                                            access_location::device,
