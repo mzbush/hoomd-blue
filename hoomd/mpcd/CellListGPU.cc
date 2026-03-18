@@ -215,7 +215,7 @@ void mpcd::CellListGPU::computeNetProperties()
                                          d_cell_temp.data,
                                          getNCells(),
                                          m_flags[mpcd::detail::thermo_options::energy],
-                                         m_tuner_property->getParam()[0]);
+                                         m_tuner_net->getParam()[0]);
         if (m_exec_conf->isCUDAErrorCheckingEnabled())
             CHECK_CUDA_ERROR();
         m_tuner_net->end();
