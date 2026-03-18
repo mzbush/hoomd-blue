@@ -62,7 +62,7 @@ __global__ void sort_apply(Scalar4* d_pos_alt,
 //! Kernel to set the empty-cell-entry sentinel
 /*!
  * \param d_order Particle order to fill with indices
- * \param d_cell_id auxiliary array to sort cell id of each mpcd particles
+ * \param d_cell_id auxiliary array to sort cell id of mpcd particles
  * \param d_vel velocities and cell ids of mpcd particles
  * \param N Number of particles
  *
