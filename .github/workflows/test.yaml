@@ -62,6 +62,8 @@ jobs:
         - config: [cuda, 124, -py, 313, -mpi, -debug]
 
         - config: [rocm, 72, -py, 313]
+        - config: [rocm, 71, -py, 313]
+        - config: [rocm, 64, -py, 313]
 
 
   release:

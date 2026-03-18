@@ -103,6 +103,10 @@ jobs:
           case "${{ inputs.compiler_version }}" in
             72)
               echo "image=rocm/dev-ubuntu-24.04:7.2-complete" >> "$GITHUB_OUTPUT";;
+            71)
+              echo "image=rocm/dev-ubuntu-24.04:7.1.1-complete" >> "$GITHUB_OUTPUT";;
+            64)
+              echo "image=rocm/dev-ubuntu-24.04:6.4.2-complete" >> "$GITHUB_OUTPUT";;
             *)
               echo "Unknown compiler" && exit 1;;
             esac
@@ -185,7 +189,7 @@ jobs:
         BUILD_HPMC: ${{ !contains(inputs.config, 'nohpmc') }}
         BUILD_DEBUG: ${{ contains(inputs.config, 'debug') }}
         HOOMD_GPU_PLATFORM: ${{ inputs.compiler_family == 'rocm' && 'HIP' || 'CUDA' }}
-        CMAKE_PREFIX_PATH: /opt/rocm-7.2.0
+        CMAKE_PREFIX_PATH: /opt/rocm-7.2.0:/opt/rocm-7.1.1:/opt/rocm-6.4.2
 
     - name: Build
       run: ninja install -j $(($(getconf _NPROCESSORS_ONLN) + 2)) -k 0
