@@ -470,7 +470,6 @@ void mpcd::CellListGPU::fillGhostBuffers()
                   h_mpcd_comm_key.data + m_mpcd_pdata->getN(),
                   [](uint2& a, uint2& b) { return a.x < b.x; });
         }
-
         {
         ArrayHandle<uint2> d_mpcd_comm_key(m_mpcd_comm_key,
                                            access_location::device,
@@ -478,24 +477,21 @@ void mpcd::CellListGPU::fillGhostBuffers()
         ArrayHandle<unsigned int> d_mpcd_send_offsets(m_mpcd_send_offsets,
                                                       access_location::device,
                                                       access_mode::readwrite);
-        // SEGMENTATION FAULT AFTER THIS LINE
+        const unsigned int N_mpcd = m_mpcd_pdata->getN() + m_mpcd_pdata->getNVirtual();
         m_tuner_send_num->begin();
         mpcd::gpu::find_num_ghost_send(d_mpcd_comm_key.data,
                                        d_mpcd_send_offsets.data,
                                        m_num_mpcd_ghosts_send,
-                                       m_mpcd_pdata->getN(),
+                                       N_mpcd,
                                        m_tuner_send_num->getParam()[0]);
         if (m_exec_conf->isCUDAErrorCheckingEnabled())
             CHECK_CUDA_ERROR();
         m_tuner_send_num->end();
         }
-    // check that there are ghosts to send
-    if (!m_num_mpcd_ghosts_send)
-        {
-        return;
-        }
 
         {
+        // Including this section causes a floating point exception error
+        // due to Integer divide-by-zero
         m_mpcd_vel_sendbuf.resize(m_num_mpcd_ghosts_send);
         ArrayHandle<uint2> d_mpcd_comm_key(m_mpcd_comm_key,
                                            access_location::device,
