@@ -61,6 +61,8 @@ jobs:
 
         - config: [cuda, 124, -py, 313, -mpi, -debug]
 
+        - config: [rocm, 72, -py, 313]
+
 
   release:
     if: ${{ contains(github.event.pull_request.labels.*.name, 'release') }}
