@@ -9,6 +9,8 @@
 
 #include "CellListGPU.cuh"
 
+#include <thrust/sort.h>
+
 namespace hoomd
     {
 namespace mpcd
@@ -399,6 +401,89 @@ __global__ void cell_check_migrate_embed(unsigned int* d_migrate_flag,
         atomicMax(d_migrate_flag, 1);
         }
     }
+
+/*!
+ * \param d_mpcd_comm_key directions to send MPCD particles as ghosts
+ * \param d_mpcd_send_offsets starting index of points sent to each neighbor
+ * \param num_mpcd_ghosts_send the total number of MPCD particles being sent
+ * \param N Number of particles in group
+ *
+ * \b Implementation
+ * Determines the starting index of the list of ghost particles in mpcd_comm_key
+ * and the total number of ghost particles to be sent. This is done by checking
+ * the position 1 to the left in the array and seeing if it is a different
+ * direction. If so, then the current position is the start indexing of the
+ * current direction.
+
+ */
+__global__ void find_num_ghost_send(uint2* d_mpcd_comm_key,
+                                    unsigned int* d_mpcd_send_offsets,
+                                    unsigned int& num_mpcd_ghosts_send,
+                                    const unsigned int N)
+    {
+    // one thread per particle in group
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= N)
+        return;
+
+    unsigned int dir = d_mpcd_comm_key[idx].x;
+    if (idx == 0)
+        {
+        if (dir < 27)
+            {
+            d_mpcd_send_offsets[dir] = 0;
+            }
+        else
+            {
+            num_mpcd_ghosts_send = 0;
+            }
+        return;
+        }
+
+    unsigned int left_dir = d_mpcd_comm_key[idx - 1].x;
+
+    // exit if not at the start of a new index
+    if (dir == left_dir)
+        {
+        return;
+        }
+
+    if (dir < 27)
+        {
+        d_mpcd_send_offsets[dir] = idx;
+        }
+    else
+        {
+        num_mpcd_ghosts_send = idx;
+        }
+    }
+
+/*!
+ * \param d_mpcd_comm_key directions to send MPCD particles as ghosts
+ * \param d_vel MPCD particle velocities
+ * \param d_mpcd_vel_sendbuf buffer for MPCD ghost velocities to be sent
+ * \param num_mpcd_ghosts_send the total number of MPCD particles being sent
+ *
+ * \b Implementation
+ * Fills the velocity buffer with ghost particles to send
+
+ */
+__global__ void fill_buffer(uint2* d_mpcd_comm_key,
+                            Scalar4* d_vel,
+                            Scalar4* d_mpcd_vel_sendbuf,
+                            const unsigned int num_mpcd_ghosts_send)
+    {
+    // one thread per particle in group
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= num_mpcd_ghosts_send)
+        return;
+
+    const unsigned int particle_index = d_mpcd_comm_key[idx].y;
+
+    // add particle data to send buffers
+    const Scalar4 vel_mass = d_vel[particle_index];
+    d_mpcd_vel_sendbuf[idx] = vel_mass;
+    }
     } // end namespace kernel
     } // end namespace gpu
     } // end namespace mpcd
@@ -673,6 +758,74 @@ cudaError_t mpcd::gpu::cell_check_migrate_embed(unsigned int* d_migrate_flag,
                                                                           box,
                                                                           num_dim,
                                                                           N);
+
+    return cudaSuccess;
+    }
+
+/*!
+ * \param d_mpcd_comm_key directions to send MPCD particles as ghosts
+ * \param d_mpcd_send_offsets starting index of points sent to each neighbor
+ * \param num_mpcd_ghosts_send the total number of MPCD particles being sent
+ * \param N Number of particles in group
+ * \param block_size Number of threads per block
+ *
+ * \sa mpcd::gpu::kernel::find_num_ghost_send
+ */
+cudaError_t mpcd::gpu::find_num_ghost_send(uint2* d_mpcd_comm_key,
+                                           unsigned int* d_mpcd_send_offsets,
+                                           unsigned int& num_mpcd_ghosts_send,
+                                           const unsigned int N,
+                                           const unsigned int block_size)
+    {
+    // // sort communication keys
+    // thrust::sort(thrust::device, d_mpcd_comm_key, d_mpcd_comm_key + N);
+
+    // fill the starting indices with invalid values
+    cudaError_t error = cudaMemset(d_mpcd_send_offsets, 0xffffffff, sizeof(unsigned int) * 27);
+    if (error != cudaSuccess)
+        return error;
+    // prepare kernel
+    unsigned int max_block_size;
+    cudaFuncAttributes attr;
+    cudaFuncGetAttributes(&attr, (const void*)mpcd::gpu::kernel::find_num_ghost_send);
+    max_block_size = attr.maxThreadsPerBlock;
+
+    unsigned int run_block_size = min(block_size, max_block_size);
+    dim3 grid(N / run_block_size + 1);
+    mpcd::gpu::kernel::find_num_ghost_send<<<grid, run_block_size>>>(d_mpcd_comm_key,
+                                                                     d_mpcd_send_offsets,
+                                                                     num_mpcd_ghosts_send,
+                                                                     N);
+
+    return cudaSuccess;
+    }
+
+/*!
+ * \param d_mpcd_comm_key directions to send MPCD particles as ghosts
+ * \param d_vel MPCD particle velocities
+ * \param d_mpcd_vel_sendbuf buffer for MPCD ghost velocities to be sent
+ * \param num_mpcd_ghosts_send the total number of MPCD particles being sent
+ * \param block_size Number of threads per block
+ *
+ * \sa mpcd::gpu::kernel::find_num_ghost_send
+ */
+cudaError_t mpcd::gpu::fill_buffer(uint2* d_mpcd_comm_key,
+                                   Scalar4* d_vel,
+                                   Scalar4* d_mpcd_vel_sendbuf,
+                                   unsigned int num_mpcd_ghosts_send,
+                                   const unsigned int block_size)
+    {
+    unsigned int max_block_size;
+    cudaFuncAttributes attr;
+    cudaFuncGetAttributes(&attr, (const void*)mpcd::gpu::kernel::fill_buffer);
+    max_block_size = attr.maxThreadsPerBlock;
+
+    unsigned int run_block_size = min(block_size, max_block_size);
+    dim3 grid(num_mpcd_ghosts_send / run_block_size + 1);
+    mpcd::gpu::kernel::fill_buffer<<<grid, run_block_size>>>(d_mpcd_comm_key,
+                                                             d_vel,
+                                                             d_mpcd_vel_sendbuf,
+                                                             num_mpcd_ghosts_send);
 
     return cudaSuccess;
     }

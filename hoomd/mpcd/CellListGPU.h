@@ -46,6 +46,10 @@ class PYBIND11_EXPORT CellListGPU : public mpcd::CellList
 #ifdef ENABLE_MPI
     //! Determine if embedded particles require migration on the gpu
     virtual bool needsEmbedMigrate(uint64_t timestep);
+
+    //! Fills ghost buffer arrays and determine where to send them
+    virtual void fillGhostBuffers();
+
     GPUFlags<unsigned int> m_migrate_flag; //!< Flag to signal migration is needed
 #endif                                     // ENABLE_MPI
 
@@ -66,6 +70,9 @@ class PYBIND11_EXPORT CellListGPU : public mpcd::CellList
 #ifdef ENABLE_MPI
     /// Autotuner for checking embedded migration.
     std::shared_ptr<Autotuner<1>> m_tuner_embed_migrate;
+
+    /// Autotuner for determining the number of ghosts to send.
+    std::shared_ptr<Autotuner<1>> m_tuner_send_num;
 
     /// Autotuner for filling ghost send buffer.
     std::shared_ptr<Autotuner<1>> m_tuner_buffer;

@@ -114,6 +114,20 @@ cudaError_t cell_check_migrate_embed(unsigned int* d_migrate_flag,
                                      const unsigned int N,
                                      const unsigned int block_size);
 
+//! Kernel driver to determine how many particles will be sent as ghosts
+cudaError_t find_num_ghost_send(uint2* d_mpcd_comm_key,
+                                unsigned int* d_mpcd_send_offsets,
+                                unsigned int& num_mpcd_ghosts_send,
+                                const unsigned int N,
+                                const unsigned int block_size);
+
+//! Kernel driver to fill up the send buffer
+cudaError_t fill_buffer(uint2* d_mpcd_comm_key,
+                        Scalar4* d_vel,
+                        Scalar4* d_mpcd_vel_sendbuf,
+                        const unsigned int num_mpcd_ghosts_send,
+                        const unsigned int block_size);
+
     } // end namespace gpu
     } // end namespace mpcd
     } // end namespace hoomd

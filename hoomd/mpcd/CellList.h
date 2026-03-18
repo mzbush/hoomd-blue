@@ -366,10 +366,10 @@ class PYBIND11_EXPORT CellList : public Compute
     BoxDim m_cover_box; //!< Box covered by the cell list
 
     GPUVector<uint2> m_mpcd_comm_key;               //!< directions to send MPCD ghosts
-    GPUVector<Scalar4> m_mpcd_ghost_vel;            //!< velocity of MPCD ghost particles received
-    GPUVector<Scalar3> m_mpcd_ghost_pos;            //!< position of MPCD ghost particles received
-    GPUVector<Scalar4> m_mpcd_vel_sendbuf;          //!< Buffer for MPCD ghost velocity sent
-    GPUVector<Scalar3> m_mpcd_pos_sendbuf;          //!< Buffer for MPCD ghost position sent
+    GPUArray<Scalar4> m_mpcd_ghost_vel;             //!< velocity of MPCD ghost particles received
+    GPUArray<Scalar3> m_mpcd_ghost_pos;             //!< position of MPCD ghost particles received
+    GPUArray<Scalar4> m_mpcd_vel_sendbuf;           //!< Buffer for MPCD ghost velocity sent
+    GPUArray<Scalar3> m_mpcd_pos_sendbuf;           //!< Buffer for MPCD ghost position sent
     unsigned int m_num_mpcd_ghosts_recv;            //!< total MPCD ghost particles received
     unsigned int m_num_mpcd_ghosts_send;            //!< total MPCD ghost particles sent
     GPUVector<unsigned int> m_embed_ghost_cell_ids; //!< Cell ids of the embedded ghost particles

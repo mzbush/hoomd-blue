@@ -30,6 +30,9 @@ mpcd::CellListGPU::CellListGPU(std::shared_ptr<SystemDefinition> sysdef,
     m_tuner_embed_migrate.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
                                                  m_exec_conf,
                                                  "mpcd_cell_embed_migrate"));
+    m_tuner_send_num.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                            m_exec_conf,
+                                            "mpcd_cell_send_num"));
     m_tuner_buffer.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
                                           m_exec_conf,
                                           "mpcd_cell_buffer"));
@@ -39,9 +42,12 @@ mpcd::CellListGPU::CellListGPU(std::shared_ptr<SystemDefinition> sysdef,
     m_tuner_ghost_update.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
                                                 m_exec_conf,
                                                 "mpcd_cell_ghost_update"));
-    m_autotuners.insert(
-        m_autotuners.end(),
-        {m_tuner_embed_migrate, m_tuner_buffer, m_tuner_ghost_cell, m_tuner_ghost_update});
+    m_autotuners.insert(m_autotuners.end(),
+                        {m_tuner_embed_migrate,
+                         m_tuner_send_num,
+                         m_tuner_buffer,
+                         m_tuner_ghost_cell,
+                         m_tuner_ghost_update});
 
     GPUFlags<unsigned int> migrate_flag(m_exec_conf);
     m_migrate_flag.swap(migrate_flag);
@@ -69,6 +75,9 @@ mpcd::CellListGPU::CellListGPU(std::shared_ptr<SystemDefinition> sysdef,
     m_tuner_embed_migrate.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
                                                  m_exec_conf,
                                                  "mpcd_cell_embed_migrate"));
+    m_tuner_send_num.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                            m_exec_conf,
+                                            "mpcd_cell_send_num"));
     m_tuner_buffer.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
                                           m_exec_conf,
                                           "mpcd_cell_buffer"));
@@ -78,9 +87,12 @@ mpcd::CellListGPU::CellListGPU(std::shared_ptr<SystemDefinition> sysdef,
     m_tuner_ghost_update.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
                                                 m_exec_conf,
                                                 "mpcd_cell_ghost_update"));
-    m_autotuners.insert(
-        m_autotuners.end(),
-        {m_tuner_embed_migrate, m_tuner_buffer, m_tuner_ghost_cell, m_tuner_ghost_update});
+    m_autotuners.insert(m_autotuners.end(),
+                        {m_tuner_embed_migrate,
+                         m_tuner_send_num,
+                         m_tuner_buffer,
+                         m_tuner_ghost_cell,
+                         m_tuner_ghost_update});
 
     GPUFlags<unsigned int> migrate_flag(m_exec_conf);
     m_migrate_flag.swap(migrate_flag);
@@ -441,6 +453,72 @@ bool mpcd::CellListGPU::needsEmbedMigrate(uint64_t timestep)
 
     return static_cast<bool>(migrate);
     }
+
+void mpcd::CellListGPU::fillGhostBuffers()
+    {
+    if (!m_decomposition)
+        {
+        return;
+        }
+
+        // fill arrays for sending
+        {
+        ArrayHandle<uint2> h_mpcd_comm_key(m_mpcd_comm_key,
+                                           access_location::host,
+                                           access_mode::readwrite);
+        std::sort(h_mpcd_comm_key.data,
+                  h_mpcd_comm_key.data + m_mpcd_pdata->getN(),
+                  [](uint2& a, uint2& b) { return a.x < b.x; });
+        }
+
+        {
+        ArrayHandle<uint2> d_mpcd_comm_key(m_mpcd_comm_key,
+                                           access_location::device,
+                                           access_mode::read);
+        ArrayHandle<unsigned int> d_mpcd_send_offsets(m_mpcd_send_offsets,
+                                                      access_location::device,
+                                                      access_mode::readwrite);
+        // SEGMENTATION FAULT AFTER THIS LINE
+        m_tuner_send_num->begin();
+        mpcd::gpu::find_num_ghost_send(d_mpcd_comm_key.data,
+                                       d_mpcd_send_offsets.data,
+                                       m_num_mpcd_ghosts_send,
+                                       m_mpcd_pdata->getN(),
+                                       m_tuner_send_num->getParam()[0]);
+        if (m_exec_conf->isCUDAErrorCheckingEnabled())
+            CHECK_CUDA_ERROR();
+        m_tuner_send_num->end();
+        }
+    // check that there are ghosts to send
+    if (!m_num_mpcd_ghosts_send)
+        {
+        return;
+        }
+
+        {
+        m_mpcd_vel_sendbuf.resize(m_num_mpcd_ghosts_send);
+        ArrayHandle<uint2> d_mpcd_comm_key(m_mpcd_comm_key,
+                                           access_location::device,
+                                           access_mode::read);
+        ArrayHandle<Scalar4> d_vel(m_mpcd_pdata->getVelocities(),
+                                   access_location::device,
+                                   access_mode::read);
+        ArrayHandle<Scalar4> d_mpcd_vel_sendbuf(m_mpcd_vel_sendbuf,
+                                                access_location::device,
+                                                access_mode::overwrite);
+
+        m_tuner_buffer->begin();
+        mpcd::gpu::fill_buffer(d_mpcd_comm_key.data,
+                               d_vel.data,
+                               d_mpcd_vel_sendbuf.data,
+                               m_num_mpcd_ghosts_send,
+                               m_tuner_buffer->getParam()[0]);
+        if (m_exec_conf->isCUDAErrorCheckingEnabled())
+            CHECK_CUDA_ERROR();
+        m_tuner_buffer->end();
+        }
+    }
+
 #endif // ENABLE_MPI
 
 namespace mpcd
