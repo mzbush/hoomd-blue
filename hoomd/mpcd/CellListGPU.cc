@@ -461,7 +461,7 @@ void mpcd::CellListGPU::fillGhostBuffers()
         return;
         }
 
-        // fill arrays for sending
+        // sort communication key
         {
         ArrayHandle<uint2> h_mpcd_comm_key(m_mpcd_comm_key,
                                            access_location::host,
@@ -470,6 +470,7 @@ void mpcd::CellListGPU::fillGhostBuffers()
                   h_mpcd_comm_key.data + m_mpcd_pdata->getN(),
                   [](uint2& a, uint2& b) { return a.x < b.x; });
         }
+        // determine the starting indexes and total number of ghost particles
         {
         ArrayHandle<uint2> d_mpcd_comm_key(m_mpcd_comm_key,
                                            access_location::device,
@@ -492,6 +493,7 @@ void mpcd::CellListGPU::fillGhostBuffers()
         {
         return;
         }
+        // fill send buffer
         {
         m_mpcd_vel_sendbuf.resize(m_num_mpcd_ghosts_send);
         ArrayHandle<uint2> d_mpcd_comm_key(m_mpcd_comm_key,
