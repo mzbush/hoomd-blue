@@ -432,6 +432,11 @@ __global__ void find_num_ghost_send(uint2* d_mpcd_comm_key,
         if (dir < 27)
             {
             d_mpcd_send_offsets[dir] = 0;
+            // if there is only one particle and it is a ghost
+            if (idx + 1 == N)
+                {
+                num_mpcd_ghosts_send = idx + 1;
+                }
             }
         return;
         }
@@ -441,6 +446,11 @@ __global__ void find_num_ghost_send(uint2* d_mpcd_comm_key,
     // exit if not at the start of a new index
     if (dir == left_dir)
         {
+        // set total number if all particles are ghosts
+        if (dir < 27 && idx + 1 == N)
+            {
+            num_mpcd_ghosts_send = idx + 1;
+            }
         return;
         }
 
@@ -450,7 +460,7 @@ __global__ void find_num_ghost_send(uint2* d_mpcd_comm_key,
         }
     else
         {
-        num_mpcd_ghosts_send = idx;
+        num_mpcd_ghosts_send = idx + 1;
         }
     }
 
