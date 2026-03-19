@@ -208,7 +208,7 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
 
             // set the bin idx to be the global index with highest bit set to 1
             bin_idx = global_cell_indexer(global_bin.x, global_bin.y, global_bin.z);
-            bin_idx |= 1 << 31;
+            bin_idx |= 1u << 31;
             }
         }
 #endif // ENABLE_MPI
