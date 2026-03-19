@@ -56,7 +56,9 @@ namespace detail
      */
 
 #ifdef __HIP_PLATFORM_HCC__
-template<typename T, int LOGICAL_WARP_THREADS = HIPCUB_DEVICE_WARP_THREADS, int PTX_ARCH = HIPCUB_ARCH>
+template<typename T,
+         int LOGICAL_WARP_THREADS = HIPCUB_DEVICE_WARP_THREADS,
+         int PTX_ARCH = HIPCUB_ARCH>
 #else
 template<typename T, int LOGICAL_WARP_THREADS = CUB_PTX_WARP_THREADS, int PTX_ARCH = CUB_PTX_ARCH>
 #endif
@@ -187,7 +189,9 @@ class WarpReduce
  * \tparam PTX_ARCH PTX architecture to build for, must be at least 300 (Kepler).
  */
 #ifdef __HIP_PLATFORM_HCC__
-template<typename T, int LOGICAL_WARP_THREADS = HIPCUB_DEVICE_WARP_THREADS, int PTX_ARCH = HIPCUB_ARCH>
+template<typename T,
+         int LOGICAL_WARP_THREADS = HIPCUB_DEVICE_WARP_THREADS,
+         int PTX_ARCH = HIPCUB_ARCH>
 #else
 template<typename T, int LOGICAL_WARP_THREADS = CUB_PTX_WARP_THREADS, int PTX_ARCH = CUB_PTX_ARCH>
 #endif
