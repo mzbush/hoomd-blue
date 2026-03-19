@@ -117,7 +117,6 @@ cudaError_t cell_check_migrate_embed(unsigned int* d_migrate_flag,
 //! Kernel driver to determine how many particles will be sent as ghosts
 cudaError_t find_num_ghost_send(uint2* d_mpcd_comm_key,
                                 unsigned int* d_mpcd_send_offsets,
-                                unsigned int& num_mpcd_ghosts_send,
                                 const unsigned int N,
                                 const unsigned int block_size);
 

@@ -479,21 +479,28 @@ void mpcd::CellListGPU::fillGhostBuffers()
                                                       access_location::device,
                                                       access_mode::readwrite);
         const unsigned int N_mpcd = m_mpcd_pdata->getN() + m_mpcd_pdata->getNVirtual();
-        unsigned int num_mpcd_ghosts_send = 0;
         m_tuner_send_num->begin();
         mpcd::gpu::find_num_ghost_send(d_mpcd_comm_key.data,
                                        d_mpcd_send_offsets.data,
-                                       num_mpcd_ghosts_send,
                                        N_mpcd,
                                        m_tuner_send_num->getParam()[0]);
         if (m_exec_conf->isCUDAErrorCheckingEnabled())
             CHECK_CUDA_ERROR();
         m_tuner_send_num->end();
-        m_num_mpcd_ghosts_send = num_mpcd_ghosts_send;
         }
-    if (!m_num_mpcd_ghosts_send)
+        // set the total number of MPCD ghost particles being sent
         {
-        return;
+        ArrayHandle<unsigned int> h_mpcd_send_offsets(m_mpcd_send_offsets,
+                                                      access_location::host,
+                                                      access_mode::read);
+
+        if (h_mpcd_send_offsets.data[26] == 0xffffffff)
+            {
+            m_num_mpcd_ghosts_send = 0;
+            return;
+            }
+
+        m_num_mpcd_ghosts_send = h_mpcd_send_offsets.data[26];
         }
         // fill send buffer
         {

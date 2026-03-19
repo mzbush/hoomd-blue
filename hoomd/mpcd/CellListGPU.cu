@@ -405,7 +405,6 @@ __global__ void cell_check_migrate_embed(unsigned int* d_migrate_flag,
 /*!
  * \param d_mpcd_comm_key directions to send MPCD particles as ghosts
  * \param d_mpcd_send_offsets starting index of points sent to each neighbor
- * \param num_mpcd_ghosts_send the total number of MPCD particles being sent
  * \param N Number of particles in group
  *
  * \b Implementation
@@ -416,10 +415,8 @@ __global__ void cell_check_migrate_embed(unsigned int* d_migrate_flag,
  * current direction.
 
  */
-__global__ void find_num_ghost_send(uint2* d_mpcd_comm_key,
-                                    unsigned int* d_mpcd_send_offsets,
-                                    unsigned int& num_mpcd_ghosts_send,
-                                    const unsigned int N)
+__global__ void
+find_num_ghost_send(uint2* d_mpcd_comm_key, unsigned int* d_mpcd_send_offsets, const unsigned int N)
     {
     // one thread per particle in group
     unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -435,7 +432,7 @@ __global__ void find_num_ghost_send(uint2* d_mpcd_comm_key,
             // if there is only one particle and it is a ghost
             if (idx + 1 == N)
                 {
-                num_mpcd_ghosts_send = idx + 1;
+                d_mpcd_send_offsets[26] = idx + 1;
                 }
             }
         return;
@@ -449,7 +446,7 @@ __global__ void find_num_ghost_send(uint2* d_mpcd_comm_key,
         // set total number if all particles are ghosts
         if (dir < 27 && idx + 1 == N)
             {
-            num_mpcd_ghosts_send = idx + 1;
+            d_mpcd_send_offsets[26] = idx + 1;
             }
         return;
         }
@@ -460,7 +457,7 @@ __global__ void find_num_ghost_send(uint2* d_mpcd_comm_key,
         }
     else
         {
-        num_mpcd_ghosts_send = idx + 1;
+        d_mpcd_send_offsets[26] = idx + 1;
         }
     }
 
@@ -771,7 +768,6 @@ cudaError_t mpcd::gpu::cell_check_migrate_embed(unsigned int* d_migrate_flag,
 /*!
  * \param d_mpcd_comm_key directions to send MPCD particles as ghosts
  * \param d_mpcd_send_offsets starting index of points sent to each neighbor
- * \param num_mpcd_ghosts_send the total number of MPCD particles being sent
  * \param N Number of particles in group
  * \param block_size Number of threads per block
  *
@@ -779,12 +775,11 @@ cudaError_t mpcd::gpu::cell_check_migrate_embed(unsigned int* d_migrate_flag,
  */
 cudaError_t mpcd::gpu::find_num_ghost_send(uint2* d_mpcd_comm_key,
                                            unsigned int* d_mpcd_send_offsets,
-                                           unsigned int& num_mpcd_ghosts_send,
                                            const unsigned int N,
                                            const unsigned int block_size)
     {
     // // sort communication keys
-    // thrust::sort(thrust::device, d_mpcd_comm_key, d_mpcd_comm_key + N);
+    // thrust::sort_by_key(thrust::device, d_mpcd_comm_key, d_mpcd_comm_key + N,);
 
     // fill the starting indices with invalid values
     cudaError_t error = cudaMemset(d_mpcd_send_offsets, 0xffffffff, sizeof(unsigned int) * 27);
@@ -800,7 +795,6 @@ cudaError_t mpcd::gpu::find_num_ghost_send(uint2* d_mpcd_comm_key,
     dim3 grid(N / run_block_size + 1);
     mpcd::gpu::kernel::find_num_ghost_send<<<grid, run_block_size>>>(d_mpcd_comm_key,
                                                                      d_mpcd_send_offsets,
-                                                                     num_mpcd_ghosts_send,
                                                                      N);
 
     return cudaSuccess;
