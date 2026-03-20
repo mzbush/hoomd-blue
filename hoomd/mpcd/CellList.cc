@@ -138,7 +138,7 @@ void mpcd::CellList::compute(uint64_t timestep)
             comm->forceMigrate();
             comm->communicate(timestep);
             }
-        // ensure that ghost particles send and received is zero
+        // ensure that ghost particles sent and received is zero
         m_num_mpcd_ghosts_send = 0;
         m_num_mpcd_ghosts_recv = 0;
 #endif // ENABLE_MPI
@@ -390,7 +390,6 @@ void mpcd::CellList::buildCellList()
 #ifdef ENABLE_MPI
     std::unique_ptr<ArrayHandle<uint2>> h_mpcd_comm_key;
     uint3 rank_size = make_uint3(0, 0, 0);
-    unsigned int num_ghosts_send = 0;
     const bool is_decomposition = bool(m_decomposition);
     if (is_decomposition)
         {
@@ -541,7 +540,6 @@ void mpcd::CellList::buildCellList()
                 dir = dir + ((ix == 1) ? -2 : 1) + ((iy == 1) ? -6 : 3) + ((iz == 1) ? -12 : 9);
                 // mark particle to be sent to neighboring rank
                 h_mpcd_comm_key->data[cur_p] = make_uint2(dir, cur_p);
-                ++num_ghosts_send;
                 // set the bin idx to be the global index with highest bit set to 1
                 bin_idx = m_global_cell_indexer(global_bin.x, global_bin.y, global_bin.z);
                 bin_idx |= 1 << 31;
@@ -583,9 +581,6 @@ void mpcd::CellList::buildCellList()
         // increment the counter always
         ++h_cell_np.data[bin_idx];
         }
-#ifdef ENABLE_MPI
-    m_num_mpcd_ghosts_send = num_ghosts_send;
-#endif // ENABLE_MPI
     // write out the conditions
     m_conditions.resetFlags(conditions);
     }
@@ -889,14 +884,6 @@ void mpcd::CellList::fillGhostBuffers()
             }
         }
 
-    if (!m_num_mpcd_ghosts_send)
-        {
-        return;
-        }
-
-    // resize buffer array
-    m_mpcd_vel_sendbuf.resize(m_num_mpcd_ghosts_send);
-
     ArrayHandle<Scalar4> h_vel(m_mpcd_pdata->getVelocities(),
                                access_location::host,
                                access_mode::readwrite);
@@ -909,6 +896,14 @@ void mpcd::CellList::fillGhostBuffers()
     std::sort(h_mpcd_comm_key.data,
               h_mpcd_comm_key.data + N_mpcd,
               [](uint2& a, uint2& b) { return a.x < b.x; });
+    auto temp = std::lower_bound(h_mpcd_comm_key.data,
+                                 h_mpcd_comm_key.data + N_mpcd,
+                                 make_uint2(0xffffffff, 0),
+                                 [](uint2 a, uint2 b) { return a.x < b.x; });
+    m_num_mpcd_ghosts_send = (uint)std::distance(h_mpcd_comm_key.data, temp);
+
+    // resize buffer array
+    m_mpcd_vel_sendbuf.resize(m_num_mpcd_ghosts_send);
 
         // add velocity to send buffers and count particle to send per rank
         {
@@ -937,6 +932,7 @@ void mpcd::CellList::fillGhostBuffers()
                 cur_dir = comm_dir;
                 }
             }
+        h_mpcd_send_offsets.data[26] = m_num_mpcd_ghosts_send;
         }
     }
 
@@ -970,10 +966,6 @@ void mpcd::CellList::sendGhosts()
                 last_start_offset = h_mpcd_send_offsets.data[i];
                 last_start_dir = i;
                 }
-            }
-        if (m_num_mpcd_ghosts_send)
-            {
-            m_num_mpcd_send_ptls[last_start_dir] = m_num_mpcd_ghosts_send - last_start_offset;
             }
         }
 
@@ -1210,8 +1202,7 @@ void mpcd::CellList::updateLocalFromGhosts()
     ArrayHandle<Scalar4> h_vel(m_mpcd_pdata->getVelocities(),
                                access_location::host,
                                access_mode::readwrite);
-    const unsigned int num_ghosts = m_num_mpcd_ghosts_send;
-    for (unsigned int cur_p = 0; cur_p < num_ghosts; ++cur_p)
+    for (unsigned int cur_p = 0; cur_p < m_num_mpcd_ghosts_send; ++cur_p)
         {
         const Scalar4 vel_i = h_mpcd_vel_sendbuf.data[cur_p];
         const double3 new_vel = make_double3(vel_i.x, vel_i.y, vel_i.z);
