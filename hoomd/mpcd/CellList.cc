@@ -898,8 +898,8 @@ void mpcd::CellList::fillGhostBuffers()
               [](uint2& a, uint2& b) { return a.x < b.x; });
     auto temp = std::lower_bound(h_mpcd_comm_key.data,
                                  h_mpcd_comm_key.data + N_mpcd,
-                                 make_uint2(0xffffffff, 0),
-                                 [](uint2 a, uint2 b) { return a.x < b.x; });
+                                 0xffffffff,
+                                 [](uint2 a, uint b) { return a.x < b; });
     m_num_mpcd_ghosts_send = (uint)std::distance(h_mpcd_comm_key.data, temp);
 
     // resize buffer array
