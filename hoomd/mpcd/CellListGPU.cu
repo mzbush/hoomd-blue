@@ -765,6 +765,14 @@ cudaError_t mpcd::gpu::cell_check_migrate_embed(unsigned int* d_migrate_flag,
     return cudaSuccess;
     }
 
+struct compare_uint2
+    {
+    __host__ __device__ bool operator()(uint2 a, uint2 b)
+        {
+        return (a.x != b.x);
+        }
+    };
+
 /*!
  * \param d_mpcd_comm_key directions to send MPCD particles as ghosts
  * \param d_mpcd_send_offsets starting index of points sent to each neighbor
@@ -778,9 +786,9 @@ cudaError_t mpcd::gpu::find_num_ghost_send(uint2* d_mpcd_comm_key,
                                            const unsigned int N,
                                            const unsigned int block_size)
     {
-    // // sort communication keys
-    // thrust::sort_by_key(thrust::device, d_mpcd_comm_key, d_mpcd_comm_key + N,);
-
+    // sort communication keys
+    compare_uint2 cmp;
+    thrust::sort(thrust::device, d_mpcd_comm_key, d_mpcd_comm_key + N, cmp);
     // fill the starting indices with invalid values
     cudaError_t error = cudaMemset(d_mpcd_send_offsets, 0xffffffff, sizeof(unsigned int) * 27);
     if (error != cudaSuccess)
