@@ -983,7 +983,7 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
             }
         }
 
-        // test particles if at the edge of periodic boundaries
+        // test particles at the edge of periodic boundaries
         {
         ArrayHandle<Scalar4> h_pos(pdata->getPositions(),
                                    access_location::host,
