@@ -1024,7 +1024,7 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
             };
         }
     cl->setGridShift(make_scalar3(0.02, -0.02, 0.02));
-    cl->compute(4);
+    cl->compute(3);
         {
         ArrayHandle<unsigned int> h_cell_np(cl->getCellSizeArray(),
                                             access_location::host,
