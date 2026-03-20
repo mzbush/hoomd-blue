@@ -282,8 +282,8 @@ void mpcd::SRDCollisionMethod::rotate(uint64_t timestep)
                 = make_scalar4(new_vel.x, new_vel.y, new_vel.z, __int_as_scalar(cell));
             }
         else
-            {
 #endif // ENABLE_MPI
+            {
             if (cur_p < N_mpcd)
                 {
                 h_vel.data[cur_p]
