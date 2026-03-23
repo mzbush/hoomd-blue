@@ -38,7 +38,7 @@ namespace kernel
  * \param global_box Global simulation box
  * \param global_cell_dim Global cell dimensions, no padding
  * \param cell_indexer 3D indexer for cell id
- * \param cell_indexer 3D indexer for global cell id
+ * \param global_cell_indexer 3D indexer for global cell id
  * \param d_mpcd_comm_key directions to send MPCD particles as ghosts
  * \param rank_size the size of the local rank
  * \param is_decomposition whether there is domain decomposition
