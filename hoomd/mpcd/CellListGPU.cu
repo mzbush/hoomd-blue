@@ -486,6 +486,95 @@ __global__ void fill_buffer(uint2* d_mpcd_comm_key,
     d_mpcd_vel_sendbuf[idx] = vel_mass;
     }
 
+//! Kernel to compute add the contribution to cell properties from ghosts on GPU
+/*!
+ * \param d_cell_np Array of number of particles per cell
+ * \param d_cell_vel Array of center of mass velocity + cell mass per cell
+ * \param d_cell_energy Array of per cell kinetic energy
+ * \param d_conditions Conditions flags for error reporting
+ * \param d_mpcd_ghost_vel ghost MPCD particle velocities
+ * \param mpcd_mass MPCD particle mass
+ * \param origin_idx Global origin index for the local box
+ * \param grid_shift Random grid shift vector
+ * \param global_cell_dim Global cell dimensions, no padding
+ * \param cell_indexer 3D indexer for cell id
+ * \param N_mpcd_ghosts Number of ghost MPCD particles
+ * \param need_energy True if computing the energy
+ *
+ * \b Implementation
+ * One thread is launched per particle. The particle global bin index stored is
+ * converted back into a 3 element global bin and used to compute the local bin
+ * index. The contribution of the particles' properties is added to the cell's
+ * properties in a running sum.
+ */
+
+__global__ void add_ghost_cell_properties(unsigned int* d_cell_np,
+                                          double4* d_cell_vel,
+                                          double* d_cell_energy,
+                                          uint3* d_conditions,
+                                          Scalar4* d_mpcd_ghost_vel,
+                                          double mpcd_mass,
+                                          const uint3 origin_idx,
+                                          const uint3 global_cell_dim,
+                                          const Index3D cell_indexer,
+                                          const unsigned int N_mpcd_ghosts,
+                                          const bool need_energy)
+    {
+    // one thread per particle
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (idx >= N_mpcd_ghosts)
+        return;
+
+    double mass_i = mpcd_mass;
+    const Scalar4 vel_mass_i = d_mpcd_ghost_vel[idx];
+    const double3 vel_i = make_double3(vel_mass_i.x, vel_mass_i.y, vel_mass_i.z);
+
+    // unset the highest bit of the global bin index
+    unsigned int global_bin_index = __scalar_as_int(vel_mass_i.w);
+    global_bin_index &= ~(1u << 31);
+
+    // turn global bin index back into global bin
+    int3 global_bin = make_int3(0, 0, 0);
+    global_bin.x = global_bin_index % global_cell_dim.x;
+    global_bin.y = (global_bin_index / global_cell_dim.x) % global_cell_dim.y;
+    global_bin.z = int(global_bin_index / (global_cell_dim.x * global_cell_dim.y));
+
+    // compute the local cell
+    int3 bin = make_int3(global_bin.x - origin_idx.x,
+                         global_bin.y - origin_idx.y,
+                         global_bin.z - origin_idx.z);
+    unsigned int bin_idx;
+    if ((0 <= bin.x && bin.x < (int)cell_indexer.getW())
+        && (0 <= bin.y && bin.y < (int)cell_indexer.getH())
+        && (0 <= bin.z && bin.z < (int)cell_indexer.getD()))
+        {
+        bin_idx = cell_indexer(bin.x, bin.y, bin.z);
+        }
+    else
+        {
+        (*d_conditions).x = idx + 1;
+        return;
+        }
+
+    // stash the current particle bin into the velocity array
+    d_mpcd_ghost_vel[idx].w = __int_as_scalar(bin_idx);
+
+    // compute the contribution of the particle to cell properties
+    const unsigned int offset = atomicInc(&d_cell_np[bin_idx], 0xffffffff);
+    double4& cell_vel = d_cell_vel[bin_idx];
+    atomicAdd(&cell_vel.x, vel_i.x * mass_i);
+    atomicAdd(&cell_vel.y, vel_i.y * mass_i);
+    atomicAdd(&cell_vel.z, vel_i.z * mass_i);
+    atomicAdd(&cell_vel.w, mass_i);
+
+    if (need_energy)
+        {
+        double ke = 0.5 * mass_i * (vel_i.x * vel_i.x + vel_i.y * vel_i.y + vel_i.z * vel_i.z);
+        atomicAdd(&d_cell_energy[bin_idx], ke);
+        }
+    }
+
 /*!
  * \param d_mpcd_comm_key directions to send MPCD particles as ghosts
  * \param d_vel MPCD particle velocities
@@ -859,6 +948,63 @@ cudaError_t mpcd::gpu::fill_buffer(uint2* d_mpcd_comm_key,
                                                              d_vel,
                                                              d_mpcd_vel_sendbuf,
                                                              num_mpcd_ghosts_send);
+
+    return cudaSuccess;
+    }
+
+/*!
+ * \param d_cell_np Array of number of particles per cell
+ * \param d_cell_vel Array of center of mass velocity + cell mass per cell
+ * \param d_cell_energy Array of per cell kinetic energy
+ * \param d_conditions Conditions flags for error reporting
+ * \param d_mpcd_ghost_vel ghost MPCD particle velocities
+ * \param mpcd_mass MPCD particle mass
+ * \param origin_idx Global origin index for the local box
+ * \param grid_shift Random grid shift vector
+ * \param global_cell_dim Global cell dimensions, no padding
+ * \param cell_indexer 3D indexer for cell id
+ * \param N_mpcd_ghosts Number of ghost MPCD particles
+ * \param need_energy True if computing the energy
+ *
+ * \b Implementation
+ * One thread is launched per particle. The particle is floored into a bin subject to a random grid
+ * shift. The number of particles in that bin is atomically incremented and the contribution of the
+ * particle's properties to the cell's properties is added to a running sum. If the addition of the
+ * particle will not overflow the allocated memory, the particle is written into that bin.
+ * Otherwise, a flag is set to resize the cell list and recompute. The MPCD particle's cell id is
+ * stashed into the velocity array.
+ */
+cudaError_t mpcd::gpu::add_ghost_cell_properties(unsigned int* d_cell_np,
+                                                 double4* d_cell_vel,
+                                                 double* d_cell_energy,
+                                                 uint3* d_conditions,
+                                                 Scalar4* d_mpcd_ghost_vel,
+                                                 double mpcd_mass,
+                                                 const uint3& origin_idx,
+                                                 const uint3& global_cell_dim,
+                                                 const Index3D& cell_indexer,
+                                                 const unsigned int N_mpcd_ghosts,
+                                                 const bool need_energy,
+                                                 const unsigned int block_size)
+    {
+    unsigned int max_block_size;
+    cudaFuncAttributes attr;
+    cudaFuncGetAttributes(&attr, (const void*)mpcd::gpu::kernel::add_ghost_cell_properties);
+    max_block_size = attr.maxThreadsPerBlock;
+
+    unsigned int run_block_size = min(block_size, max_block_size);
+    dim3 grid(N_mpcd_ghosts / run_block_size + 1);
+    mpcd::gpu::kernel::add_ghost_cell_properties<<<grid, run_block_size>>>(d_cell_np,
+                                                                           d_cell_vel,
+                                                                           d_cell_energy,
+                                                                           d_conditions,
+                                                                           d_mpcd_ghost_vel,
+                                                                           mpcd_mass,
+                                                                           origin_idx,
+                                                                           global_cell_dim,
+                                                                           cell_indexer,
+                                                                           N_mpcd_ghosts,
+                                                                           need_energy);
 
     return cudaSuccess;
     }

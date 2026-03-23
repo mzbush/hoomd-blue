@@ -127,6 +127,20 @@ cudaError_t fill_buffer(uint2* d_mpcd_comm_key,
                         const unsigned int num_mpcd_ghosts_send,
                         const unsigned int block_size);
 
+cudaError_t add_ghost_cell_properties(unsigned int* d_cell_np,
+                                      double4* d_cell_vel,
+                                      double* d_cell_energy,
+                                      uint3* d_conditions,
+                                      Scalar4* d_mpcd_ghost_vel,
+                                      double mpcd_mass,
+                                      const uint3& origin_idx,
+                                      const uint3& global_cell_dim,
+                                      const Index3D& cell_indexer,
+                                      const unsigned int N_mpcd_ghosts,
+                                      const bool need_energy,
+                                      const unsigned int block_size);
+
+//! Kernel driver to update the local velocities after collision
 cudaError_t update_local_from_ghosts(uint2* d_mpcd_comm_key,
                                      Scalar4* d_vel,
                                      Scalar4* d_mpcd_vel_sendbuf,

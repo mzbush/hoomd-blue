@@ -55,6 +55,9 @@ class PYBIND11_EXPORT CellListGPU : public mpcd::CellList
     //! Fills ghost buffer arrays and determine where to send them
     virtual void fillGhostBuffers();
 
+    //! Add ghost contribution to cell properties
+    virtual void addGhostsToCells();
+
     GPUFlags<unsigned int> m_migrate_flag; //!< Flag to signal migration is needed
 #endif                                     // ENABLE_MPI
 

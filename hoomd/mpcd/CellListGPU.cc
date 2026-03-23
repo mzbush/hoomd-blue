@@ -518,6 +518,45 @@ void mpcd::CellListGPU::fillGhostBuffers()
         }
     }
 
+void mpcd::CellListGPU::addGhostsToCells()
+    {
+    if (!m_decomposition)
+        {
+        return;
+        }
+
+    if (!m_num_mpcd_ghosts_recv)
+        {
+        return;
+        }
+
+    ArrayHandle<unsigned int> d_cell_np(m_cell_np, access_location::device, access_mode::readwrite);
+    ArrayHandle<double4> d_cell_vel(m_cell_vel, access_location::device, access_mode::readwrite);
+    ArrayHandle<double> d_cell_energy(m_cell_energy,
+                                      access_location::device,
+                                      access_mode::readwrite);
+    ArrayHandle<Scalar4> d_mpcd_ghost_vel(m_mpcd_ghost_vel,
+                                          access_location::device,
+                                          access_mode::readwrite);
+
+    m_tuner_ghost_cell->begin();
+    mpcd::gpu::add_ghost_cell_properties(d_cell_np.data,
+                                         d_cell_vel.data,
+                                         d_cell_energy.data,
+                                         m_conditions.getDeviceFlags(),
+                                         d_mpcd_ghost_vel.data,
+                                         m_mpcd_pdata->getMass(),
+                                         m_origin_idx,
+                                         m_global_cell_dim,
+                                         m_cell_indexer,
+                                         m_num_mpcd_ghosts_recv,
+                                         m_flags[mpcd::detail::thermo_options::energy],
+                                         m_tuner_ghost_cell->getParam()[0]);
+    if (m_exec_conf->isCUDAErrorCheckingEnabled())
+        CHECK_CUDA_ERROR();
+    m_tuner_ghost_cell->end();
+    }
+
 void mpcd::CellListGPU::updateLocalFromGhosts()
     {
     if (!m_decomposition)
