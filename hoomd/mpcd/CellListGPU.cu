@@ -882,7 +882,7 @@ cudaError_t mpcd::gpu::update_local_from_ghosts(uint2* d_mpcd_comm_key,
     {
     unsigned int max_block_size;
     cudaFuncAttributes attr;
-    cudaFuncGetAttributes(&attr, (const void*)mpcd::gpu::kernel::fill_buffer);
+    cudaFuncGetAttributes(&attr, (const void*)mpcd::gpu::kernel::update_local_from_ghosts);
     max_block_size = attr.maxThreadsPerBlock;
 
     unsigned int run_block_size = min(block_size, max_block_size);
