@@ -127,6 +127,12 @@ cudaError_t fill_buffer(uint2* d_mpcd_comm_key,
                         const unsigned int num_mpcd_ghosts_send,
                         const unsigned int block_size);
 
+cudaError_t update_local_from_ghosts(uint2* d_mpcd_comm_key,
+                                     Scalar4* d_vel,
+                                     Scalar4* d_mpcd_vel_sendbuf,
+                                     const unsigned int num_mpcd_ghosts_send,
+                                     const unsigned int block_size);
+
     } // end namespace gpu
     } // end namespace mpcd
     } // end namespace hoomd

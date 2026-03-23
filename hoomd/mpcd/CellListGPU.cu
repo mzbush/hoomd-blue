@@ -487,6 +487,33 @@ __global__ void fill_buffer(uint2* d_mpcd_comm_key,
     const Scalar4 vel_mass = d_vel[particle_index];
     d_mpcd_vel_sendbuf[idx] = vel_mass;
     }
+
+/*!
+ * \param d_mpcd_comm_key directions to send MPCD particles as ghosts
+ * \param d_vel MPCD particle velocities
+ * \param d_mpcd_vel_sendbuf buffer for MPCD ghost velocities to be sent
+ * \param num_mpcd_ghosts_send the total number of MPCD particles being sent
+ *
+ * \b Implementation
+ * Updates the velocities of the particles with velocities from the send buffer
+
+ */
+__global__ void update_local_from_ghosts(uint2* d_mpcd_comm_key,
+                                         Scalar4* d_vel,
+                                         Scalar4* d_mpcd_vel_sendbuf,
+                                         const unsigned int num_mpcd_ghosts_send)
+    {
+    // one thread per particle in group
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= num_mpcd_ghosts_send)
+        return;
+
+    const Scalar4 vel_i = d_mpcd_vel_sendbuf[idx];
+    const double3 new_vel = make_double3(vel_i.x, vel_i.y, vel_i.z);
+    const unsigned int particle_index = d_mpcd_comm_key[idx].y;
+    const Scalar4 old_vel = d_vel[particle_index];
+    d_vel[particle_index] = make_scalar4(new_vel.x, new_vel.y, new_vel.z, old_vel.w);
+    }
     } // end namespace kernel
     } // end namespace gpu
     } // end namespace mpcd
@@ -838,4 +865,33 @@ cudaError_t mpcd::gpu::fill_buffer(uint2* d_mpcd_comm_key,
     return cudaSuccess;
     }
 
+/*!
+ * \param d_mpcd_comm_key directions to send MPCD particles as ghosts
+ * \param d_vel MPCD particle velocities
+ * \param d_mpcd_vel_sendbuf buffer for MPCD ghost velocities to be sent
+ * \param num_mpcd_ghosts_send the total number of MPCD particles being sent
+ * \param block_size Number of threads per block
+ *
+ * \sa mpcd::gpu::kernel::update_local_from_ghosts
+ */
+cudaError_t mpcd::gpu::update_local_from_ghosts(uint2* d_mpcd_comm_key,
+                                                Scalar4* d_vel,
+                                                Scalar4* d_mpcd_vel_sendbuf,
+                                                unsigned int num_mpcd_ghosts_send,
+                                                const unsigned int block_size)
+    {
+    unsigned int max_block_size;
+    cudaFuncAttributes attr;
+    cudaFuncGetAttributes(&attr, (const void*)mpcd::gpu::kernel::fill_buffer);
+    max_block_size = attr.maxThreadsPerBlock;
+
+    unsigned int run_block_size = min(block_size, max_block_size);
+    dim3 grid(num_mpcd_ghosts_send / run_block_size + 1);
+    mpcd::gpu::kernel::update_local_from_ghosts<<<grid, run_block_size>>>(d_mpcd_comm_key,
+                                                                          d_vel,
+                                                                          d_mpcd_vel_sendbuf,
+                                                                          num_mpcd_ghosts_send);
+
+    return cudaSuccess;
+    }
     } // end namespace hoomd

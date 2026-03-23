@@ -518,6 +518,33 @@ void mpcd::CellListGPU::fillGhostBuffers()
         }
     }
 
+void mpcd::CellListGPU::updateLocalFromGhosts()
+    {
+    if (!m_decomposition)
+        {
+        return;
+        }
+
+    // fill update the local particles
+    ArrayHandle<uint2> d_mpcd_comm_key(m_mpcd_comm_key, access_location::device, access_mode::read);
+    ArrayHandle<Scalar4> d_mpcd_vel_sendbuf(m_mpcd_vel_sendbuf,
+                                            access_location::device,
+                                            access_mode::read);
+    ArrayHandle<Scalar4> d_vel(m_mpcd_pdata->getVelocities(),
+                               access_location::device,
+                               access_mode::readwrite);
+
+    m_tuner_ghost_update->begin();
+    mpcd::gpu::update_local_from_ghosts(d_mpcd_comm_key.data,
+                                        d_vel.data,
+                                        d_mpcd_vel_sendbuf.data,
+                                        m_num_mpcd_ghosts_send,
+                                        m_tuner_ghost_update->getParam()[0]);
+    if (m_exec_conf->isCUDAErrorCheckingEnabled())
+        CHECK_CUDA_ERROR();
+    m_tuner_ghost_update->end();
+    }
+
 #endif // ENABLE_MPI
 
 namespace mpcd

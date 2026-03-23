@@ -33,6 +33,11 @@ class PYBIND11_EXPORT CellListGPU : public mpcd::CellList
 
     virtual ~CellListGPU();
 
+#ifdef ENABLE_MPI
+    //! update the local particles based on the updated ghosts
+    virtual void updateLocalFromGhosts();
+#endif
+
     protected:
     //! Compute the cell list of particles on the GPU
     void buildCellList() override;
