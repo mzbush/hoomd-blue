@@ -49,10 +49,8 @@ namespace kernel
  * \b Implementation
  * One thread is launched per particle. The particle is floored into a bin subject to a random grid
  * shift. The number of particles in that bin is atomically incremented and the contribution of the
- * particle's properties to the cell's properties is added to a running sum. If the addition of the
- * particle will not overflow the allocated memory, the particle is written into that bin.
- * Otherwise, a flag is set to resize the cell list and recompute. The MPCD particle's cell id is
- * stashed into the velocity array.
+ * particle's properties to the cell's properties is added to a running sum. The MPCD particle's
+ * cell id is stashed into the velocity array.
  */
 __global__ void compute_cell_list(unsigned int* d_cell_np,
                                   double4* d_cell_vel,
