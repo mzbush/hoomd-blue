@@ -34,8 +34,7 @@ class PYBIND11_EXPORT GSDReader
     GSDReader(std::shared_ptr<const ExecutionConfiguration> exec_conf,
               const std::string& name,
               const uint64_t frame,
-              bool from_end,
-              std::string precision = "single");
+              bool from_end);
 
     //! Destructor
     ~GSDReader();
@@ -55,14 +54,9 @@ class PYBIND11_EXPORT GSDReader
         }
 
     //! initializes a snapshot with the particle data
-    std::shared_ptr<SnapshotSystemData<float>> getSnapshot() const
-    {
-        if (m_precision == "double")
-            {
-            return std::static_pointer_cast<SnapshotSystemData<float>>(
-                std::static_pointer_cast<void>(m_snapshot_double));
-            }
-        return m_snapshot_float;
+    std::shared_ptr<SnapshotSystemData<double>> getSnapshot() const
+        {
+        return m_snapshot;
         }
 
     //! initializes a snapshot with the particle data
@@ -97,11 +91,8 @@ class PYBIND11_EXPORT GSDReader
     uint64_t m_timestep;                                       //!< Timestep at the selected frame
     std::string m_name;                                        //!< Cached file name
     uint64_t m_frame;                                          //!< Cached frame
-    std::shared_ptr<SnapshotSystemData<float>> m_snapshot_float;   //!< Float snapshot
-    std::shared_ptr<SnapshotSystemData<double>> m_snapshot_double; //!< Double snapshot
-    std::shared_ptr<void> m_snapshot;                               //!< Generic pointer
+    std::shared_ptr<SnapshotSystemData<double>> m_snapshot; //!< Double snapshot
     gsd_handle m_handle;                                       //!< Handle to the file
-    std::string m_precision;                                   //!< Float precision to pass
 
     //! Helper function to read a type list from the file
     std::vector<std::string> readTypes(uint64_t frame, const char* name);
