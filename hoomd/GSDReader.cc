@@ -51,7 +51,7 @@ GSDReader::GSDReader(std::shared_ptr<const ExecutionConfiguration> exec_conf,
         s << "Invalid schema in " << name << endl;
         throw runtime_error(s.str());
         }
-    if (m_handle.header.schema_version >= gsd_make_version(2, 1))
+    if (m_handle.header.schema_version >= gsd_make_version(3, 0))
         {
         std::ostringstream s;
         s << "Invalid schema version in " << name << endl;
