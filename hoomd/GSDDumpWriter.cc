@@ -731,39 +731,8 @@ void GSDDumpWriter::writeProperties(const GSDDumpWriter::GSDFrame& frame)
         assert(frame.particle_data.pos.size() == N);
 
         m_exec_conf->msg->notice(10) << "GSD: writing particles/position" << endl;
+        writeVec3FloatDoubleChunk("particles/position", frame.particle_data.pos, N);
 
-        if (m_precision == "double")
-            {
-            std::vector<vec3<double>> pos_double(frame.particle_data.pos.size());
-            for (size_t i = 0; i < frame.particle_data.pos.size(); i++)
-                {
-                pos_double[i] = vec3<double>(frame.particle_data.pos[i]);
-                }
-            retval = gsd_write_chunk(&m_handle,
-                                     "particles/position",
-                                     GSD_TYPE_DOUBLE,
-                                     N,
-                                     3,
-                                     0,
-                                     (void*)pos_double.data());
-            }
-        else
-            {
-            std::vector<vec3<float>> pos_float(frame.particle_data.pos.size());
-            for (size_t i = 0; i < frame.particle_data.pos.size(); i++)
-                {
-                pos_float[i] = vec3<float>(frame.particle_data.pos[i]);
-                }
-            retval = gsd_write_chunk(&m_handle,
-                                     "particles/position",
-                                     GSD_TYPE_FLOAT,
-                                     N,
-                                     3,
-                                     0,
-                                     (void*)pos_float.data());
-            }
-
-        GSDUtils::checkError(retval, m_fname);
         if (m_nframes == 0)
             m_nondefault["particles/position"] = true;
         }
