@@ -247,11 +247,11 @@ class PYBIND11_EXPORT GSDDumpWriter : public Analyzer
 #endif
 
     private:
-    std::string m_fname;           //!< The file name we are writing to
-    std::string m_mode;            //!< The file open mode
-    bool m_truncate = false;       //!< True if we should truncate the file on every analyze()
-    bool m_write_topology = false; //!< True if topology should be written
-    bool m_write_diameter = false; //!< True if the diameter attribute should be written
+    std::string m_fname;                //!< The file name we are writing to
+    std::string m_mode;                 //!< The file open mode
+    bool m_truncate = false;            //!< True if we should truncate the file on every analyze()
+    bool m_write_topology = false;      //!< True if topology should be written
+    bool m_write_diameter = false;      //!< True if the diameter attribute should be written
     std::string m_precision = "single"; //!< Precision for float data ("single" or "double")
 
     /// Flags indicating which particle fields are dynamic.

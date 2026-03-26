@@ -100,10 +100,13 @@ def test_write(simulation_factory, hoomd_snapshot, tmp_path):
             assert_equivalent_snapshots(traj[0], hoomd_snapshot)
             assert traj[0].particles.position.dtype == np.float32
 
+
 def test_write_double_precision(simulation_factory, hoomd_snapshot, tmp_path):
     filename = tmp_path / "temporary_test_file.gsd"
     sim = simulation_factory(hoomd_snapshot)
-    hoomd.write.GSD.write(state=sim.state, mode="wb", filename=str(filename), precision="double")
+    hoomd.write.GSD.write(
+        state=sim.state, mode="wb", filename=str(filename), precision="double"
+    )
     if hoomd_snapshot.communicator.rank == 0:
         with gsd.hoomd.open(name=filename, mode="r") as traj:
             assert len(traj) == 1

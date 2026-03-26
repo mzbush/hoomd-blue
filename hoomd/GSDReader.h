@@ -91,7 +91,7 @@ class PYBIND11_EXPORT GSDReader
     uint64_t m_timestep;                                       //!< Timestep at the selected frame
     std::string m_name;                                        //!< Cached file name
     uint64_t m_frame;                                          //!< Cached frame
-    std::shared_ptr<SnapshotSystemData<double>> m_snapshot; //!< Double snapshot
+    std::shared_ptr<SnapshotSystemData<double>> m_snapshot;    //!< Double snapshot
     gsd_handle m_handle;                                       //!< Handle to the file
 
     //! Helper function to read a type list from the file

@@ -250,7 +250,7 @@ class GSD(Writer):
             .. code-block:: python
 
                 gsd.auto_flush_period = 30
-                
+
         precision (str): Write precision for floating-point data.
             One of ``'single'`` or ``'double'``.
 
@@ -390,7 +390,9 @@ class GSD(Writer):
         self._finalizer = weakref.finalize(self, self.flush)
 
     @staticmethod
-    def write(state, filename, filter=All(), mode="wb", logger=None, precision="single"):
+    def write(
+        state, filename, filter=All(), mode="wb", logger=None, precision="single"
+    ):
         """Write the given simulation state out to a GSD file.
 
         Args:

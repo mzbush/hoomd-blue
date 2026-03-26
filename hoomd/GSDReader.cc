@@ -132,7 +132,7 @@ bool GSDReader::readChunk(void* data,
             std::vector<float> float_buffer(num_elements);
             int retval = gsd_read_chunk(&m_handle, float_buffer.data(), entry);
             GSDUtils::checkError(retval, m_name);
-            
+
             // Cast float to double
             double* double_data = reinterpret_cast<double*>(data);
             for (size_t i = 0; i < num_elements; i++)
@@ -140,17 +140,18 @@ bool GSDReader::readChunk(void* data,
                 double_data[i] = static_cast<double>(float_buffer[i]);
                 }
             }
-        else {
+        else
+            {
             if (actual_size != expected_size)
                 {
                 std::ostringstream s;
                 s << "Expecting " << expected_size << " bytes in " << name << " but found "
-                << actual_size << ".";
+                  << actual_size << ".";
                 throw runtime_error(s.str());
                 }
             int retval = gsd_read_chunk(&m_handle, data, entry);
             GSDUtils::checkError(retval, m_name);
-        }
+            }
 
         return true;
         }
@@ -212,7 +213,7 @@ void GSDReader::readHeader()
     readChunk(&box, m_frame, "configuration/box", 6 * 4);
     auto snap = std::static_pointer_cast<SnapshotSystemData<double>>(m_snapshot);
     snap->dimensions = dim;
-    
+
     if (dim == 2)
         {
         box[2] = 0;
@@ -240,19 +241,31 @@ void GSDReader::readParticles()
     auto snap = std::static_pointer_cast<SnapshotSystemData<double>>(m_snapshot);
     unsigned int N = snap->particle_data.size;
     snap->particle_data.type_mapping = readTypes(m_frame, "particles/types");
-    
-    size_t scalar_bytes = 8;  // double
-    size_t vec3_bytes = 24;   // 3 * 8
-    size_t quat_bytes = 32;   // 4 * 8
-    
+
+    size_t scalar_bytes = 8; // double
+    size_t vec3_bytes = 24;  // 3 * 8
+    size_t quat_bytes = 32;  // 4 * 8
+
     readChunk(snap->particle_data.charge.data(), m_frame, "particles/charge", N * scalar_bytes, N);
     readChunk(snap->particle_data.type.data(), m_frame, "particles/typeid", N * 4, N);
     readChunk(snap->particle_data.mass.data(), m_frame, "particles/mass", N * scalar_bytes, N);
-    readChunk(snap->particle_data.diameter.data(), m_frame, "particles/diameter", N * scalar_bytes, N);
+    readChunk(snap->particle_data.diameter.data(),
+              m_frame,
+              "particles/diameter",
+              N * scalar_bytes,
+              N);
     readChunk(snap->particle_data.body.data(), m_frame, "particles/body", N * 4, N);
-    readChunk(snap->particle_data.inertia.data(), m_frame, "particles/moment_inertia", N * vec3_bytes, N);
+    readChunk(snap->particle_data.inertia.data(),
+              m_frame,
+              "particles/moment_inertia",
+              N * vec3_bytes,
+              N);
     readChunk(snap->particle_data.pos.data(), m_frame, "particles/position", N * vec3_bytes, N);
-    readChunk(snap->particle_data.orientation.data(), m_frame, "particles/orientation", N * quat_bytes, N);
+    readChunk(snap->particle_data.orientation.data(),
+              m_frame,
+              "particles/orientation",
+              N * quat_bytes,
+              N);
     readChunk(snap->particle_data.vel.data(), m_frame, "particles/velocity", N * vec3_bytes, N);
     readChunk(snap->particle_data.angmom.data(), m_frame, "particles/angmom", N * quat_bytes, N);
     readChunk(snap->particle_data.image.data(), m_frame, "particles/image", N * 12, N);
