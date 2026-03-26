@@ -69,8 +69,9 @@ class PYBIND11_EXPORT GSDReader
     bool readChunk(void* data,
                    uint64_t frame,
                    const char* name,
-                   size_t expected_size,
-                   unsigned int cur_n = 0);
+                   uint64_t expected_n,
+                   uint32_t expected_m,
+                   gsd_type expected_type);
 
     //! clears the snapshot object
     void clearSnapshot()
