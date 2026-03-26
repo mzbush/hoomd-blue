@@ -125,25 +125,26 @@ bool GSDReader::readChunk(void* data,
         {
         std::ostringstream s;
         s << "Expecting shape (" << expected_n << "," << expected_m << ") in chunk " << name
-          << " but found (" << entry->N << "," << entry->M  << ").";
-            throw runtime_error(s.str());
+          << " but found (" << entry->N << "," << entry->M << ").";
+        throw runtime_error(s.str());
         }
 
-    if (expected_type == GSD_TYPE_FLOAT && !(entry->type == GSD_TYPE_FLOAT || entry->type == GSD_TYPE_DOUBLE))
+    if (expected_type == GSD_TYPE_FLOAT
+        && !(entry->type == GSD_TYPE_FLOAT || entry->type == GSD_TYPE_DOUBLE))
         {
         std::ostringstream s;
-        s << "Expecting floating point data type in chunk " << name
-          << " but found " << (int)entry->type << ".";
-            throw runtime_error(s.str());
+        s << "Expecting floating point data type in chunk " << name << " but found "
+          << (int)entry->type << ".";
+        throw runtime_error(s.str());
         }
     else if (expected_type != GSD_TYPE_FLOAT && expected_type != entry->type)
         {
         std::ostringstream s;
-        s << "Expecting type " << expected_type << " in chunk " << name
-          << " but found " << (int)entry->type << ".";
-            throw runtime_error(s.str());
+        s << "Expecting type " << expected_type << " in chunk " << name << " but found "
+          << (int)entry->type << ".";
+        throw runtime_error(s.str());
         }
-    
+
     m_exec_conf->msg->notice(7) << "data.gsd_snapshot: reading chunk " << name << endl;
 
     if (entry->type == GSD_TYPE_FLOAT)
@@ -255,30 +256,72 @@ void GSDReader::readParticles()
 
     // the snapshot already has default values, if a chunk is not found, the value
     // is already at the default, and the failed read is not a problem
-    readChunk(m_snapshot->particle_data.charge.data(), m_frame, "particles/charge", N, 1, GSD_TYPE_FLOAT);
-    readChunk(m_snapshot->particle_data.type.data(), m_frame, "particles/typeid", N, 1, GSD_TYPE_UINT32);
-    readChunk(m_snapshot->particle_data.mass.data(), m_frame, "particles/mass", N, 1, GSD_TYPE_FLOAT);
+    readChunk(m_snapshot->particle_data.charge.data(),
+              m_frame,
+              "particles/charge",
+              N,
+              1,
+              GSD_TYPE_FLOAT);
+    readChunk(m_snapshot->particle_data.type.data(),
+              m_frame,
+              "particles/typeid",
+              N,
+              1,
+              GSD_TYPE_UINT32);
+    readChunk(m_snapshot->particle_data.mass.data(),
+              m_frame,
+              "particles/mass",
+              N,
+              1,
+              GSD_TYPE_FLOAT);
     readChunk(m_snapshot->particle_data.diameter.data(),
               m_frame,
               "particles/diameter",
-              N, 1, GSD_TYPE_FLOAT);
-    readChunk(m_snapshot->particle_data.body.data(), m_frame, "particles/body", N, 1, GSD_TYPE_INT32);
+              N,
+              1,
+              GSD_TYPE_FLOAT);
+    readChunk(m_snapshot->particle_data.body.data(),
+              m_frame,
+              "particles/body",
+              N,
+              1,
+              GSD_TYPE_INT32);
     readChunk(m_snapshot->particle_data.inertia.data(),
               m_frame,
               "particles/moment_inertia",
               N,
               3,
               GSD_TYPE_FLOAT);
-    readChunk(m_snapshot->particle_data.pos.data(), m_frame, "particles/position", N, 3, GSD_TYPE_FLOAT);
+    readChunk(m_snapshot->particle_data.pos.data(),
+              m_frame,
+              "particles/position",
+              N,
+              3,
+              GSD_TYPE_FLOAT);
     readChunk(m_snapshot->particle_data.orientation.data(),
               m_frame,
               "particles/orientation",
               N,
               4,
               GSD_TYPE_FLOAT);
-    readChunk(m_snapshot->particle_data.vel.data(), m_frame, "particles/velocity", N, 3, GSD_TYPE_FLOAT);
-    readChunk(m_snapshot->particle_data.angmom.data(), m_frame, "particles/angmom", N, 4, GSD_TYPE_FLOAT);
-    readChunk(m_snapshot->particle_data.image.data(), m_frame, "particles/image", N, 3, GSD_TYPE_INT32);
+    readChunk(m_snapshot->particle_data.vel.data(),
+              m_frame,
+              "particles/velocity",
+              N,
+              3,
+              GSD_TYPE_FLOAT);
+    readChunk(m_snapshot->particle_data.angmom.data(),
+              m_frame,
+              "particles/angmom",
+              N,
+              4,
+              GSD_TYPE_FLOAT);
+    readChunk(m_snapshot->particle_data.image.data(),
+              m_frame,
+              "particles/image",
+              N,
+              3,
+              GSD_TYPE_INT32);
     }
 
 /*! Read the same data chunks for topology
@@ -291,8 +334,18 @@ void GSDReader::readTopology()
     if (N > 0)
         {
         m_snapshot->bond_data.resize(N);
-        readChunk(m_snapshot->bond_data.type_id.data(), m_frame, "bonds/typeid", N, 1, GSD_TYPE_UINT32);
-        readChunk(m_snapshot->bond_data.groups.data(), m_frame, "bonds/group", N, 2, GSD_TYPE_UINT32);
+        readChunk(m_snapshot->bond_data.type_id.data(),
+                  m_frame,
+                  "bonds/typeid",
+                  N,
+                  1,
+                  GSD_TYPE_UINT32);
+        readChunk(m_snapshot->bond_data.groups.data(),
+                  m_frame,
+                  "bonds/group",
+                  N,
+                  2,
+                  GSD_TYPE_UINT32);
         }
 
     N = 0;
@@ -301,8 +354,18 @@ void GSDReader::readTopology()
     if (N > 0)
         {
         m_snapshot->angle_data.resize(N);
-        readChunk(m_snapshot->angle_data.type_id.data(), m_frame, "angles/typeid", N, 1, GSD_TYPE_UINT32);
-        readChunk(m_snapshot->angle_data.groups.data(), m_frame, "angles/group", N, 3, GSD_TYPE_UINT32);
+        readChunk(m_snapshot->angle_data.type_id.data(),
+                  m_frame,
+                  "angles/typeid",
+                  N,
+                  1,
+                  GSD_TYPE_UINT32);
+        readChunk(m_snapshot->angle_data.groups.data(),
+                  m_frame,
+                  "angles/group",
+                  N,
+                  3,
+                  GSD_TYPE_UINT32);
         }
 
     N = 0;
@@ -311,8 +374,18 @@ void GSDReader::readTopology()
     if (N > 0)
         {
         m_snapshot->dihedral_data.resize(N);
-        readChunk(m_snapshot->dihedral_data.type_id.data(), m_frame, "dihedrals/typeid", N, 1, GSD_TYPE_UINT32);
-        readChunk(m_snapshot->dihedral_data.groups.data(), m_frame, "dihedrals/group", N, 4, GSD_TYPE_UINT32);
+        readChunk(m_snapshot->dihedral_data.type_id.data(),
+                  m_frame,
+                  "dihedrals/typeid",
+                  N,
+                  1,
+                  GSD_TYPE_UINT32);
+        readChunk(m_snapshot->dihedral_data.groups.data(),
+                  m_frame,
+                  "dihedrals/group",
+                  N,
+                  4,
+                  GSD_TYPE_UINT32);
         }
 
     N = 0;
@@ -321,8 +394,18 @@ void GSDReader::readTopology()
     if (N > 0)
         {
         m_snapshot->improper_data.resize(N);
-        readChunk(m_snapshot->improper_data.type_id.data(), m_frame, "impropers/typeid", N, 1, GSD_TYPE_UINT32);
-        readChunk(m_snapshot->improper_data.groups.data(), m_frame, "impropers/group", N, 4, GSD_TYPE_UINT32);
+        readChunk(m_snapshot->improper_data.type_id.data(),
+                  m_frame,
+                  "impropers/typeid",
+                  N,
+                  1,
+                  GSD_TYPE_UINT32);
+        readChunk(m_snapshot->improper_data.groups.data(),
+                  m_frame,
+                  "impropers/group",
+                  N,
+                  4,
+                  GSD_TYPE_UINT32);
         }
 
     N = 0;
@@ -334,7 +417,12 @@ void GSDReader::readTopology()
         readChunk(&data[0], m_frame, "constraints/value", N, 1, GSD_TYPE_FLOAT);
         for (unsigned int i = 0; i < N; i++)
             m_snapshot->constraint_data.val[i] = Scalar(data[i]);
-        readChunk(m_snapshot->constraint_data.groups.data(), m_frame, "constraints/group", N, 2, GSD_TYPE_UINT32);
+        readChunk(m_snapshot->constraint_data.groups.data(),
+                  m_frame,
+                  "constraints/group",
+                  N,
+                  2,
+                  GSD_TYPE_UINT32);
         }
 
     if (m_handle.header.schema_version >= gsd_make_version(1, 1))
@@ -345,8 +433,18 @@ void GSDReader::readTopology()
         if (N > 0)
             {
             m_snapshot->pair_data.resize(N);
-            readChunk(m_snapshot->pair_data.type_id.data(), m_frame, "pairs/typeid", N, 1, GSD_TYPE_UINT32);
-            readChunk(m_snapshot->pair_data.groups.data(), m_frame, "pairs/group", N, 2, GSD_TYPE_UINT32);
+            readChunk(m_snapshot->pair_data.type_id.data(),
+                      m_frame,
+                      "pairs/typeid",
+                      N,
+                      1,
+                      GSD_TYPE_UINT32);
+            readChunk(m_snapshot->pair_data.groups.data(),
+                      m_frame,
+                      "pairs/group",
+                      N,
+                      2,
+                      GSD_TYPE_UINT32);
             }
         }
     }

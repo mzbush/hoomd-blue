@@ -205,7 +205,12 @@ def state_args(request):
 @skip_gsd
 @pytest.mark.parametrize("precision", ["single", "double"])
 def test_state_from_gsd(
-    device, simulation_factory, lattice_snapshot_factory, state_args, tmp_path, precision
+    device,
+    simulation_factory,
+    lattice_snapshot_factory,
+    state_args,
+    tmp_path,
+    precision,
 ):
     snap_params, nsteps = state_args
 
