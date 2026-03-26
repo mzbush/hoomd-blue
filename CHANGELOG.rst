@@ -7,11 +7,18 @@ Recent releases
 Next release
 ^^^^^^^^^^^^^^^^^^^^
 
+HOOMD-blue 7.0 changes the definition of the rotation trial move size ``a``. You will need to
+retune any hard-coded or saved values. Here are the distributions of the trial move rotation
+angles in HOOMD-blue 2.0–6.x and in 7.0+ for comparison:
+
+.. image:: https://github.com/user-attachments/assets/4a713aa9-2ec4-40dc-8363-aaf93e7eca2b
+
 *Added*
 
 *Changed*
 
 * Use tabs in binary installation documentation (#2246).
+* Improve the sampling of rotation trial moves (#2264).
 
 *Deprecated*
 
@@ -20,6 +27,7 @@ Next release
 *Fixed*
 
 * Fixed Helfrich equation in the docs (#2242)
+* Build with Eigen 5.x (#2261)
 
 6.1.1 (2026-02-19)
 ^^^^^^^^^^^^^^^^^^^^
