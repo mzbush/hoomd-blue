@@ -7,9 +7,18 @@ Recent releases
 Next release
 ^^^^^^^^^^^^^^^^^^^^
 
+HOOMD-blue 7.0 changes the definition of the rotation trial move size ``a``. You will need to
+retune any hard-coded or saved values. Here are the distributions of the trial move rotation
+angles in HOOMD-blue 2.0–6.x and in 7.0+ for comparison:
+
+.. image:: https://github.com/user-attachments/assets/4a713aa9-2ec4-40dc-8363-aaf93e7eca2b
+
 *Added*
 
 *Changed*
+
+* Use tabs in binary installation documentation (#2246).
+* Improve the sampling of rotation trial moves (#2264).
 
 *Deprecated*
 
@@ -18,6 +27,7 @@ Next release
 *Fixed*
 
 * Fixed Helfrich equation in the docs (#2242)
+* Build with Eigen 5.x (#2261)
 
 6.1.1 (2026-02-19)
 ^^^^^^^^^^^^^^^^^^^^
@@ -2421,7 +2431,7 @@ v2.3.0 (2018-04-25)
       frame indices to index from the end of the trajectory.
    -  Faster reinitialization from snapshots when done frequently.
    -  New command line option ``--single-mpi`` allows non-mpi builds of
-      hoomd to launch within mpirun (i.e. for use with mpi4py managed
+      hoomd to launch within mpirun (i.e. for use with mpi4py managed
       pools of jobs)
    -  For users of the University of Michigan Flux system: A ``--mode``
       option is no longer required to run hoomd.
@@ -2636,7 +2646,7 @@ v2.2.0 (2017-09-08)
    -  Check that composite body dimensions are consistent with minimum
       image convention and generate an error if they are not.
    -  ``md.integrate.mode.minimize_fire()`` now supports anisotropic
-      particles (i.e. composite bodies)
+      particles (i.e. composite bodies)
    -  ``md.integrate.mode.minimize_fire()`` now supports flexible
       specification of integration methods
    -  ``md.integrate.npt()/md.integrate.nph()`` now accept a friction
@@ -3397,7 +3407,7 @@ v1.0.1 (2014-09-09)
 **Bug fixes**
 
 1.  Fixed bug where error messages were truncated and HOOMD exited with
-    a segmentation fault instead (e.g. on Blue Waters)
+    a segmentation fault instead (e.g. on Blue Waters)
 2.  Fixed bug where plug-ins did not load on Blue Waters
 3.  Fixed compile error with gcc4.4 and cuda5.0
 4.  Fixed syntax error in ``read_snapshot()``
@@ -4260,7 +4270,7 @@ Version 0.8.0 (2008-12-22)
     computation, thanks to David Tarjan
 19. A header prefix can be added to log files to make them more gnuplot
     friendly
-20. Log quantities completely revamped. Common quantities (i.e. kinetic
+20. Log quantities completely revamped. Common quantities (i.e. kinetic
     energy, potential energy can now be logged in any simulation)
 21. Particle groups can now be created. Currently only analyze.msd makes
     use of them.

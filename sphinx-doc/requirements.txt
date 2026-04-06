@@ -18,9 +18,9 @@ beautifulsoup4==4.14.3
     #   nbconvert
 bleach==6.3.0
     # via nbconvert
-certifi==2026.1.4
+certifi==2026.2.25
     # via requests
-charset-normalizer==3.4.4
+charset-normalizer==3.4.6
     # via requests
 decorator==5.2.1
     # via ipython
@@ -38,9 +38,9 @@ furo==2025.12.19
     # via -r sphinx-doc/requirements.in
 idna==3.11
     # via requests
-imagesize==1.4.1
+imagesize==2.0.0
     # via sphinx
-ipython==9.10.0
+ipython==9.11.0
     # via -r sphinx-doc/requirements.in
 ipython-pygments-lexers==1.1.1
     # via ipython
@@ -86,7 +86,7 @@ nbformat==5.10.4
     #   nbsphinx
 nbsphinx==0.9.8
     # via -r sphinx-doc/requirements.in
-numpy==2.4.2
+numpy==2.4.3
     # via -r sphinx-doc/requirements.in
 packaging==26.0
     # via
@@ -100,7 +100,7 @@ parso==0.8.6
     # via jedi
 pexpect==4.9.0
     # via ipython
-platformdirs==4.9.2
+platformdirs==4.9.4
     # via jupyter-core
 plumbum==1.10.0
     # via pandoc
@@ -148,12 +148,15 @@ sphinx==9.1.0
     #   nbsphinx
     #   sphinx-basic-ng
     #   sphinx-copybutton
+    #   sphinx-inline-tabs
     #   sphinx-notfound-page
     #   sphinxcontrib-googleanalytics
     #   sphinxcontrib-katex
 sphinx-basic-ng==1.0.0b2
     # via furo
 sphinx-copybutton==0.5.2
+    # via -r sphinx-doc/requirements.in
+sphinx-inline-tabs==2025.12.21.14
     # via -r sphinx-doc/requirements.in
 sphinx-notfound-page==1.1.0
     # via -r sphinx-doc/requirements.in
@@ -177,7 +180,7 @@ stack-data==0.6.3
     # via ipython
 tinycss2==1.4.0
     # via bleach
-tornado==6.5.4
+tornado==6.5.5
     # via
     #   -r sphinx-doc/requirements.in
     #   jupyter-client
