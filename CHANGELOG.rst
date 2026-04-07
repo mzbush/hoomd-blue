@@ -11,7 +11,7 @@ HOOMD-blue 7.0 writes GSD schema 2.0 files. Update your other software for compa
 
 * gsd >= 5.0
 * Ovito >= 3.15.2
-* gsd-vmd >= 2026-03-19
+* gsd-vmd >= 0.6.0
 
 HOOMD-blue 7.0 also changes the definition of the rotation trial move size
 ``a``. You will need to retune any hard-coded or saved values. Here are the
