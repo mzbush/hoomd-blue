@@ -4,7 +4,7 @@ Change Log
 Recent releases
 ---------------
 
-Next release
+7.0.0 (2026-04-07)
 ^^^^^^^^^^^^^^^^^^^^
 
 HOOMD-blue 7.0 writes GSD schema 2.0 files. Update your other software for compatibility:
