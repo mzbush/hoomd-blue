@@ -15,6 +15,9 @@ angles in HOOMD-blue 2.0–6.x and in 7.0+ for comparison:
 
 *Added*
 
+* ``hoomd.hpmc.integrate.HPMCIntegrator.translate_move_dimensions``: Sets the dimensionality of HPMC translation moves,
+  enabling interfacial confinement (xy) in 3D simulations.
+
 *Changed*
 
 * Use tabs in binary installation documentation (#2246).
