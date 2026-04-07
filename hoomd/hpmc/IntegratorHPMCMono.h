@@ -5,7 +5,6 @@
 
 #include <iostream>
 
-#include "GSDHPMCSchema.h"
 #include "IntegratorHPMC.h"
 #include "Moves.h"
 #include "ShapeSpheropolyhedron.h"
