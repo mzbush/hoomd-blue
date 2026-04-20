@@ -61,6 +61,10 @@ jobs:
 
         - config: [cuda, 124, -py, 314, -mpi, -debug]
 
+        - config: [rocm, 72, -py, 313]
+        - config: [rocm, 71, -py, 313]
+        - config: [rocm, 64, -py, 313]
+
 
   release:
     if: ${{ contains(github.event.pull_request.labels.*.name, 'release') }}
@@ -89,8 +93,8 @@ jobs:
         - config: [clang, 17, -py, 312, -mpi]
         - config: [clang, 16, -py, 312, -mpi]
         - config: [clang, 15, -py, 311, -mpi]
-        - config: [clang, 14, -py, 310, -mpi]
-        - config: [clang, 13, -py, 310, -mpi]
+        - config: [clang, 14, -py, 311, -mpi]
+        - config: [clang, 13, -py, 311, -mpi]
         - config: [gcc, 13, -py, 313, -mpi]
         - config: [gcc, 12, -py, 312, -mpi]
         - config: [gcc, 11, -py, 311, -mpi]
