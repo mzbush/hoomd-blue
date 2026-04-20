@@ -4,28 +4,42 @@ Change Log
 Recent releases
 ---------------
 
-Next release
+7.0.1 (2026-04-08)
 ^^^^^^^^^^^^^^^^^^^^
 
-HOOMD-blue 7.0 changes the definition of the rotation trial move size ``a``. You will need to
-retune any hard-coded or saved values. Here are the distributions of the trial move rotation
-angles in HOOMD-blue 2.0–6.x and in 7.0+ for comparison:
+*Fixed*
+
+* Fixed external component builds with Eigen 5.x (#2272).
+
+7.0.0 (2026-04-07)
+^^^^^^^^^^^^^^^^^^^^
+
+HOOMD-blue 7.0 writes GSD schema 2.0 files. Update your other software for compatibility:
+
+* gsd >= 5.0
+* Ovito >= 3.15.2
+* gsd-vmd >= 0.6.0
+
+HOOMD-blue 7.0 also changes the definition of the 3D rotation trial move
+size ``a`` (2D rotation moves are not changed). You will need to retune any
+hard-coded or saved values. Here are the distributions of the trial move
+rotation angles in HOOMD-blue 2.0–6.x and in 7.0+ for comparison:
 
 .. image:: https://github.com/user-attachments/assets/4a713aa9-2ec4-40dc-8363-aaf93e7eca2b
 
 *Added*
 
 * ``hoomd.hpmc.integrate.HPMCIntegrator.translate_move_dimensions``: Sets the dimensionality of HPMC translation moves,
-  enabling interfacial confinement (xy) in 3D simulations.
+  enabling interfacial confinement (xy) in 3D simulations (#2265).
+* ``create_state_from_gsd`` can now read GSD schema 2.0 files (#2249).
+* ``write.GSD`` and ``write.Burst`` can now write double precision values to GSD files.
+  Set ``precision="double"`` to enable. The default value is ``"single"``, consistent
+  with previous releases (#2249).
 
 *Changed*
 
 * Use tabs in binary installation documentation (#2246).
-* Improve the sampling of rotation trial moves (#2264).
-
-*Deprecated*
-
-*Removed*
+* Improve the sampling of 3D rotation trial moves (#2264).
 
 *Fixed*
 
