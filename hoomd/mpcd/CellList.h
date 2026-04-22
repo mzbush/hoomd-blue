@@ -398,6 +398,9 @@ class PYBIND11_EXPORT CellList : public Compute
 
     //! Add ghost contribution to cell properties
     virtual void addGhostsToCells();
+
+    //! Check the condition flags for ghosts
+    bool checkGhostConditions();
 #endif // ENABLE_MPI
 
     //! Updates the requested optional flags

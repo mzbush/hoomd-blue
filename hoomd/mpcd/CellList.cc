@@ -156,7 +156,7 @@ void mpcd::CellList::compute(uint64_t timestep)
         fillGhostBuffers();
         sendGhosts();
         addGhostsToCells();
-        checkConditions();
+        checkGhostConditions();
 #endif // ENABLE_MPI
         finishComputeProperties();
 
@@ -1210,6 +1210,25 @@ void mpcd::CellList::updateLocalFromGhosts()
         const Scalar4 old_vel = h_vel.data[idx];
         h_vel.data[idx] = make_scalar4(new_vel.x, new_vel.y, new_vel.z, old_vel.w);
         }
+    }
+
+bool mpcd::CellList::checkGhostConditions()
+    {
+    bool result = false;
+
+    uint3 conditions = m_conditions.readFlags();
+    if (conditions.x)
+        {
+        unsigned int n = conditions.x - 1;
+        if (n < getNMPCDGhosts())
+            {
+            m_exec_conf->msg->errorAllRanks()
+                << "MPCD ghost particle " << n << " has no valid cell" << std::endl;
+            }
+        throw std::runtime_error("Error computing cell list");
+        }
+
+    return result;
     }
 #endif // ENABLE_MPI
 

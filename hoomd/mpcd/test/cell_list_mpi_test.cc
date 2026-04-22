@@ -1607,6 +1607,28 @@ void celllist_back_communication_test_2Drank(std::shared_ptr<ExecutionConfigurat
                 }
             }
         }
+
+        // check that an error occurs if trying to send a particle to a rank that isn't a neighbor
+
+        {
+        ArrayHandle<Scalar4> h_pos(pdata->getPositions(),
+                                   access_location::host,
+                                   access_mode::overwrite);
+        if (my_rank == 2)
+            {
+            h_pos.data[0] = scale(make_scalar4(-3.0, 2.0, -0.8, 0.0), ref_box,
+                                  box); // to rank 4
+            }
+        }
+
+    if (my_rank == 5)
+        {
+        UP_ASSERT_EXCEPTION(std::runtime_error, [&] { cl->compute(1); });
+        }
+    else
+        {
+        cl->compute(1);
+        }
     }
 
 //! dimension test case for MPCD CellList class
