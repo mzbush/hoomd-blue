@@ -30,7 +30,24 @@ mpcd::CellListGPU::CellListGPU(std::shared_ptr<SystemDefinition> sysdef,
     m_tuner_embed_migrate.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
                                                  m_exec_conf,
                                                  "mpcd_cell_embed_migrate"));
-    m_autotuners.push_back(m_tuner_embed_migrate);
+    m_tuner_send_num.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                            m_exec_conf,
+                                            "mpcd_cell_send_num"));
+    m_tuner_buffer.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                          m_exec_conf,
+                                          "mpcd_cell_buffer"));
+    m_tuner_ghost_cell.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                              m_exec_conf,
+                                              "mpcd_cell_ghost_property"));
+    m_tuner_ghost_update.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                                m_exec_conf,
+                                                "mpcd_cell_ghost_update"));
+    m_autotuners.insert(m_autotuners.end(),
+                        {m_tuner_embed_migrate,
+                         m_tuner_send_num,
+                         m_tuner_buffer,
+                         m_tuner_ghost_cell,
+                         m_tuner_ghost_update});
 
     GPUFlags<unsigned int> migrate_flag(m_exec_conf);
     m_migrate_flag.swap(migrate_flag);
@@ -58,7 +75,24 @@ mpcd::CellListGPU::CellListGPU(std::shared_ptr<SystemDefinition> sysdef,
     m_tuner_embed_migrate.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
                                                  m_exec_conf,
                                                  "mpcd_cell_embed_migrate"));
-    m_autotuners.push_back(m_tuner_embed_migrate);
+    m_tuner_send_num.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                            m_exec_conf,
+                                            "mpcd_cell_send_num"));
+    m_tuner_buffer.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                          m_exec_conf,
+                                          "mpcd_cell_buffer"));
+    m_tuner_ghost_cell.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                              m_exec_conf,
+                                              "mpcd_cell_ghost_property"));
+    m_tuner_ghost_update.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                                m_exec_conf,
+                                                "mpcd_cell_ghost_update"));
+    m_autotuners.insert(m_autotuners.end(),
+                        {m_tuner_embed_migrate,
+                         m_tuner_send_num,
+                         m_tuner_buffer,
+                         m_tuner_ghost_cell,
+                         m_tuner_ghost_update});
 
     GPUFlags<unsigned int> migrate_flag(m_exec_conf);
     m_migrate_flag.swap(migrate_flag);
@@ -84,89 +118,180 @@ void mpcd::CellListGPU::buildCellList()
     const unsigned int N_mpcd = m_mpcd_pdata->getN() + m_mpcd_pdata->getNVirtual();
     unsigned int N_tot = N_mpcd;
 
-    // total effective number of cells in the global box, optionally padded by
-    // extra cells in MPI simulations
-    uint3 n_global_cells = m_global_cell_dim;
+    // get communcation variables
+    uint3 rank_size = make_uint3(0, 0, 0);
 #ifdef ENABLE_MPI
-    if (isCommunicating(mpcd::detail::face::east))
-        n_global_cells.x += 2 * m_num_extra;
-    if (isCommunicating(mpcd::detail::face::north))
-        n_global_cells.y += 2 * m_num_extra;
-    if (isCommunicating(mpcd::detail::face::up))
-        n_global_cells.z += 2 * m_num_extra;
-#endif // ENABLE_MPI
-
-    if (m_embed_group)
+    if (m_decomposition)
         {
-        ArrayHandle<unsigned int> d_embed_cell_ids(m_embed_cell_ids,
-                                                   access_location::device,
-                                                   access_mode::overwrite);
-        ArrayHandle<Scalar4> d_pos_embed(m_pdata->getPositions(),
-                                         access_location::device,
-                                         access_mode::read);
-        ArrayHandle<Scalar4> d_vel_embed(m_pdata->getVelocities(),
-                                         access_location::device,
-                                         access_mode::read);
-        ArrayHandle<unsigned int> d_embed_member_idx(m_embed_group->getIndexArray(),
-                                                     access_location::device,
-                                                     access_mode::read);
-        N_tot += m_embed_group->getNumMembers();
+        // allocate space for communication flag
+        m_mpcd_comm_key.resize(N_mpcd);
+        ArrayHandle<uint2> d_mpcd_comm_key(m_mpcd_comm_key,
+                                           access_location::device,
+                                           access_mode::overwrite);
+        // allocate the the number of ranks in each dimension
+        Index3D di = m_decomposition->getDomainIndexer();
+        rank_size = make_uint3(di.getW(), di.getH(), di.getD());
 
-        m_tuner_cell->begin();
-        mpcd::gpu::compute_cell_list(d_cell_np.data,
-                                     d_cell_vel.data,
-                                     d_cell_energy.data,
-                                     m_conditions.getDeviceFlags(),
-                                     d_vel.data,
-                                     m_mpcd_pdata->getMass(),
-                                     d_embed_cell_ids.data,
-                                     d_pos.data,
-                                     d_pos_embed.data,
-                                     d_vel_embed.data,
-                                     d_embed_member_idx.data,
-                                     m_pdata->getBox().getPeriodic(),
-                                     m_origin_idx,
-                                     m_grid_shift,
-                                     m_pdata->getGlobalBox(),
-                                     n_global_cells,
-                                     m_global_cell_dim,
-                                     m_cell_indexer,
-                                     N_mpcd,
-                                     N_tot,
-                                     m_flags[mpcd::detail::thermo_options::energy],
-                                     m_tuner_cell->getParam()[0]);
-        if (m_exec_conf->isCUDAErrorCheckingEnabled())
-            CHECK_CUDA_ERROR();
-        m_tuner_cell->end();
+        if (m_embed_group)
+            {
+            ArrayHandle<unsigned int> d_embed_cell_ids(m_embed_cell_ids,
+                                                       access_location::device,
+                                                       access_mode::overwrite);
+            ArrayHandle<Scalar4> d_pos_embed(m_pdata->getPositions(),
+                                             access_location::device,
+                                             access_mode::read);
+            ArrayHandle<Scalar4> d_vel_embed(m_pdata->getVelocities(),
+                                             access_location::device,
+                                             access_mode::read);
+            ArrayHandle<unsigned int> d_embed_member_idx(m_embed_group->getIndexArray(),
+                                                         access_location::device,
+                                                         access_mode::read);
+            N_tot += m_embed_group->getNumMembers();
+
+            m_tuner_cell->begin();
+            mpcd::gpu::compute_cell_list(d_cell_np.data,
+                                         d_cell_vel.data,
+                                         d_cell_energy.data,
+                                         m_conditions.getDeviceFlags(),
+                                         d_vel.data,
+                                         m_mpcd_pdata->getMass(),
+                                         d_embed_cell_ids.data,
+                                         d_pos.data,
+                                         d_pos_embed.data,
+                                         d_vel_embed.data,
+                                         d_embed_member_idx.data,
+                                         m_pdata->getGlobalBox().getPeriodic(),
+                                         m_origin_idx,
+                                         m_grid_shift,
+                                         m_pdata->getGlobalBox(),
+                                         m_global_cell_dim,
+                                         m_cell_indexer,
+                                         m_global_cell_indexer,
+                                         d_mpcd_comm_key.data,
+                                         rank_size,
+                                         true,
+                                         N_mpcd,
+                                         N_tot,
+                                         m_flags[mpcd::detail::thermo_options::energy],
+                                         m_tuner_cell->getParam()[0]);
+            if (m_exec_conf->isCUDAErrorCheckingEnabled())
+                CHECK_CUDA_ERROR();
+            m_tuner_cell->end();
+            }
+        else
+            {
+            m_tuner_cell->begin();
+            mpcd::gpu::compute_cell_list(d_cell_np.data,
+                                         d_cell_vel.data,
+                                         d_cell_energy.data,
+                                         m_conditions.getDeviceFlags(),
+                                         d_vel.data,
+                                         m_mpcd_pdata->getMass(),
+                                         NULL,
+                                         d_pos.data,
+                                         NULL,
+                                         NULL,
+                                         NULL,
+                                         m_pdata->getGlobalBox().getPeriodic(),
+                                         m_origin_idx,
+                                         m_grid_shift,
+                                         m_pdata->getGlobalBox(),
+                                         m_global_cell_dim,
+                                         m_cell_indexer,
+                                         m_global_cell_indexer,
+                                         d_mpcd_comm_key.data,
+                                         rank_size,
+                                         true,
+                                         N_mpcd,
+                                         N_tot,
+                                         m_flags[mpcd::detail::thermo_options::energy],
+                                         m_tuner_cell->getParam()[0]);
+            if (m_exec_conf->isCUDAErrorCheckingEnabled())
+                CHECK_CUDA_ERROR();
+            m_tuner_cell->end();
+            }
         }
     else
+#endif // ENABLE_MPI
         {
-        m_tuner_cell->begin();
-        mpcd::gpu::compute_cell_list(d_cell_np.data,
-                                     d_cell_vel.data,
-                                     d_cell_energy.data,
-                                     m_conditions.getDeviceFlags(),
-                                     d_vel.data,
-                                     m_mpcd_pdata->getMass(),
-                                     NULL,
-                                     d_pos.data,
-                                     NULL,
-                                     NULL,
-                                     NULL,
-                                     m_pdata->getBox().getPeriodic(),
-                                     m_origin_idx,
-                                     m_grid_shift,
-                                     m_pdata->getGlobalBox(),
-                                     n_global_cells,
-                                     m_global_cell_dim,
-                                     m_cell_indexer,
-                                     N_mpcd,
-                                     N_tot,
-                                     m_flags[mpcd::detail::thermo_options::energy],
-                                     m_tuner_cell->getParam()[0]);
-        if (m_exec_conf->isCUDAErrorCheckingEnabled())
-            CHECK_CUDA_ERROR();
-        m_tuner_cell->end();
+        if (m_embed_group)
+            {
+            ArrayHandle<unsigned int> d_embed_cell_ids(m_embed_cell_ids,
+                                                       access_location::device,
+                                                       access_mode::overwrite);
+            ArrayHandle<Scalar4> d_pos_embed(m_pdata->getPositions(),
+                                             access_location::device,
+                                             access_mode::read);
+            ArrayHandle<Scalar4> d_vel_embed(m_pdata->getVelocities(),
+                                             access_location::device,
+                                             access_mode::read);
+            ArrayHandle<unsigned int> d_embed_member_idx(m_embed_group->getIndexArray(),
+                                                         access_location::device,
+                                                         access_mode::read);
+            N_tot += m_embed_group->getNumMembers();
+
+            m_tuner_cell->begin();
+            mpcd::gpu::compute_cell_list(d_cell_np.data,
+                                         d_cell_vel.data,
+                                         d_cell_energy.data,
+                                         m_conditions.getDeviceFlags(),
+                                         d_vel.data,
+                                         m_mpcd_pdata->getMass(),
+                                         d_embed_cell_ids.data,
+                                         d_pos.data,
+                                         d_pos_embed.data,
+                                         d_vel_embed.data,
+                                         d_embed_member_idx.data,
+                                         m_pdata->getGlobalBox().getPeriodic(),
+                                         m_origin_idx,
+                                         m_grid_shift,
+                                         m_pdata->getGlobalBox(),
+                                         m_global_cell_dim,
+                                         m_cell_indexer,
+                                         m_global_cell_indexer,
+                                         NULL,
+                                         rank_size,
+                                         false,
+                                         N_mpcd,
+                                         N_tot,
+                                         m_flags[mpcd::detail::thermo_options::energy],
+                                         m_tuner_cell->getParam()[0]);
+            if (m_exec_conf->isCUDAErrorCheckingEnabled())
+                CHECK_CUDA_ERROR();
+            m_tuner_cell->end();
+            }
+        else
+            {
+            m_tuner_cell->begin();
+            mpcd::gpu::compute_cell_list(d_cell_np.data,
+                                         d_cell_vel.data,
+                                         d_cell_energy.data,
+                                         m_conditions.getDeviceFlags(),
+                                         d_vel.data,
+                                         m_mpcd_pdata->getMass(),
+                                         NULL,
+                                         d_pos.data,
+                                         NULL,
+                                         NULL,
+                                         NULL,
+                                         m_pdata->getGlobalBox().getPeriodic(),
+                                         m_origin_idx,
+                                         m_grid_shift,
+                                         m_pdata->getGlobalBox(),
+                                         m_global_cell_dim,
+                                         m_cell_indexer,
+                                         m_global_cell_indexer,
+                                         NULL,
+                                         rank_size,
+                                         false,
+                                         N_mpcd,
+                                         N_tot,
+                                         m_flags[mpcd::detail::thermo_options::energy],
+                                         m_tuner_cell->getParam()[0]);
+            if (m_exec_conf->isCUDAErrorCheckingEnabled())
+                CHECK_CUDA_ERROR();
+            m_tuner_cell->end();
+            }
         }
     }
 
@@ -328,6 +453,137 @@ bool mpcd::CellListGPU::needsEmbedMigrate(uint64_t timestep)
 
     return static_cast<bool>(migrate);
     }
+
+void mpcd::CellListGPU::fillGhostBuffers()
+    {
+    if (!m_decomposition)
+        {
+        return;
+        }
+
+        // determine the starting indexes and total number of ghost particles
+        {
+        ArrayHandle<uint2> d_mpcd_comm_key(m_mpcd_comm_key,
+                                           access_location::device,
+                                           access_mode::read);
+        ArrayHandle<unsigned int> d_mpcd_send_offsets(m_mpcd_send_offsets,
+                                                      access_location::device,
+                                                      access_mode::readwrite);
+        const unsigned int N_mpcd = m_mpcd_pdata->getN() + m_mpcd_pdata->getNVirtual();
+        m_tuner_send_num->begin();
+        mpcd::gpu::find_num_ghost_send(d_mpcd_comm_key.data,
+                                       d_mpcd_send_offsets.data,
+                                       N_mpcd,
+                                       m_tuner_send_num->getParam()[0]);
+        if (m_exec_conf->isCUDAErrorCheckingEnabled())
+            CHECK_CUDA_ERROR();
+        m_tuner_send_num->end();
+        }
+        // set the total number of MPCD ghost particles being sent
+        {
+        ArrayHandle<unsigned int> h_mpcd_send_offsets(m_mpcd_send_offsets,
+                                                      access_location::host,
+                                                      access_mode::read);
+
+        if (h_mpcd_send_offsets.data[26] == 0xffffffff)
+            {
+            m_num_mpcd_ghosts_send = 0;
+            return;
+            }
+
+        m_num_mpcd_ghosts_send = h_mpcd_send_offsets.data[26];
+        }
+        // fill send buffer
+        {
+        m_mpcd_vel_sendbuf.resize(m_num_mpcd_ghosts_send);
+        ArrayHandle<uint2> d_mpcd_comm_key(m_mpcd_comm_key,
+                                           access_location::device,
+                                           access_mode::read);
+        ArrayHandle<Scalar4> d_vel(m_mpcd_pdata->getVelocities(),
+                                   access_location::device,
+                                   access_mode::read);
+        ArrayHandle<Scalar4> d_mpcd_vel_sendbuf(m_mpcd_vel_sendbuf,
+                                                access_location::device,
+                                                access_mode::overwrite);
+
+        m_tuner_buffer->begin();
+        mpcd::gpu::fill_buffer(d_mpcd_comm_key.data,
+                               d_vel.data,
+                               d_mpcd_vel_sendbuf.data,
+                               m_num_mpcd_ghosts_send,
+                               m_tuner_buffer->getParam()[0]);
+        if (m_exec_conf->isCUDAErrorCheckingEnabled())
+            CHECK_CUDA_ERROR();
+        m_tuner_buffer->end();
+        }
+    }
+
+void mpcd::CellListGPU::addGhostsToCells()
+    {
+    if (!m_decomposition)
+        {
+        return;
+        }
+
+    if (!m_num_mpcd_ghosts_recv)
+        {
+        return;
+        }
+
+    ArrayHandle<unsigned int> d_cell_np(m_cell_np, access_location::device, access_mode::readwrite);
+    ArrayHandle<double4> d_cell_vel(m_cell_vel, access_location::device, access_mode::readwrite);
+    ArrayHandle<double> d_cell_energy(m_cell_energy,
+                                      access_location::device,
+                                      access_mode::readwrite);
+    ArrayHandle<Scalar4> d_mpcd_ghost_vel(m_mpcd_ghost_vel,
+                                          access_location::device,
+                                          access_mode::readwrite);
+
+    m_tuner_ghost_cell->begin();
+    mpcd::gpu::add_ghost_cell_properties(d_cell_np.data,
+                                         d_cell_vel.data,
+                                         d_cell_energy.data,
+                                         m_conditions.getDeviceFlags(),
+                                         d_mpcd_ghost_vel.data,
+                                         m_mpcd_pdata->getMass(),
+                                         m_origin_idx,
+                                         m_global_cell_dim,
+                                         m_cell_indexer,
+                                         m_num_mpcd_ghosts_recv,
+                                         m_flags[mpcd::detail::thermo_options::energy],
+                                         m_tuner_ghost_cell->getParam()[0]);
+    if (m_exec_conf->isCUDAErrorCheckingEnabled())
+        CHECK_CUDA_ERROR();
+    m_tuner_ghost_cell->end();
+    }
+
+void mpcd::CellListGPU::updateLocalFromGhosts()
+    {
+    if (!m_decomposition)
+        {
+        return;
+        }
+
+    // fill update the local particles
+    ArrayHandle<uint2> d_mpcd_comm_key(m_mpcd_comm_key, access_location::device, access_mode::read);
+    ArrayHandle<Scalar4> d_mpcd_vel_sendbuf(m_mpcd_vel_sendbuf,
+                                            access_location::device,
+                                            access_mode::read);
+    ArrayHandle<Scalar4> d_vel(m_mpcd_pdata->getVelocities(),
+                               access_location::device,
+                               access_mode::readwrite);
+
+    m_tuner_ghost_update->begin();
+    mpcd::gpu::update_local_from_ghosts(d_mpcd_comm_key.data,
+                                        d_vel.data,
+                                        d_mpcd_vel_sendbuf.data,
+                                        m_num_mpcd_ghosts_send,
+                                        m_tuner_ghost_update->getParam()[0]);
+    if (m_exec_conf->isCUDAErrorCheckingEnabled())
+        CHECK_CUDA_ERROR();
+    m_tuner_ghost_update->end();
+    }
+
 #endif // ENABLE_MPI
 
 namespace mpcd
