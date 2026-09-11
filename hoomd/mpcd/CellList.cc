@@ -138,9 +138,6 @@ void mpcd::CellList::compute(uint64_t timestep)
             comm->forceMigrate();
             comm->communicate(timestep);
             }
-        // ensure that ghost particles sent and received is zero
-        m_num_mpcd_ghosts_send = 0;
-        m_num_mpcd_ghosts_recv = 0;
 #endif // ENABLE_MPI
 
         // resize to be able to hold the number of embedded particles
