@@ -5,7 +5,7 @@
  * \file mpcd/CellListGPU.cu
  * \brief Defines GPU functions and kernels used by mpcd::CellListGPU
  */
-#include <hipcub/hipcub.hpp>
+#include <cub/device/device_reduce.cuh>
 
 #include "CellListGPU.cuh"
 
