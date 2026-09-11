@@ -757,12 +757,9 @@ void mpcd::CellList::initializeCommunicationSetup()
             else if (i < 0)
                 i += di.getW();
 
-            // only if communicating along x-direction
-            if (ix && di.getW() == 1)
-                continue;
-
-            // if there is only one neighbor along x-direction
-            if (ix == 1 && di.getW() == 2)
+            // skip if not communicating along x-direction (either only 1 rank or wrong direction
+            // with 2 ranks)
+            if ((ix != 0 && di.getW() == 1) || (ix == 1 && di.getW() == 2))
                 continue;
 
             for (int iy = -1; iy <= 1; iy++)
@@ -774,12 +771,9 @@ void mpcd::CellList::initializeCommunicationSetup()
                 else if (j < 0)
                     j += di.getH();
 
-                // only if communicating along y-direction
-                if (iy && di.getH() == 1)
-                    continue;
-
-                // if there is only one neighbor along y-direction
-                if (iy == 1 && di.getH() == 2)
+                // skip if not communicating along y-direction (either only 1 rank or wrong
+                // direction with 2 ranks)
+                if ((iy != 0 && di.getH() == 1) || (iy == 1 && di.getH() == 2))
                     continue;
 
                 for (int iz = -1; iz <= 1; iz++)
@@ -791,12 +785,9 @@ void mpcd::CellList::initializeCommunicationSetup()
                     else if (k < 0)
                         k += di.getD();
 
-                    // only if communicating along z-direction
-                    if (iz && di.getD() == 1)
-                        continue;
-
-                    // if there is only one neighbor along z-direction
-                    if (iz == 1 && di.getD() == 2)
+                    // skip if not communicating along z-direction (either only 1 rank or wrong
+                    // direction with 2 ranks)
+                    if ((iz != 0 && di.getD() == 1) || (iz == 1 && di.getD() == 2))
                         continue;
 
                     // exclude ourselves
@@ -1068,11 +1059,7 @@ void mpcd::CellList::sendGhosts()
 
 void mpcd::CellList::addGhostsToCells()
     {
-    if (!m_decomposition)
-        {
-        return;
-        }
-    if (!m_num_mpcd_ghosts_recv)
+    if (!m_decomposition || m_num_mpcd_ghosts_recv == 0)
         {
         return;
         }

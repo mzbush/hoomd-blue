@@ -123,7 +123,7 @@ __global__ void srd_rotate(Scalar4* d_vel,
     double mass(0);
 
 #ifdef ENABLE_MPI
-    if (!(tid < N_local))
+    if (tid >= N_local)
         {
         const Scalar4 vel_cell = d_vel_ghosts[tid - N_local];
         vel = make_double3(vel_cell.x, vel_cell.y, vel_cell.z);
@@ -194,7 +194,7 @@ __global__ void srd_rotate(Scalar4* d_vel,
 
     // set the new velocity
 #ifdef ENABLE_MPI
-    if (!(tid < N_local))
+    if (tid >= N_local)
         {
         d_vel_ghosts[tid - N_local]
             = make_scalar4(new_vel.x, new_vel.y, new_vel.z, __int_as_scalar(cell));
