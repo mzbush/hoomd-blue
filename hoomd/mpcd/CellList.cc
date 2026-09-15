@@ -866,12 +866,10 @@ void mpcd::CellList::fillGhostBuffers()
         ArrayHandle<unsigned int> h_mpcd_send_offsets(m_mpcd_send_offsets,
                                                       access_location::host,
                                                       access_mode::overwrite);
-        for (unsigned int i = 0; i < m_mpcd_send_offsets.getNumElements(); i++)
-            {
-            h_mpcd_send_offsets.data[i] = 0xffffffff;
-            }
+        std::fill(h_mpcd_send_offsets.data,
+                  h_mpcd_send_offsets.data + m_mpcd_send_offsets.getNumElements(),
+                  0xffffffff);
         }
-
     ArrayHandle<Scalar4> h_vel(m_mpcd_pdata->getVelocities(),
                                access_location::host,
                                access_mode::readwrite);
