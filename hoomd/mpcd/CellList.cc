@@ -1130,6 +1130,10 @@ void mpcd::CellList::addGhostsToCells()
 
 void mpcd::CellList::reverseSendGhosts()
     {
+    if (!m_decomposition || (m_num_mpcd_ghosts_send == 0 && m_num_mpcd_ghosts_recv == 0))
+        {
+        return;
+        }
     ArrayHandle<Scalar4> h_mpcd_ghost_vel(m_mpcd_ghost_vel,
                                           access_location::host,
                                           access_mode::read);
@@ -1179,6 +1183,10 @@ void mpcd::CellList::reverseSendGhosts()
 
 void mpcd::CellList::updateLocalFromGhosts()
     {
+    if (!m_decomposition || m_num_mpcd_ghosts_send == 0)
+        {
+        return;
+        }
     ArrayHandle<Scalar4> h_mpcd_vel_sendbuf(m_mpcd_vel_sendbuf,
                                             access_location::host,
                                             access_mode::read);
