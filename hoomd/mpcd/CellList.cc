@@ -494,24 +494,23 @@ void mpcd::CellList::buildCellList()
                              global_bin.y - m_origin_idx.y,
                              global_bin.z - m_origin_idx.z);
         unsigned int bin_idx;
-        bool is_local = (0 <= bin.x && bin.x < (int)m_cell_dim.x)
-                        && (0 <= bin.y && bin.y < (int)m_cell_dim.y)
-                        && (0 <= bin.z && bin.z < (int)m_cell_dim.z);
-        if (is_local)
-            {
-            bin_idx = m_cell_indexer(bin.x, bin.y, bin.z);
+        bool is_local = true;
+
 #ifdef ENABLE_MPI
-            if (is_decomposition && cur_p < N_mpcd)
+        if (is_decomposition)
+            {
+            is_local = (0 <= bin.x && bin.x < (int)m_cell_dim.x)
+                       && (0 <= bin.y && bin.y < (int)m_cell_dim.y)
+                       && (0 <= bin.z && bin.z < (int)m_cell_dim.z);
+            if (is_local)
                 {
-                h_mpcd_comm_key->data[cur_p] = make_uint2(0xffffffff, cur_p);
+                bin_idx = m_cell_indexer(bin.x, bin.y, bin.z);
+                if (cur_p < N_mpcd)
+                    {
+                    h_mpcd_comm_key->data[cur_p] = make_uint2(0xffffffff, cur_p);
+                    }
                 }
-#endif // ENABLE_MPI
-            }
-        else
-            {
-#ifdef ENABLE_MPI
-            // mark the particle for sending to the correct rank
-            if (is_decomposition && cur_p < N_mpcd)
+            else
                 {
                 // determine from the bin which rank the particle's cell belongs to
                 int ix = 0;
@@ -535,18 +534,22 @@ void mpcd::CellList::buildCellList()
                 // get shifted direction index
                 int dir = ((iz + 1) * 3 + (iy + 1)) * 3 + (ix + 1);
                 dir = dir + ((ix == 1) ? -2 : 1) + ((iy == 1) ? -6 : 3) + ((iz == 1) ? -12 : 9);
+
                 // mark particle to be sent to neighboring rank
-                h_mpcd_comm_key->data[cur_p] = make_uint2(dir, cur_p);
+                if (cur_p < N_mpcd)
+                    {
+                    h_mpcd_comm_key->data[cur_p] = make_uint2(dir, cur_p);
+                    }
+
                 // set the bin idx to be the global index with highest bit set to 1
                 bin_idx = m_global_cell_indexer(global_bin.x, global_bin.y, global_bin.z);
                 bin_idx |= 1 << 31;
                 }
-            else
+            }
+        else
 #endif // ENABLE_MPI
-                {
-                conditions.x = cur_p + 1;
-                continue;
-                }
+            {
+            bin_idx = m_cell_indexer(bin.x, bin.y, bin.z);
             }
 
         // stash the current particle bin into the velocity array
