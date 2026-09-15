@@ -1023,7 +1023,6 @@ void mpcd::CellList::sendGhosts()
         const MPI_Datatype mpi_scalar4 = m_exec_conf->getMPIConfig()->getScalar4Datatype();
         // loop over neighbors
         unsigned int nreq = 0;
-        m_reqs.resize(4 * m_num_unique_neigh);
         for (unsigned int ineigh = 0; ineigh < m_num_unique_neigh; ++ineigh)
             {
             // rank of neighbor processor
