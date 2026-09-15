@@ -888,7 +888,7 @@ void mpcd::CellList::fillGhostBuffers()
                                  h_mpcd_comm_key.data + N_mpcd,
                                  0xffffffff,
                                  [](uint2 a, uint b) { return a.x < b; });
-    m_num_mpcd_ghosts_send = (uint)std::distance(h_mpcd_comm_key.data, temp);
+    m_num_mpcd_ghosts_send = static_cast<unsigned int>(std::distance(h_mpcd_comm_key.data, temp));
 
     // resize buffer array
     m_mpcd_vel_sendbuf.resize(m_num_mpcd_ghosts_send);
