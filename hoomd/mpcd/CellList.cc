@@ -861,7 +861,9 @@ void mpcd::CellList::fillGhostBuffers()
         return;
         }
 
-        // fill arrays for sending
+    // reset values
+    m_num_mpcd_ghosts_recv = 0;
+    m_num_mpcd_ghosts_send = 0;
         {
         ArrayHandle<unsigned int> h_mpcd_send_offsets(m_mpcd_send_offsets,
                                                       access_location::host,
@@ -870,6 +872,7 @@ void mpcd::CellList::fillGhostBuffers()
                   h_mpcd_send_offsets.data + m_mpcd_send_offsets.getNumElements(),
                   0xffffffff);
         }
+
     ArrayHandle<Scalar4> h_vel(m_mpcd_pdata->getVelocities(),
                                access_location::host,
                                access_mode::readwrite);
