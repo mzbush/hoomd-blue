@@ -421,6 +421,8 @@ find_num_ghost_send(uint2* d_mpcd_comm_key, unsigned int* d_mpcd_send_offsets, c
     if (idx >= N)
         return;
 
+    // if at the first index, there is no left neighbor to compare
+    // set the offset of the 1st direction in the list
     unsigned int dir = d_mpcd_comm_key[idx].x;
     if (idx == 0)
         {
@@ -449,6 +451,8 @@ find_num_ghost_send(uint2* d_mpcd_comm_key, unsigned int* d_mpcd_send_offsets, c
         return;
         }
 
+    // set the start of a new index if particle at idx is a ghost or
+    // total number of ghost particles if it is local
     if (dir < 27)
         {
         d_mpcd_send_offsets[dir] = idx;
