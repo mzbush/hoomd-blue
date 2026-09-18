@@ -465,7 +465,7 @@ void mpcd::CellListGPU::fillGhostBuffers()
         {
         ArrayHandle<uint2> d_mpcd_comm_key(m_mpcd_comm_key,
                                            access_location::device,
-                                           access_mode::read);
+                                           access_mode::readwrite);
         ArrayHandle<unsigned int> d_mpcd_send_offsets(m_mpcd_send_offsets,
                                                       access_location::device,
                                                       access_mode::readwrite);
