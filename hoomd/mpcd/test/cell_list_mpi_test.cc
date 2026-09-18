@@ -1997,4 +1997,40 @@ UP_TEST(mpcd_cell_list_gpu_edge_test_triclinic)
         make_scalar3(5.0, 5.0, 5.0),
         make_scalar3(0.5, -0.75, 1.0));
     }
+
+//! back communication test case for MPCD CellListGPU class
+UP_TEST(mpcd_cell_list_gpu_back_communication_test)
+    {
+    celllist_back_communication_test<mpcd::CellListGPU>(
+        std::make_shared<ExecutionConfiguration>(ExecutionConfiguration::GPU),
+        make_scalar3(5.0, 5.0, 5.0),
+        make_scalar3(0, 0, 0));
+    }
+
+//! back communication test case for MPCD CellListGPU class, noncubic
+UP_TEST(mpcd_cell_list_gpu_back_communication_test_noncubic)
+    {
+    celllist_back_communication_test<mpcd::CellListGPU>(
+        std::make_shared<ExecutionConfiguration>(ExecutionConfiguration::GPU),
+        make_scalar3(6.0, 6.5, 7.0),
+        make_scalar3(0, 0, 0));
+    }
+
+//! back communication test case for MPCD CellListGPU class, triclinic
+UP_TEST(mpcd_cell_list_gpu_back_communication_test_triclinic)
+    {
+    celllist_back_communication_test<mpcd::CellList>(
+        std::make_shared<ExecutionConfiguration>(ExecutionConfiguration::GPU),
+        make_scalar3(5.0, 5.0, 5.0),
+        make_scalar3(0.5, -0.75, 1.0));
+    }
+
+//! back communication test case for MPCD CellListGPU class
+UP_TEST(mpcd_cell_list_gpu_back_communication_test_2Drank)
+    {
+    celllist_back_communication_test_2Drank<mpcd::CellListGPU>(
+        std::make_shared<ExecutionConfiguration>(ExecutionConfiguration::GPU),
+        make_scalar3(8.0, 8.0, 8.0),
+        make_scalar3(0, 0, 0));
+    }
 #endif // ENABLE_HIP
