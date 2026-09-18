@@ -361,15 +361,6 @@ class PYBIND11_EXPORT CellList : public Compute
     Nano::Signal<mpcd::detail::ThermoFlags()> m_flag_signal; //!< Signal for requested flags
     mpcd::detail::ThermoFlags m_flags;                       //!< Requested thermo flags
 
-    GPUVector<double4> m_cell_vel;     //!< Average velocity of a cell + cell mass
-    GPUVector<double> m_cell_energy;   //!< Kinetic energy
-    GPUVector<double> m_cell_temp;     //!< Unscaled temperature
-    GPUArray<double> m_net_properties; //!< Scalar properties of the system
-    bool m_needs_net_reduce;           //!< Flag if a net reduction is necessary
-
-    Nano::Signal<mpcd::detail::ThermoFlags()> m_flag_signal; //!< Signal for requested flags
-    mpcd::detail::ThermoFlags m_flags;                       //!< Requested thermo flags
-
 #ifdef ENABLE_MPI
     std::shared_ptr<DomainDecomposition> m_decomposition;
     BoxDim m_cover_box; //!< Box covered by the cell list
