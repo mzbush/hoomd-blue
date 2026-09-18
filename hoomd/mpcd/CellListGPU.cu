@@ -456,6 +456,11 @@ find_num_ghost_send(uint2* d_mpcd_comm_key, unsigned int* d_mpcd_send_offsets, c
     if (dir < 27)
         {
         d_mpcd_send_offsets[dir] = idx;
+        // set total number if all particles are ghosts
+        if (idx + 1 == N)
+            {
+            d_mpcd_send_offsets[26] = idx + 1;
+            }
         }
     else
         {
