@@ -441,20 +441,6 @@ void srd_collision_method_thermostat_test(std::shared_ptr<ExecutionConfiguration
     collide->setCellList(cl);
     AllThermoRequest thermo_req(cl);
 
-    // force a migration to ensure particles are in sensible ranks
-    if (exec_conf->isCUDAEnabled())
-        {
-        auto mpcd_comm = std::shared_ptr<mpcd::CommunicatorGPU>(new mpcd::CommunicatorGPU(sysdef));
-        mpcd_comm->setCellList(cl);
-        mpcd_comm->migrateParticles(0);
-        }
-    else
-        {
-        auto mpcd_comm = std::shared_ptr<mpcd::Communicator>(new mpcd::Communicator(sysdef));
-        mpcd_comm->setCellList(cl);
-        mpcd_comm->migrateParticles(0);
-        }
-
     // timestep counter and number of samples to make
     uint64_t timestep = 0;
     const unsigned int N = 1000;
