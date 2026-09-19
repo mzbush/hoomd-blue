@@ -1060,6 +1060,179 @@ void celllist_edge_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
         }
     }
 
+//! Test that correct number of ghost particles are communicated if some but not all are sent
+template<class CL>
+void celllist_communication_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
+                                 const Scalar3& L,
+                                 const Scalar3& tilt)
+    {
+    UP_ASSERT_EQUAL(exec_conf->getNRanks(), 8);
+
+    auto ref_box = std::make_shared<BoxDim>(2.0);
+    auto box = std::make_shared<BoxDim>(L);
+    box->setTiltFactors(tilt.x, tilt.y, tilt.z);
+
+    std::shared_ptr<SnapshotSystemData<Scalar>> snap(new SnapshotSystemData<Scalar>());
+    snap->global_box = box;
+    snap->particle_data.type_mapping.push_back("A");
+    // dummy initialize all particles to one domain, we will move them outside the domain for
+    // the tests
+    /*
+     * The +/- halves of the box owned by each domain are:
+     *    x y z
+     * 0: - - -
+     * 1: + - -
+     * 2: - + -
+     * 3: + + -
+     * 4: - - +
+     * 5: + - +
+     * 6: - + +
+     * 7: + + +
+     */
+    snap->mpcd_data.resize(8);
+    snap->mpcd_data.type_mapping.push_back("A");
+    snap->mpcd_data.position[0] = scale(vec3<Scalar>(-0.1, -0.1, -0.1), ref_box, box);
+    snap->mpcd_data.position[1] = scale(vec3<Scalar>(0.1, -0.1, -0.1), ref_box, box);
+    snap->mpcd_data.position[2] = scale(vec3<Scalar>(0.1, -0.1, -0.1), ref_box, box);
+    snap->mpcd_data.position[3] = scale(vec3<Scalar>(0.1, 0.1, -0.1), ref_box, box);
+    snap->mpcd_data.position[4] = scale(vec3<Scalar>(0.1, 0.1, -0.1), ref_box, box);
+    snap->mpcd_data.position[5] = scale(vec3<Scalar>(-0.1, -0.1, 0.1), ref_box, box);
+    snap->mpcd_data.position[6] = scale(vec3<Scalar>(-0.1, 0.1, 0.1), ref_box, box);
+    snap->mpcd_data.position[7] = scale(vec3<Scalar>(0.1, 0.1, 0.1), ref_box, box);
+
+    // set velocities for the particles
+    snap->mpcd_data.velocity[0] = vec3<Scalar>(1.0, 0.0, 0.0);
+    snap->mpcd_data.velocity[1] = vec3<Scalar>(2.0, 0.0, 0.0);
+    snap->mpcd_data.velocity[2] = vec3<Scalar>(3.0, 0.0, 0.0);
+    snap->mpcd_data.velocity[3] = vec3<Scalar>(4.0, 0.0, 0.0);
+    snap->mpcd_data.velocity[4] = vec3<Scalar>(5.0, 0.0, 0.0);
+    snap->mpcd_data.velocity[5] = vec3<Scalar>(6.0, 0.0, 0.0);
+    snap->mpcd_data.velocity[6] = vec3<Scalar>(7.0, 0.0, 0.0);
+    snap->mpcd_data.velocity[7] = vec3<Scalar>(8.0, 0.0, 0.0);
+
+    std::vector<Scalar> fx {0.5};
+    std::vector<Scalar> fy {0.5};
+    std::vector<Scalar> fz {0.5};
+    std::shared_ptr<DomainDecomposition> decomposition(
+        new DomainDecomposition(exec_conf, snap->global_box->getL(), fx, fy, fz));
+    std::shared_ptr<SystemDefinition> sysdef(new SystemDefinition(snap, exec_conf, decomposition));
+    std::shared_ptr<Communicator> pdata_comm(new Communicator(sysdef, decomposition));
+    sysdef->setCommunicator(pdata_comm);
+
+    std::shared_ptr<mpcd::ParticleData> pdata = sysdef->getMPCDParticleData();
+    std::shared_ptr<mpcd::CellList> cl(new CL(sysdef, make_uint3(2, 2, 2), false));
+
+    const unsigned int my_rank = exec_conf->getRank();
+
+        // update the positions so that they are on the domains of different ranks
+        {
+        ArrayHandle<Scalar4> h_pos(pdata->getPositions(),
+                                   access_location::host,
+                                   access_mode::overwrite);
+        if (my_rank == 0)
+            {
+            UP_ASSERT_EQUAL(pdata->getN(), 1);
+            h_pos.data[0] = scale(make_scalar4(-0.44273, -0.44293, -0.15600, __int_as_scalar(0)),
+                                  ref_box,
+                                  box); // will not be communicated
+            }
+        else if (my_rank == 1)
+            {
+            UP_ASSERT_EQUAL(pdata->getN(), 2);
+
+            h_pos.data[0] = scale(make_scalar4(0.30460, -0.91245, -0.95994, __int_as_scalar(0)),
+                                  ref_box,
+                                  box); // will be communicated
+            h_pos.data[1] = scale(make_scalar4(0.50358, -0.47262, -0.16004, __int_as_scalar(0)),
+                                  ref_box,
+                                  box); // will not be communicated
+            }
+        else if (my_rank == 2)
+            {
+            UP_ASSERT_EQUAL(pdata->getN(), 0);
+            }
+        else if (my_rank == 3)
+            {
+            UP_ASSERT_EQUAL(pdata->getN(), 2);
+            h_pos.data[0] = scale(make_scalar4(0.67641, 0.07026, -0.02902, __int_as_scalar(0)),
+                                  ref_box,
+                                  box); // will be communicated
+            h_pos.data[1] = scale(make_scalar4(0.67843, 0.17429, -0.55059, __int_as_scalar(0)),
+                                  ref_box,
+                                  box); // will not be communicated
+            }
+        else if (my_rank == 4)
+            {
+            UP_ASSERT_EQUAL(pdata->getN(), 1);
+            h_pos.data[0] = scale(make_scalar4(-0.99184, -0.38215, 0.90351, __int_as_scalar(0)),
+                                  ref_box,
+                                  box); // will be communicated
+            }
+        else if (my_rank == 5)
+            {
+            UP_ASSERT_EQUAL(pdata->getN(), 0);
+            }
+        else if (my_rank == 6)
+            {
+            UP_ASSERT_EQUAL(pdata->getN(), 1);
+            h_pos.data[0] = scale(make_scalar4(-0.09794, 0.91063, 0.78380, __int_as_scalar(0)),
+                                  ref_box,
+                                  box); // will not be communicated
+            }
+        else if (my_rank == 7)
+            {
+            UP_ASSERT_EQUAL(pdata->getN(), 1);
+            h_pos.data[0] = scale(make_scalar4(0.89025, 0.18635, 0.88574, __int_as_scalar(0)),
+                                  ref_box,
+                                  box); // will not be communicated
+            }
+        }
+    const Scalar3 shift = make_scalar3(0.161036, 0.0377121, 0.0650974);
+    cl->setGridShift(shift);
+    cl->compute(1);
+        {
+        unsigned int num_ghosts = cl->getNMPCDGhosts();
+        ArrayHandle<Scalar4> h_mpcd_ghost_vel(cl->getMPCDGhostVelocities(),
+                                              access_location::host,
+                                              access_mode::overwrite);
+        if (my_rank == 0)
+            {
+            UP_ASSERT_EQUAL(num_ghosts, 0);
+            }
+        else if (my_rank == 1)
+            {
+            UP_ASSERT_EQUAL(num_ghosts, 1);
+            UP_ASSERT_EQUAL(h_mpcd_ghost_vel.data[0].x, 4.0);
+            }
+        else if (my_rank == 2)
+            {
+            UP_ASSERT_EQUAL(num_ghosts, 0);
+            }
+        else if (my_rank == 3)
+            {
+            UP_ASSERT_EQUAL(num_ghosts, 0);
+            }
+        else if (my_rank == 4)
+            {
+            UP_ASSERT_EQUAL(num_ghosts, 1);
+            UP_ASSERT_EQUAL(h_mpcd_ghost_vel.data[0].x, 2.0);
+            }
+        else if (my_rank == 5)
+            {
+            UP_ASSERT_EQUAL(num_ghosts, 1);
+            UP_ASSERT_EQUAL(h_mpcd_ghost_vel.data[0].x, 6.0);
+            }
+        else if (my_rank == 6)
+            {
+            UP_ASSERT_EQUAL(num_ghosts, 0);
+            }
+        else if (my_rank == 7)
+            {
+            UP_ASSERT_EQUAL(num_ghosts, 0);
+            }
+        }
+    }
+
 //! Test that the updated velocities are correctly assigned back to particles
 template<class CL>
 void celllist_back_communication_test(std::shared_ptr<ExecutionConfiguration> exec_conf,
@@ -1794,6 +1967,33 @@ UP_TEST(mpcd_cell_list_edge_test_triclinic)
         make_scalar3(0.5, -0.75, 1.0));
     }
 
+//! communication test case for MPCD CellList class
+UP_TEST(mpcd_cell_list_communication_test)
+    {
+    celllist_communication_test<mpcd::CellList>(
+        std::make_shared<ExecutionConfiguration>(ExecutionConfiguration::CPU),
+        make_scalar3(2.0, 2.0, 2.0),
+        make_scalar3(0, 0, 0));
+    }
+
+//! communication test case for MPCD CellList class, noncubic
+UP_TEST(mpcd_cell_list_communication_test_noncubic)
+    {
+    celllist_communication_test<mpcd::CellList>(
+        std::make_shared<ExecutionConfiguration>(ExecutionConfiguration::CPU),
+        make_scalar3(6.0, 6.5, 7.0),
+        make_scalar3(0, 0, 0));
+    }
+
+//! communication test case for MPCD CellList class, triclinic
+UP_TEST(mpcd_cell_list_communication_test_triclinic)
+    {
+    celllist_communication_test<mpcd::CellList>(
+        std::make_shared<ExecutionConfiguration>(ExecutionConfiguration::CPU),
+        make_scalar3(5.0, 5.0, 5.0),
+        make_scalar3(0.5, -0.75, 1.0));
+    }
+
 //! back communication test case for MPCD CellList class
 UP_TEST(mpcd_cell_list_back_communication_test)
     {
@@ -1996,6 +2196,15 @@ UP_TEST(mpcd_cell_list_gpu_edge_test_triclinic)
         std::make_shared<ExecutionConfiguration>(ExecutionConfiguration::GPU),
         make_scalar3(5.0, 5.0, 5.0),
         make_scalar3(0.5, -0.75, 1.0));
+    }
+
+//! communication test case for MPCD CellListGPU class
+UP_TEST(mpcd_cell_list_gpu_communication_test)
+    {
+    celllist_communication_test<mpcd::CellListGPU>(
+        std::make_shared<ExecutionConfiguration>(ExecutionConfiguration::GPU),
+        make_scalar3(2.0, 2.0, 2.0),
+        make_scalar3(0, 0, 0));
     }
 
 //! back communication test case for MPCD CellListGPU class

@@ -464,7 +464,7 @@ find_num_ghost_send(uint2* d_mpcd_comm_key, unsigned int* d_mpcd_send_offsets, c
         }
     else
         {
-        d_mpcd_send_offsets[26] = idx + 1;
+        d_mpcd_send_offsets[26] = idx;
         }
     }
 
