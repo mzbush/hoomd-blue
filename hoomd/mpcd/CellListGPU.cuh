@@ -64,12 +64,15 @@ cudaError_t compute_cell_list(unsigned int* d_cell_np,
                               const Scalar4* d_vel_embed,
                               const unsigned int* d_embed_member_idx,
                               const uchar3& periodic,
-                              const int3& origin_idx,
+                              const uint3& origin_idx,
                               const Scalar3& grid_shift,
                               const BoxDim& global_box,
-                              const uint3& n_global_cell,
                               const uint3& global_cell_dim,
                               const Index3D& cell_indexer,
+                              const Index3D& global_cell_indexer,
+                              uint2* d_mpcd_comm_key,
+                              const uint3& rank_size,
+                              const bool is_decomposition,
                               const unsigned int N_mpcd,
                               const unsigned int N_tot,
                               const bool need_energy,
@@ -109,6 +112,39 @@ cudaError_t cell_check_migrate_embed(unsigned int* d_migrate_flag,
                                      const BoxDim& box,
                                      const unsigned int num_dim,
                                      const unsigned int N,
+                                     const unsigned int block_size);
+
+//! Kernel driver to determine how many particles will be sent as ghosts
+cudaError_t find_num_ghost_send(uint2* d_mpcd_comm_key,
+                                unsigned int* d_mpcd_send_offsets,
+                                const unsigned int N,
+                                const unsigned int block_size);
+
+//! Kernel driver to fill up the send buffer
+cudaError_t fill_buffer(uint2* d_mpcd_comm_key,
+                        Scalar4* d_vel,
+                        Scalar4* d_mpcd_vel_sendbuf,
+                        const unsigned int num_mpcd_ghosts_send,
+                        const unsigned int block_size);
+
+cudaError_t add_ghost_cell_properties(unsigned int* d_cell_np,
+                                      double4* d_cell_vel,
+                                      double* d_cell_energy,
+                                      uint3* d_conditions,
+                                      Scalar4* d_mpcd_ghost_vel,
+                                      double mpcd_mass,
+                                      const uint3& origin_idx,
+                                      const uint3& global_cell_dim,
+                                      const Index3D& cell_indexer,
+                                      const unsigned int N_mpcd_ghosts,
+                                      const bool need_energy,
+                                      const unsigned int block_size);
+
+//! Kernel driver to update the local velocities after collision
+cudaError_t update_local_from_ghosts(uint2* d_mpcd_comm_key,
+                                     Scalar4* d_vel,
+                                     Scalar4* d_mpcd_vel_sendbuf,
+                                     const unsigned int num_mpcd_ghosts_send,
                                      const unsigned int block_size);
 
     } // end namespace gpu
