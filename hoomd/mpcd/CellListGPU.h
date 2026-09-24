@@ -76,6 +76,11 @@ class PYBIND11_EXPORT CellListGPU : public mpcd::CellList
     std::shared_ptr<Autotuner<1>> m_tuner_net;
 
 #ifdef ENABLE_MPI
+    GPUArray<unsigned int> m_ghost_idx;
+    GPUArray<unsigned int> m_ghost_idx_sorted;
+    GPUArray<unsigned int> m_ghost_dir;
+    GPUArray<unsigned int> m_ghost_dir_sorted;
+
     /// Autotuner for checking embedded migration.
     std::shared_ptr<Autotuner<1>> m_tuner_embed_migrate;
 

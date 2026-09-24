@@ -5,11 +5,12 @@
  * \file mpcd/CellListGPU.cu
  * \brief Defines GPU functions and kernels used by mpcd::CellListGPU
  */
+#ifdef ENABLE_MPI
+#include <cub/device/device_radix_sort.cuh>
+#endif // ENABLE_MPI
 #include <cub/device/device_reduce.cuh>
 
 #include "CellListGPU.cuh"
-
-#include <thrust/sort.h>
 
 namespace hoomd
     {
@@ -70,7 +71,8 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
                                   const uint3 global_cell_dim,
                                   const Index3D cell_indexer,
                                   const Index3D global_cell_indexer,
-                                  uint2* d_mpcd_comm_key,
+                                  unsigned int* d_ghost_dir,
+                                  unsigned int* d_ghost_idx,
                                   const uint3 rank_size,
                                   const bool is_decomposition,
                                   const unsigned int N_mpcd,
@@ -170,7 +172,8 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
 #ifdef ENABLE_MPI
         if (is_decomposition && idx < N_mpcd)
             {
-            d_mpcd_comm_key[idx] = make_uint2(0xffffffff, idx);
+            d_ghost_dir[idx] = 0xffffffff;
+            d_ghost_idx[idx] = idx;
             }
 #endif // ENABLE_MPI
         }
@@ -202,7 +205,8 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
             int dir = ((iz + 1) * 3 + (iy + 1)) * 3 + (ix + 1);
             dir = dir + ((ix == 1) ? -2 : 1) + ((iy == 1) ? -6 : 3) + ((iz == 1) ? -12 : 9);
             // mark particle to be sent to neighboring rank
-            d_mpcd_comm_key[idx] = make_uint2(dir, idx);
+            d_ghost_dir[idx] = dir;
+            d_ghost_idx[idx] = idx;
 
             // set the bin idx to be the global index with highest bit set to 1
             bin_idx = global_cell_indexer(global_bin.x, global_bin.y, global_bin.z);
@@ -359,6 +363,7 @@ __global__ void stage_net_cell_thermo(mpcd::detail::cell_thermo_element* d_tmp_t
     d_tmp_thermo[idx] = thermo;
     }
 
+#ifdef ENABLE_MPI
 /*!
  * \param d_migrate_flag Flag signaling migration is required (output)
  * \param d_pos Embedded particle positions
@@ -401,8 +406,8 @@ __global__ void cell_check_migrate_embed(unsigned int* d_migrate_flag,
     }
 
 /*!
- * \param d_mpcd_comm_key directions to send MPCD particles as ghosts
  * \param d_mpcd_send_offsets starting index of points sent to each neighbor
+ * \param d_ghost_dir_sorted directions to send MPCD particles as ghosts
  * \param N Number of particles in group
  *
  * \b Implementation
@@ -413,8 +418,9 @@ __global__ void cell_check_migrate_embed(unsigned int* d_migrate_flag,
  * current direction.
 
  */
-__global__ void
-find_num_ghost_send(uint2* d_mpcd_comm_key, unsigned int* d_mpcd_send_offsets, const unsigned int N)
+__global__ void find_num_ghost_send(unsigned int* d_mpcd_send_offsets,
+                                    const unsigned int* d_ghost_dir_sorted,
+                                    const unsigned int N)
     {
     // one thread per particle in group
     unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -423,7 +429,7 @@ find_num_ghost_send(uint2* d_mpcd_comm_key, unsigned int* d_mpcd_send_offsets, c
 
     // if at the first index, there is no left neighbor to compare
     // set the offset of the 1st direction in the list
-    unsigned int dir = d_mpcd_comm_key[idx].x;
+    unsigned int dir = d_ghost_dir_sorted[idx];
     if (idx == 0)
         {
         if (dir < 27)
@@ -438,7 +444,7 @@ find_num_ghost_send(uint2* d_mpcd_comm_key, unsigned int* d_mpcd_send_offsets, c
         return;
         }
 
-    unsigned int left_dir = d_mpcd_comm_key[idx - 1].x;
+    unsigned int left_dir = d_ghost_dir_sorted[idx - 1];
 
     // exit if not at the start of a new index
     if (dir == left_dir)
@@ -469,18 +475,17 @@ find_num_ghost_send(uint2* d_mpcd_comm_key, unsigned int* d_mpcd_send_offsets, c
     }
 
 /*!
- * \param d_mpcd_comm_key directions to send MPCD particles as ghosts
- * \param d_vel MPCD particle velocities
  * \param d_mpcd_vel_sendbuf buffer for MPCD ghost velocities to be sent
+ * \param d_vel MPCD particle velocities
+ * \param d_ghost_idx_sorted indexes of MPCD particles to send as ghosts
  * \param num_mpcd_ghosts_send the total number of MPCD particles being sent
  *
  * \b Implementation
  * Fills the velocity buffer with ghost particles to send
-
  */
-__global__ void fill_buffer(uint2* d_mpcd_comm_key,
-                            Scalar4* d_vel,
-                            Scalar4* d_mpcd_vel_sendbuf,
+__global__ void fill_buffer(Scalar4* d_mpcd_vel_sendbuf,
+                            const Scalar4* d_vel,
+                            const unsigned int* d_ghost_idx_sorted,
                             const unsigned int num_mpcd_ghosts_send)
     {
     // one thread per particle in group
@@ -488,11 +493,10 @@ __global__ void fill_buffer(uint2* d_mpcd_comm_key,
     if (idx >= num_mpcd_ghosts_send)
         return;
 
-    const unsigned int particle_index = d_mpcd_comm_key[idx].y;
+    const unsigned int particle_index = d_ghost_idx_sorted[idx];
 
     // add particle data to send buffers
-    const Scalar4 vel_mass = d_vel[particle_index];
-    d_mpcd_vel_sendbuf[idx] = vel_mass;
+    d_mpcd_vel_sendbuf[idx] = d_vel[particle_index];
     }
 
 //! Kernel to compute add the contribution to cell properties from ghosts on GPU
@@ -585,19 +589,19 @@ __global__ void add_ghost_cell_properties(unsigned int* d_cell_np,
     }
 
 /*!
- * \param d_mpcd_comm_key directions to send MPCD particles as ghosts
  * \param d_vel MPCD particle velocities
  * \param d_mpcd_vel_sendbuf buffer for MPCD ghost velocities to be sent
+ * \param d_ghost_idx_sorted indexes of MPCD particles to send as ghosts
  * \param num_mpcd_ghosts_send the total number of MPCD particles being sent
  *
  * \b Implementation
  * Updates the velocities of the particles with velocities from the send buffer
 
  */
-__global__ void update_local_from_ghosts(uint2* d_mpcd_comm_key,
-                                         Scalar4* d_vel,
-                                         Scalar4* d_mpcd_vel_sendbuf,
-                                         const unsigned int num_mpcd_ghosts_send)
+__global__ void update_local_from_ghosts(Scalar4* d_vel,
+                                         const Scalar4* d_mpcd_vel_sendbuf,
+                                         const unsigned int* d_ghost_idx_sorted,
+                                         unsigned int num_mpcd_ghosts_send)
     {
     // one thread per particle in group
     unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -605,11 +609,14 @@ __global__ void update_local_from_ghosts(uint2* d_mpcd_comm_key,
         return;
 
     const Scalar4 vel_i = d_mpcd_vel_sendbuf[idx];
-    const double3 new_vel = make_double3(vel_i.x, vel_i.y, vel_i.z);
-    const unsigned int particle_index = d_mpcd_comm_key[idx].y;
+    const Scalar3 new_vel = make_scalar3(vel_i.x, vel_i.y, vel_i.z);
+
+    const unsigned int particle_index = d_ghost_idx_sorted[idx];
     const Scalar4 old_vel = d_vel[particle_index];
+
     d_vel[particle_index] = make_scalar4(new_vel.x, new_vel.y, new_vel.z, old_vel.w);
     }
+#endif // ENABLE_MPI
     } // end namespace kernel
     } // end namespace gpu
     } // end namespace mpcd
@@ -657,7 +664,8 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
                                          const uint3& global_cell_dim,
                                          const Index3D& cell_indexer,
                                          const Index3D& global_cell_indexer,
-                                         uint2* d_mpcd_comm_key,
+                                         unsigned int* d_ghost_dir,
+                                         unsigned int* d_ghost_idx,
                                          const uint3& rank_size,
                                          const bool is_decomposition,
                                          const unsigned int N_mpcd,
@@ -707,7 +715,8 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
                                                                    global_cell_dim,
                                                                    cell_indexer,
                                                                    global_cell_indexer,
-                                                                   d_mpcd_comm_key,
+                                                                   d_ghost_dir,
+                                                                   d_ghost_idx,
                                                                    rank_size,
                                                                    is_decomposition,
                                                                    N_mpcd,
@@ -850,6 +859,7 @@ cudaError_t mpcd::gpu::reduce_net_cell_thermo(mpcd::detail::cell_thermo_element*
     return cudaSuccess;
     }
 
+#ifdef ENABLE_MPI
 /*!
  * \param d_migrate_flag Flag signaling migration is required (output)
  * \param d_pos Embedded particle positions
@@ -888,34 +898,64 @@ cudaError_t mpcd::gpu::cell_check_migrate_embed(unsigned int* d_migrate_flag,
     return cudaSuccess;
     }
 
-struct compare_uint2
+/*!
+ * \param d_tmp Temporary memory for sorting.
+ * \param tmp_bytes Number of temporary bytes for sorting.
+ * \param d_types The particle types to sort.
+ * \param d_sorted_types The sorted particle types.
+ * \param d_indexes The particle indexes to sort.
+ * \param d_sorted_indexes The sorted particle indexes.
+ * \param N Number of particle types to sort.
+ * \returns A pair of flags saying if the output data needs to be swapped with the input.
+ *
+ * The sorting is done using CUB with the DoubleBuffer. On the first call, the temporary memory
+ * is sized. On the second call, the sorting is actually performed. The sorted data may not actually
+ * lie in \a d_*_sorted because of the double buffers, but this sorting seems to be more efficient.
+ * The user should accordingly swap the input and output arrays if the returned values are true.
+ */
+uchar2 mpcd::gpu::sort_ghosts_by_dir(void* d_tmp,
+                                     size_t& tmp_bytes,
+                                     unsigned int* d_ghost_dir,
+                                     unsigned int* d_ghost_dir_sorted,
+                                     unsigned int* d_ghost_idx,
+                                     unsigned int* d_ghost_idx_sorted,
+                                     const unsigned int N)
     {
-    __host__ __device__ bool operator()(uint2 a, uint2 b)
+    // max valid value of dir is 26, which can be encoded in 5 bits
+    constexpr unsigned int num_bits = 5;
+    cub::DoubleBuffer<unsigned int> d_keys(d_ghost_dir, d_ghost_dir_sorted);
+    cub::DoubleBuffer<unsigned int> d_vals(d_ghost_idx, d_ghost_idx_sorted);
+    cub::DeviceRadixSort::SortPairs(d_tmp, tmp_bytes, d_keys, d_vals, N, 0, num_bits);
+
+    uchar2 swap = make_uchar2(0, 0);
+    if (d_tmp != NULL)
         {
-        return (a.x < b.x);
+        // mark that the gpu arrays should be flipped if the final result is not in the sorted
+        // array (1)
+        swap.x = (d_keys.selector == 0);
+        swap.y = (d_vals.selector == 0);
         }
-    };
+    return swap;
+    }
 
 /*!
- * \param d_mpcd_comm_key directions to send MPCD particles as ghosts
  * \param d_mpcd_send_offsets starting index of points sent to each neighbor
+ * \param d_mpcd_comm_key directions to send MPCD particles as ghosts
  * \param N Number of particles in group
  * \param block_size Number of threads per block
  *
  * \sa mpcd::gpu::kernel::find_num_ghost_send
  */
-cudaError_t mpcd::gpu::find_num_ghost_send(uint2* d_mpcd_comm_key,
-                                           unsigned int* d_mpcd_send_offsets,
+cudaError_t mpcd::gpu::find_num_ghost_send(unsigned int* d_mpcd_send_offsets,
+                                           const unsigned int* d_ghost_dir_sorted,
                                            const unsigned int N,
                                            const unsigned int block_size)
     {
-    // sort communication keys
-    compare_uint2 cmp;
-    thrust::sort(thrust::device, d_mpcd_comm_key, d_mpcd_comm_key + N, cmp);
     // fill the starting indices with invalid values
     cudaError_t error = cudaMemset(d_mpcd_send_offsets, 0xffffffff, sizeof(unsigned int) * 27);
     if (error != cudaSuccess)
         return error;
+
     // prepare kernel
     unsigned int max_block_size;
     cudaFuncAttributes attr;
@@ -924,27 +964,27 @@ cudaError_t mpcd::gpu::find_num_ghost_send(uint2* d_mpcd_comm_key,
 
     unsigned int run_block_size = min(block_size, max_block_size);
     dim3 grid(N / run_block_size + 1);
-    mpcd::gpu::kernel::find_num_ghost_send<<<grid, run_block_size>>>(d_mpcd_comm_key,
-                                                                     d_mpcd_send_offsets,
+    mpcd::gpu::kernel::find_num_ghost_send<<<grid, run_block_size>>>(d_mpcd_send_offsets,
+                                                                     d_ghost_dir_sorted,
                                                                      N);
 
     return cudaSuccess;
     }
 
 /*!
- * \param d_mpcd_comm_key directions to send MPCD particles as ghosts
- * \param d_vel MPCD particle velocities
  * \param d_mpcd_vel_sendbuf buffer for MPCD ghost velocities to be sent
+ * \param d_vel MPCD particle velocities
+ * \param d_ghost_idx_sorted indexes of MPCD particles to send as ghosts
  * \param num_mpcd_ghosts_send the total number of MPCD particles being sent
  * \param block_size Number of threads per block
  *
  * \sa mpcd::gpu::kernel::fill_buffer
  */
-cudaError_t mpcd::gpu::fill_buffer(uint2* d_mpcd_comm_key,
-                                   Scalar4* d_vel,
-                                   Scalar4* d_mpcd_vel_sendbuf,
+cudaError_t mpcd::gpu::fill_buffer(Scalar4* d_mpcd_vel_sendbuf,
+                                   const Scalar4* d_vel,
+                                   const unsigned int* d_ghost_idx_sorted,
                                    unsigned int num_mpcd_ghosts_send,
-                                   const unsigned int block_size)
+                                   unsigned int block_size)
     {
     unsigned int max_block_size;
     cudaFuncAttributes attr;
@@ -953,9 +993,9 @@ cudaError_t mpcd::gpu::fill_buffer(uint2* d_mpcd_comm_key,
 
     unsigned int run_block_size = min(block_size, max_block_size);
     dim3 grid(num_mpcd_ghosts_send / run_block_size + 1);
-    mpcd::gpu::kernel::fill_buffer<<<grid, run_block_size>>>(d_mpcd_comm_key,
+    mpcd::gpu::kernel::fill_buffer<<<grid, run_block_size>>>(d_mpcd_vel_sendbuf,
                                                              d_vel,
-                                                             d_mpcd_vel_sendbuf,
+                                                             d_ghost_idx_sorted,
                                                              num_mpcd_ghosts_send);
 
     return cudaSuccess;
@@ -1019,19 +1059,19 @@ cudaError_t mpcd::gpu::add_ghost_cell_properties(unsigned int* d_cell_np,
     }
 
 /*!
- * \param d_mpcd_comm_key directions to send MPCD particles as ghosts
  * \param d_vel MPCD particle velocities
  * \param d_mpcd_vel_sendbuf buffer for MPCD ghost velocities to be sent
+ * \param d_mpcd_comm_key indexes of MPCD particles to send as ghosts
  * \param num_mpcd_ghosts_send the total number of MPCD particles being sent
  * \param block_size Number of threads per block
  *
  * \sa mpcd::gpu::kernel::update_local_from_ghosts
  */
-cudaError_t mpcd::gpu::update_local_from_ghosts(uint2* d_mpcd_comm_key,
-                                                Scalar4* d_vel,
-                                                Scalar4* d_mpcd_vel_sendbuf,
+cudaError_t mpcd::gpu::update_local_from_ghosts(Scalar4* d_vel,
+                                                const Scalar4* d_mpcd_vel_sendbuf,
+                                                const unsigned int* d_ghost_idx_sorted,
                                                 unsigned int num_mpcd_ghosts_send,
-                                                const unsigned int block_size)
+                                                unsigned int block_size)
     {
     unsigned int max_block_size;
     cudaFuncAttributes attr;
@@ -1040,11 +1080,12 @@ cudaError_t mpcd::gpu::update_local_from_ghosts(uint2* d_mpcd_comm_key,
 
     unsigned int run_block_size = min(block_size, max_block_size);
     dim3 grid(num_mpcd_ghosts_send / run_block_size + 1);
-    mpcd::gpu::kernel::update_local_from_ghosts<<<grid, run_block_size>>>(d_mpcd_comm_key,
-                                                                          d_vel,
+    mpcd::gpu::kernel::update_local_from_ghosts<<<grid, run_block_size>>>(d_vel,
                                                                           d_mpcd_vel_sendbuf,
+                                                                          d_ghost_idx_sorted,
                                                                           num_mpcd_ghosts_send);
 
     return cudaSuccess;
     }
+#endif // ENABLE_MPI
     } // end namespace hoomd

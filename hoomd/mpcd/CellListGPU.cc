@@ -123,11 +123,21 @@ void mpcd::CellListGPU::buildCellList()
 #ifdef ENABLE_MPI
     if (m_decomposition)
         {
-        // allocate space for communication flag
-        m_mpcd_comm_key.resize(N_mpcd);
-        ArrayHandle<uint2> d_mpcd_comm_key(m_mpcd_comm_key,
-                                           access_location::device,
-                                           access_mode::overwrite);
+        if (N_mpcd > m_ghost_idx.getNumElements())
+            {
+            GPUArray<unsigned int> m_ghost_dir_tmp(N_mpcd, m_exec_conf);
+            m_ghost_dir.swap(m_ghost_dir_tmp);
+
+            GPUArray<unsigned int> m_ghost_idx_tmp(N_mpcd, m_exec_conf);
+            m_ghost_idx.swap(m_ghost_idx_tmp);
+            }
+        ArrayHandle<unsigned int> d_ghost_dir(m_ghost_dir,
+                                              access_location::device,
+                                              access_mode::overwrite);
+        ArrayHandle<unsigned int> d_ghost_idx(m_ghost_idx,
+                                              access_location::device,
+                                              access_mode::overwrite);
+
         // allocate the the number of ranks in each dimension
         Index3D di = m_decomposition->getDomainIndexer();
         rank_size = make_uint3(di.getW(), di.getH(), di.getD());
@@ -167,7 +177,8 @@ void mpcd::CellListGPU::buildCellList()
                                          m_global_cell_dim,
                                          m_cell_indexer,
                                          m_global_cell_indexer,
-                                         d_mpcd_comm_key.data,
+                                         d_ghost_dir.data,
+                                         d_ghost_idx.data,
                                          rank_size,
                                          true,
                                          N_mpcd,
@@ -199,7 +210,8 @@ void mpcd::CellListGPU::buildCellList()
                                          m_global_cell_dim,
                                          m_cell_indexer,
                                          m_global_cell_indexer,
-                                         d_mpcd_comm_key.data,
+                                         d_ghost_dir.data,
+                                         d_ghost_idx.data,
                                          rank_size,
                                          true,
                                          N_mpcd,
@@ -250,6 +262,7 @@ void mpcd::CellListGPU::buildCellList()
                                          m_cell_indexer,
                                          m_global_cell_indexer,
                                          NULL,
+                                         NULL,
                                          rank_size,
                                          false,
                                          N_mpcd,
@@ -281,6 +294,7 @@ void mpcd::CellListGPU::buildCellList()
                                          m_global_cell_dim,
                                          m_cell_indexer,
                                          m_global_cell_indexer,
+                                         NULL,
                                          NULL,
                                          rank_size,
                                          false,
@@ -461,18 +475,76 @@ void mpcd::CellListGPU::fillGhostBuffers()
         return;
         }
 
+        // sort the communication keys
+        {
+        const unsigned int N_mpcd = m_mpcd_pdata->getN() + m_mpcd_pdata->getNVirtual();
+        if (N_mpcd > m_ghost_dir_sorted.getNumElements())
+            {
+            GPUArray<unsigned int> m_ghost_dir_sorted_tmp(N_mpcd, m_exec_conf);
+            m_ghost_dir_sorted.swap(m_ghost_dir_sorted_tmp);
+
+            GPUArray<unsigned int> m_ghost_idx_sorted_tmp(N_mpcd, m_exec_conf);
+            m_ghost_idx_sorted.swap(m_ghost_idx_sorted_tmp);
+            }
+
+        uchar2 swap;
+            {
+            ArrayHandle<unsigned int> d_ghost_dir(m_ghost_dir,
+                                                  access_location::device,
+                                                  access_mode::readwrite);
+            ArrayHandle<unsigned int> d_ghost_dir_sorted(m_ghost_dir_sorted,
+                                                         access_location::device,
+                                                         access_mode::overwrite);
+
+            ArrayHandle<unsigned int> d_ghost_idx(m_ghost_idx,
+                                                  access_location::device,
+                                                  access_mode::readwrite);
+            ArrayHandle<unsigned int> d_ghost_idx_sorted(m_ghost_idx_sorted,
+                                                         access_location::device,
+                                                         access_mode::overwrite);
+
+            void* d_tmp = NULL;
+            size_t tmp_bytes = 0;
+            mpcd::gpu::sort_ghosts_by_dir(d_tmp,
+                                          tmp_bytes,
+                                          d_ghost_dir.data,
+                                          d_ghost_dir_sorted.data,
+                                          d_ghost_idx.data,
+                                          d_ghost_idx_sorted.data,
+                                          N_mpcd);
+
+            // make requested temporary allocation (1 char = 1B)
+            size_t alloc_size = (tmp_bytes > 0) ? tmp_bytes : 4;
+            ScopedAllocation<unsigned char> d_alloc(m_exec_conf->getCachedAllocator(), alloc_size);
+            d_tmp = (void*)d_alloc();
+
+            // perform the sort
+            swap = mpcd::gpu::sort_ghosts_by_dir(d_tmp,
+                                                 tmp_bytes,
+                                                 d_ghost_dir.data,
+                                                 d_ghost_dir_sorted.data,
+                                                 d_ghost_idx.data,
+                                                 d_ghost_idx_sorted.data,
+                                                 N_mpcd);
+            }
+        if (swap.x)
+            m_ghost_dir_sorted.swap(m_ghost_dir);
+        if (swap.y)
+            m_ghost_idx_sorted.swap(m_ghost_idx);
+        }
+
         // determine the starting indexes and total number of ghost particles
         {
-        ArrayHandle<uint2> d_mpcd_comm_key(m_mpcd_comm_key,
-                                           access_location::device,
-                                           access_mode::readwrite);
         ArrayHandle<unsigned int> d_mpcd_send_offsets(m_mpcd_send_offsets,
                                                       access_location::device,
                                                       access_mode::readwrite);
+        ArrayHandle<unsigned int> d_ghost_dir_sorted(m_ghost_dir_sorted,
+                                                     access_location::device,
+                                                     access_mode::read);
         const unsigned int N_mpcd = m_mpcd_pdata->getN() + m_mpcd_pdata->getNVirtual();
         m_tuner_send_num->begin();
-        mpcd::gpu::find_num_ghost_send(d_mpcd_comm_key.data,
-                                       d_mpcd_send_offsets.data,
+        mpcd::gpu::find_num_ghost_send(d_mpcd_send_offsets.data,
+                                       d_ghost_dir_sorted.data,
                                        N_mpcd,
                                        m_tuner_send_num->getParam()[0]);
         if (m_exec_conf->isCUDAErrorCheckingEnabled())
@@ -496,20 +568,21 @@ void mpcd::CellListGPU::fillGhostBuffers()
         // fill send buffer
         {
         m_mpcd_vel_sendbuf.resize(m_num_mpcd_ghosts_send);
-        ArrayHandle<uint2> d_mpcd_comm_key(m_mpcd_comm_key,
-                                           access_location::device,
-                                           access_mode::read);
-        ArrayHandle<Scalar4> d_vel(m_mpcd_pdata->getVelocities(),
-                                   access_location::device,
-                                   access_mode::read);
+
         ArrayHandle<Scalar4> d_mpcd_vel_sendbuf(m_mpcd_vel_sendbuf,
                                                 access_location::device,
                                                 access_mode::overwrite);
+        ArrayHandle<Scalar4> d_vel(m_mpcd_pdata->getVelocities(),
+                                   access_location::device,
+                                   access_mode::read);
+        ArrayHandle<unsigned int> d_ghost_idx_sorted(m_ghost_idx_sorted,
+                                                     access_location::device,
+                                                     access_mode::read);
 
         m_tuner_buffer->begin();
-        mpcd::gpu::fill_buffer(d_mpcd_comm_key.data,
+        mpcd::gpu::fill_buffer(d_mpcd_vel_sendbuf.data,
                                d_vel.data,
-                               d_mpcd_vel_sendbuf.data,
+                               d_ghost_idx_sorted.data,
                                m_num_mpcd_ghosts_send,
                                m_tuner_buffer->getParam()[0]);
         if (m_exec_conf->isCUDAErrorCheckingEnabled())
@@ -565,7 +638,9 @@ void mpcd::CellListGPU::updateLocalFromGhosts()
         }
 
     // fill update the local particles
-    ArrayHandle<uint2> d_mpcd_comm_key(m_mpcd_comm_key, access_location::device, access_mode::read);
+    ArrayHandle<unsigned int> d_ghost_idx_sorted(m_ghost_idx_sorted,
+                                                 access_location::device,
+                                                 access_mode::read);
     ArrayHandle<Scalar4> d_mpcd_vel_sendbuf(m_mpcd_vel_sendbuf,
                                             access_location::device,
                                             access_mode::read);
@@ -574,9 +649,9 @@ void mpcd::CellListGPU::updateLocalFromGhosts()
                                access_mode::readwrite);
 
     m_tuner_ghost_update->begin();
-    mpcd::gpu::update_local_from_ghosts(d_mpcd_comm_key.data,
-                                        d_vel.data,
+    mpcd::gpu::update_local_from_ghosts(d_vel.data,
                                         d_mpcd_vel_sendbuf.data,
+                                        d_ghost_idx_sorted.data,
                                         m_num_mpcd_ghosts_send,
                                         m_tuner_ghost_update->getParam()[0]);
     if (m_exec_conf->isCUDAErrorCheckingEnabled())

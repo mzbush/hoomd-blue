@@ -70,7 +70,8 @@ cudaError_t compute_cell_list(unsigned int* d_cell_np,
                               const uint3& global_cell_dim,
                               const Index3D& cell_indexer,
                               const Index3D& global_cell_indexer,
-                              uint2* d_mpcd_comm_key,
+                              unsigned int* d_ghost_dir,
+                              unsigned int* d_ghost_idx,
                               const uint3& rank_size,
                               const bool is_decomposition,
                               const unsigned int N_mpcd,
@@ -105,6 +106,7 @@ cudaError_t reduce_net_cell_thermo(mpcd::detail::cell_thermo_element* d_reduced,
                                    const mpcd::detail::cell_thermo_element* d_tmp_thermo,
                                    const size_t N_cells);
 
+#ifdef ENABLE_MPI
 //! Kernel driver to check if any embedded particles require migration
 cudaError_t cell_check_migrate_embed(unsigned int* d_migrate_flag,
                                      const Scalar4* d_pos,
@@ -114,18 +116,30 @@ cudaError_t cell_check_migrate_embed(unsigned int* d_migrate_flag,
                                      const unsigned int N,
                                      const unsigned int block_size);
 
+//! Select ghost particles from communication keys
+// void scan_ghost_comm_keys(uint2* d_mpcd_comm_key)
+
+//! Sort ghosts by direction to send
+uchar2 sort_ghosts_by_dir(void* d_tmp,
+                          size_t& tmp_bytes,
+                          unsigned int* d_ghost_dir,
+                          unsigned int* d_ghost_dir_sorted,
+                          unsigned int* d_ghost_idx,
+                          unsigned int* d_ghost_idx_sorted,
+                          const unsigned int N);
+
 //! Kernel driver to determine how many particles will be sent as ghosts
-cudaError_t find_num_ghost_send(uint2* d_mpcd_comm_key,
-                                unsigned int* d_mpcd_send_offsets,
+cudaError_t find_num_ghost_send(unsigned int* d_mpcd_send_offsets,
+                                const unsigned int* d_ghost_dir_sorted,
                                 const unsigned int N,
                                 const unsigned int block_size);
 
 //! Kernel driver to fill up the send buffer
-cudaError_t fill_buffer(uint2* d_mpcd_comm_key,
-                        Scalar4* d_vel,
-                        Scalar4* d_mpcd_vel_sendbuf,
-                        const unsigned int num_mpcd_ghosts_send,
-                        const unsigned int block_size);
+cudaError_t fill_buffer(Scalar4* d_mpcd_vel_sendbuf,
+                        const Scalar4* d_vel,
+                        const unsigned int* d_ghost_idx_sorted,
+                        unsigned int num_mpcd_ghosts_send,
+                        unsigned int block_size);
 
 cudaError_t add_ghost_cell_properties(unsigned int* d_cell_np,
                                       double4* d_cell_vel,
@@ -141,11 +155,12 @@ cudaError_t add_ghost_cell_properties(unsigned int* d_cell_np,
                                       const unsigned int block_size);
 
 //! Kernel driver to update the local velocities after collision
-cudaError_t update_local_from_ghosts(uint2* d_mpcd_comm_key,
-                                     Scalar4* d_vel,
-                                     Scalar4* d_mpcd_vel_sendbuf,
-                                     const unsigned int num_mpcd_ghosts_send,
-                                     const unsigned int block_size);
+cudaError_t update_local_from_ghosts(Scalar4* d_vel,
+                                     const Scalar4* d_mpcd_vel_sendbuf,
+                                     const unsigned int* d_ghost_idx_sorted,
+                                     unsigned int num_mpcd_ghosts_send,
+                                     unsigned int block_size);
+#endif // ENABLE_MPI
 
     } // end namespace gpu
     } // end namespace mpcd
