@@ -80,9 +80,13 @@ class PYBIND11_EXPORT CellListGPU : public mpcd::CellList
     GPUArray<unsigned int> m_ghost_idx_sorted;
     GPUArray<unsigned int> m_ghost_dir;
     GPUArray<unsigned int> m_ghost_dir_sorted;
+    GPUFlags<unsigned int> m_num_ghost_scan;
 
     /// Autotuner for checking embedded migration.
     std::shared_ptr<Autotuner<1>> m_tuner_embed_migrate;
+
+    /// Autotuner for filter particles
+    std::shared_ptr<Autotuner<1>> m_tuner_filter_ghosts;
 
     /// Autotuner for determining the number of ghosts to send.
     std::shared_ptr<Autotuner<1>> m_tuner_send_num;

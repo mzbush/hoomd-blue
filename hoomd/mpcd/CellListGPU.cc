@@ -30,6 +30,9 @@ mpcd::CellListGPU::CellListGPU(std::shared_ptr<SystemDefinition> sysdef,
     m_tuner_embed_migrate.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
                                                  m_exec_conf,
                                                  "mpcd_cell_embed_migrate"));
+    m_tuner_filter_ghosts.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                                 m_exec_conf,
+                                                 "mpcd_filter_ghosts"));
     m_tuner_send_num.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
                                             m_exec_conf,
                                             "mpcd_cell_send_num"));
@@ -44,6 +47,7 @@ mpcd::CellListGPU::CellListGPU(std::shared_ptr<SystemDefinition> sysdef,
                                                 "mpcd_cell_ghost_update"));
     m_autotuners.insert(m_autotuners.end(),
                         {m_tuner_embed_migrate,
+                         m_tuner_filter_ghosts,
                          m_tuner_send_num,
                          m_tuner_buffer,
                          m_tuner_ghost_cell,
@@ -51,6 +55,9 @@ mpcd::CellListGPU::CellListGPU(std::shared_ptr<SystemDefinition> sysdef,
 
     GPUFlags<unsigned int> migrate_flag(m_exec_conf);
     m_migrate_flag.swap(migrate_flag);
+
+    GPUFlags<unsigned int> num_ghost_scan(m_exec_conf);
+    m_num_ghost_scan.swap(num_ghost_scan);
 #endif // ENABLE_MPI
     }
 
@@ -75,6 +82,9 @@ mpcd::CellListGPU::CellListGPU(std::shared_ptr<SystemDefinition> sysdef,
     m_tuner_embed_migrate.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
                                                  m_exec_conf,
                                                  "mpcd_cell_embed_migrate"));
+    m_tuner_filter_ghosts.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
+                                                 m_exec_conf,
+                                                 "mpcd_filter_ghosts"));
     m_tuner_send_num.reset(new Autotuner<1>({AutotunerBase::makeBlockSizeRange(m_exec_conf)},
                                             m_exec_conf,
                                             "mpcd_cell_send_num"));
@@ -89,6 +99,7 @@ mpcd::CellListGPU::CellListGPU(std::shared_ptr<SystemDefinition> sysdef,
                                                 "mpcd_cell_ghost_update"));
     m_autotuners.insert(m_autotuners.end(),
                         {m_tuner_embed_migrate,
+                         m_tuner_filter_ghosts,
                          m_tuner_send_num,
                          m_tuner_buffer,
                          m_tuner_ghost_cell,
@@ -96,6 +107,9 @@ mpcd::CellListGPU::CellListGPU(std::shared_ptr<SystemDefinition> sysdef,
 
     GPUFlags<unsigned int> migrate_flag(m_exec_conf);
     m_migrate_flag.swap(migrate_flag);
+
+    GPUFlags<unsigned int> num_ghost_scan(m_exec_conf);
+    m_num_ghost_scan.swap(num_ghost_scan);
 #endif // ENABLE_MPI
     }
 
@@ -127,14 +141,8 @@ void mpcd::CellListGPU::buildCellList()
             {
             GPUArray<unsigned int> m_ghost_dir_tmp(N_mpcd, m_exec_conf);
             m_ghost_dir.swap(m_ghost_dir_tmp);
-
-            GPUArray<unsigned int> m_ghost_idx_tmp(N_mpcd, m_exec_conf);
-            m_ghost_idx.swap(m_ghost_idx_tmp);
             }
         ArrayHandle<unsigned int> d_ghost_dir(m_ghost_dir,
-                                              access_location::device,
-                                              access_mode::overwrite);
-        ArrayHandle<unsigned int> d_ghost_idx(m_ghost_idx,
                                               access_location::device,
                                               access_mode::overwrite);
 
@@ -178,7 +186,6 @@ void mpcd::CellListGPU::buildCellList()
                                          m_cell_indexer,
                                          m_global_cell_indexer,
                                          d_ghost_dir.data,
-                                         d_ghost_idx.data,
                                          rank_size,
                                          true,
                                          N_mpcd,
@@ -211,7 +218,6 @@ void mpcd::CellListGPU::buildCellList()
                                          m_cell_indexer,
                                          m_global_cell_indexer,
                                          d_ghost_dir.data,
-                                         d_ghost_idx.data,
                                          rank_size,
                                          true,
                                          N_mpcd,
@@ -262,7 +268,6 @@ void mpcd::CellListGPU::buildCellList()
                                          m_cell_indexer,
                                          m_global_cell_indexer,
                                          NULL,
-                                         NULL,
                                          rank_size,
                                          false,
                                          N_mpcd,
@@ -294,7 +299,6 @@ void mpcd::CellListGPU::buildCellList()
                                          m_global_cell_dim,
                                          m_cell_indexer,
                                          m_global_cell_indexer,
-                                         NULL,
                                          NULL,
                                          rank_size,
                                          false,
@@ -483,9 +487,71 @@ void mpcd::CellListGPU::fillGhostBuffers()
             GPUArray<unsigned int> m_ghost_dir_sorted_tmp(N_mpcd, m_exec_conf);
             m_ghost_dir_sorted.swap(m_ghost_dir_sorted_tmp);
 
+            GPUArray<unsigned int> m_ghost_idx_tmp(N_mpcd, m_exec_conf);
+            m_ghost_idx.swap(m_ghost_idx_tmp);
+
             GPUArray<unsigned int> m_ghost_idx_sorted_tmp(N_mpcd, m_exec_conf);
             m_ghost_idx_sorted.swap(m_ghost_idx_sorted_tmp);
             }
+
+            // filter the particles to sort down to just the ones we want to send
+            // we will abuse the various ghost memory to not have to allocate extra
+            {
+            ArrayHandle<unsigned int> d_ghost_dir(m_ghost_dir,
+                                                  access_location::device,
+                                                  access_mode::read);
+            ArrayHandle<unsigned int> d_ghost_dir_scan(m_ghost_dir_sorted,
+                                                       access_location::device,
+                                                       access_mode::overwrite);
+            ArrayHandle<unsigned int> d_ghost_dir_filter(m_ghost_idx_sorted,
+                                                         access_location::device,
+                                                         access_mode::overwrite);
+            ArrayHandle<unsigned int> d_ghost_idx_filter(m_ghost_idx,
+                                                         access_location::device,
+                                                         access_mode::overwrite);
+
+            /* scan the directions to identify ghosts with prefix sum */
+            void* d_tmp = NULL;
+            size_t tmp_bytes = 0;
+            mpcd::gpu::scan_for_ghosts(d_tmp,
+                                       tmp_bytes,
+                                       d_ghost_dir.data,
+                                       d_ghost_dir_scan.data,
+                                       N_mpcd);
+
+            // make requested temporary allocation (1 char = 1B)
+            size_t alloc_size = (tmp_bytes > 0) ? tmp_bytes : 4;
+            ScopedAllocation<unsigned char> d_alloc(m_exec_conf->getCachedAllocator(), alloc_size);
+            d_tmp = (void*)d_alloc();
+
+            mpcd::gpu::scan_for_ghosts(d_tmp,
+                                       tmp_bytes,
+                                       d_ghost_dir.data,
+                                       d_ghost_dir_scan.data,
+                                       N_mpcd);
+
+            /* filter down to just the ghosts that need sending */
+            m_tuner_filter_ghosts->begin();
+            mpcd::gpu::filter_ghosts(d_ghost_dir_filter.data,
+                                     d_ghost_idx_filter.data,
+                                     m_num_ghost_scan.getDeviceFlags(),
+                                     d_ghost_dir.data,
+                                     d_ghost_dir_scan.data,
+                                     N_mpcd,
+                                     m_tuner_filter_ghosts->getParam()[0]);
+            if (m_exec_conf->isCUDAErrorCheckingEnabled())
+                CHECK_CUDA_ERROR();
+            m_tuner_filter_ghosts->end();
+
+            // copy number of ghosts to send from device memory
+            m_num_mpcd_ghosts_send = m_num_ghost_scan.readFlags();
+            }
+
+        // swap abused memory: m_ghost_idx_sorted has the filtered directions
+        // m_ghost_idx has the filtered indexes already.
+        // the contents of the *_sorted arrays don't matter because they will
+        // get overwritten next
+        m_ghost_dir.swap(m_ghost_idx_sorted);
 
         uchar2 swap;
             {
@@ -511,7 +577,7 @@ void mpcd::CellListGPU::fillGhostBuffers()
                                           d_ghost_dir_sorted.data,
                                           d_ghost_idx.data,
                                           d_ghost_idx_sorted.data,
-                                          N_mpcd);
+                                          m_num_mpcd_ghosts_send);
 
             // make requested temporary allocation (1 char = 1B)
             size_t alloc_size = (tmp_bytes > 0) ? tmp_bytes : 4;
@@ -525,7 +591,7 @@ void mpcd::CellListGPU::fillGhostBuffers()
                                                  d_ghost_dir_sorted.data,
                                                  d_ghost_idx.data,
                                                  d_ghost_idx_sorted.data,
-                                                 N_mpcd);
+                                                 m_num_mpcd_ghosts_send);
             }
         if (swap.x)
             m_ghost_dir_sorted.swap(m_ghost_dir);
@@ -541,30 +607,16 @@ void mpcd::CellListGPU::fillGhostBuffers()
         ArrayHandle<unsigned int> d_ghost_dir_sorted(m_ghost_dir_sorted,
                                                      access_location::device,
                                                      access_mode::read);
-        const unsigned int N_mpcd = m_mpcd_pdata->getN() + m_mpcd_pdata->getNVirtual();
         m_tuner_send_num->begin();
         mpcd::gpu::find_num_ghost_send(d_mpcd_send_offsets.data,
                                        d_ghost_dir_sorted.data,
-                                       N_mpcd,
+                                       m_num_mpcd_ghosts_send,
                                        m_tuner_send_num->getParam()[0]);
         if (m_exec_conf->isCUDAErrorCheckingEnabled())
             CHECK_CUDA_ERROR();
         m_tuner_send_num->end();
         }
-        // set the total number of MPCD ghost particles being sent
-        {
-        ArrayHandle<unsigned int> h_mpcd_send_offsets(m_mpcd_send_offsets,
-                                                      access_location::host,
-                                                      access_mode::read);
 
-        if (h_mpcd_send_offsets.data[26] == 0xffffffff)
-            {
-            m_num_mpcd_ghosts_send = 0;
-            return;
-            }
-
-        m_num_mpcd_ghosts_send = h_mpcd_send_offsets.data[26];
-        }
         // fill send buffer
         {
         m_mpcd_vel_sendbuf.resize(m_num_mpcd_ghosts_send);

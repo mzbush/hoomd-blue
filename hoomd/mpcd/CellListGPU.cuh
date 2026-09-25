@@ -71,7 +71,6 @@ cudaError_t compute_cell_list(unsigned int* d_cell_np,
                               const Index3D& cell_indexer,
                               const Index3D& global_cell_indexer,
                               unsigned int* d_ghost_dir,
-                              unsigned int* d_ghost_idx,
                               const uint3& rank_size,
                               const bool is_decomposition,
                               const unsigned int N_mpcd,
@@ -116,8 +115,21 @@ cudaError_t cell_check_migrate_embed(unsigned int* d_migrate_flag,
                                      const unsigned int N,
                                      const unsigned int block_size);
 
-//! Select ghost particles from communication keys
-// void scan_ghost_comm_keys(uint2* d_mpcd_comm_key)
+//! Scan for ghost particles in directions
+void scan_for_ghosts(void* d_tmp,
+                     size_t& tmp_bytes,
+                     unsigned int* d_ghost_dir,
+                     unsigned int* d_ghost_dir_scan,
+                     unsigned int N);
+
+//! Kernel driver to filter ghosts down from scanned results
+cudaError_t filter_ghosts(unsigned int* d_ghost_dir_filter,
+                          unsigned int* d_ghost_idx_filter,
+                          unsigned int* d_num_ghost_scan,
+                          const unsigned int* d_ghost_dir,
+                          const unsigned int* d_ghost_dir_scan,
+                          unsigned int N,
+                          unsigned int block_size);
 
 //! Sort ghosts by direction to send
 uchar2 sort_ghosts_by_dir(void* d_tmp,
@@ -141,6 +153,7 @@ cudaError_t fill_buffer(Scalar4* d_mpcd_vel_sendbuf,
                         unsigned int num_mpcd_ghosts_send,
                         unsigned int block_size);
 
+//! Kernel driver to add ghost particles to cells
 cudaError_t add_ghost_cell_properties(unsigned int* d_cell_np,
                                       double4* d_cell_vel,
                                       double* d_cell_energy,
@@ -161,7 +174,6 @@ cudaError_t update_local_from_ghosts(Scalar4* d_vel,
                                      unsigned int num_mpcd_ghosts_send,
                                      unsigned int block_size);
 #endif // ENABLE_MPI
-
     } // end namespace gpu
     } // end namespace mpcd
     } // end namespace hoomd

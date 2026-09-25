@@ -5,10 +5,13 @@
  * \file mpcd/CellListGPU.cu
  * \brief Defines GPU functions and kernels used by mpcd::CellListGPU
  */
+
+#include <cub/device/device_reduce.cuh>
 #ifdef ENABLE_MPI
 #include <cub/device/device_radix_sort.cuh>
+#include <cub/device/device_scan.cuh>
+#include <thrust/iterator/transform_iterator.h>
 #endif // ENABLE_MPI
-#include <cub/device/device_reduce.cuh>
 
 #include "CellListGPU.cuh"
 
@@ -18,6 +21,18 @@ namespace mpcd
     {
 namespace gpu
     {
+
+#ifdef ENABLE_MPI
+//! Functor to test if a direction is valid (i.e., less than 26)
+struct ValidDirection
+    {
+    __host__ __device__ inline unsigned int operator()(unsigned int dir) const
+        {
+        return dir < 26;
+        }
+    };
+#endif // ENABLE_MPI
+
 namespace kernel
     {
 //! Kernel to compute the MPCD cell list on the GPU
@@ -72,7 +87,6 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
                                   const Index3D cell_indexer,
                                   const Index3D global_cell_indexer,
                                   unsigned int* d_ghost_dir,
-                                  unsigned int* d_ghost_idx,
                                   const uint3 rank_size,
                                   const bool is_decomposition,
                                   const unsigned int N_mpcd,
@@ -168,14 +182,6 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
     if (is_local)
         {
         bin_idx = cell_indexer(bin.x, bin.y, bin.z);
-        // set the MPI communication flag
-#ifdef ENABLE_MPI
-        if (is_decomposition && idx < N_mpcd)
-            {
-            d_ghost_dir[idx] = 0xffffffff;
-            d_ghost_idx[idx] = idx;
-            }
-#endif // ENABLE_MPI
         }
 #ifdef ENABLE_MPI
     else
@@ -206,7 +212,6 @@ __global__ void compute_cell_list(unsigned int* d_cell_np,
             dir = dir + ((ix == 1) ? -2 : 1) + ((iy == 1) ? -6 : 3) + ((iz == 1) ? -12 : 9);
             // mark particle to be sent to neighboring rank
             d_ghost_dir[idx] = dir;
-            d_ghost_idx[idx] = idx;
 
             // set the bin idx to be the global index with highest bit set to 1
             bin_idx = global_cell_indexer(global_bin.x, global_bin.y, global_bin.z);
@@ -406,17 +411,59 @@ __global__ void cell_check_migrate_embed(unsigned int* d_migrate_flag,
     }
 
 /*!
+ * \param d_ghost_dir_filter Filtered list of directions to send ghost
+ * \param d_ghost_idx_filter Filtered list of ghost particle indexes
+ * \param d_num_ghost_scan Total number of ghosts
+ * \param d_ghost_dir Unfiltered list of directions for ghost particles
+ * \param d_ghost_dir_scan Result of scanning list of directions (filter indexes)
+ * \param N Number of particles in group
+ */
+__global__ void filter_ghosts(unsigned int* d_ghost_dir_filter,
+                              unsigned int* d_ghost_idx_filter,
+                              unsigned int* d_num_ghost_scan,
+                              const unsigned int* d_ghost_dir,
+                              const unsigned int* d_ghost_dir_scan,
+                              unsigned int N)
+    {
+    // one thread per particle in group
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= N)
+        return;
+
+    // load direction and exit early if invalid AND not the last particle
+    const unsigned int dir = d_ghost_dir[idx];
+    const unsigned int valid_dir = ValidDirection()(dir);
+    const bool last_particle = idx == N - 1;
+    if (!valid_dir && !last_particle)
+        return;
+
+    const unsigned int scan_result = d_ghost_dir_scan[idx];
+
+    // only valid directions stored in filter
+    if (valid_dir)
+        {
+        d_ghost_dir_filter[scan_result] = dir;
+        d_ghost_idx_filter[scan_result] = idx;
+        }
+
+    // last particle knows the total number of ghosts if it adds its own result
+    if (last_particle)
+        {
+        *d_num_ghost_scan = scan_result + valid_dir;
+        }
+    }
+
+/*!
  * \param d_mpcd_send_offsets starting index of points sent to each neighbor
  * \param d_ghost_dir_sorted directions to send MPCD particles as ghosts
  * \param N Number of particles in group
  *
  * \b Implementation
- * Determines the starting index of the list of ghost particles in mpcd_comm_key
+ * Determines the starting index of the list of ghost particles in d_ghost_dir_sorted
  * and the total number of ghost particles to be sent. This is done by checking
  * the position 1 to the left in the array and seeing if it is a different
  * direction. If so, then the current position is the start indexing of the
- * current direction.
-
+ * current direction. The total number of ghosts is also written into the last index.
  */
 __global__ void find_num_ghost_send(unsigned int* d_mpcd_send_offsets,
                                     const unsigned int* d_ghost_dir_sorted,
@@ -427,50 +474,36 @@ __global__ void find_num_ghost_send(unsigned int* d_mpcd_send_offsets,
     if (idx >= N)
         return;
 
-    // if at the first index, there is no left neighbor to compare
-    // set the offset of the 1st direction in the list
-    unsigned int dir = d_ghost_dir_sorted[idx];
+    // the first thread always writes the number of ghosts into the last entry,
+    // put that into flight first
     if (idx == 0)
         {
-        if (dir < 27)
-            {
-            d_mpcd_send_offsets[dir] = 0;
-            // if there is only one particle and it is a ghost
-            if (idx + 1 == N)
-                {
-                d_mpcd_send_offsets[26] = idx + 1;
-                }
-            }
-        return;
+        d_mpcd_send_offsets[26] = N;
         }
 
-    unsigned int left_dir = d_ghost_dir_sorted[idx - 1];
-
-    // exit if not at the start of a new index
-    if (dir == left_dir)
-        {
-        // set total number if all particles are ghosts
-        if (dir < 27 && idx + 1 == N)
-            {
-            d_mpcd_send_offsets[26] = idx + 1;
-            }
+    // load direction and check if it's a valid one to send to.
+    // exit early for particles having invalid direction so we can assume all
+    // have a valid direction later.
+    const unsigned int dir = d_ghost_dir_sorted[idx];
+    const bool valid_dir = ValidDirection()(dir);
+    if (!valid_dir)
         return;
-        }
 
-    // set the start of a new index if particle at idx is a ghost or
-    // total number of ghost particles if it is local
-    if (dir < 27)
+    // test if particles
+    if (idx > 0)
         {
-        d_mpcd_send_offsets[dir] = idx;
-        // set total number if all particles are ghosts
-        if (idx + 1 == N)
+        // other particles need to compare with their left neighbor
+        unsigned int left_dir = d_ghost_dir_sorted[idx - 1];
+        if (dir != left_dir)
             {
-            d_mpcd_send_offsets[26] = idx + 1;
+            d_mpcd_send_offsets[dir] = idx;
             }
         }
     else
         {
-        d_mpcd_send_offsets[26] = idx;
+        // the first particle has nobody to compare with and is always a start if it
+        // has a valid direction.
+        d_mpcd_send_offsets[dir] = 0;
         }
     }
 
@@ -665,7 +698,6 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
                                          const Index3D& cell_indexer,
                                          const Index3D& global_cell_indexer,
                                          unsigned int* d_ghost_dir,
-                                         unsigned int* d_ghost_idx,
                                          const uint3& rank_size,
                                          const bool is_decomposition,
                                          const unsigned int N_mpcd,
@@ -678,16 +710,25 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
         = cudaMemset(d_cell_np, 0, sizeof(unsigned int) * cell_indexer.getNumElements());
     if (error != cudaSuccess)
         return error;
+
     cudaError_t error_vel
         = cudaMemset(d_cell_vel, 0, sizeof(double4) * cell_indexer.getNumElements());
     if (error_vel != cudaSuccess)
         return error_vel;
+
     if (need_energy)
         {
         cudaError_t error_energy
             = cudaMemset(d_cell_energy, 0, sizeof(double) * cell_indexer.getNumElements());
         if (error_energy != cudaSuccess)
             return error_energy;
+        }
+
+    if (d_ghost_dir)
+        {
+        cudaError_t error_ghost_dir = cudaMemset(d_ghost_dir, 0xff, sizeof(unsigned int) * N_mpcd);
+        if (error_ghost_dir != cudaSuccess)
+            return error_ghost_dir;
         }
 
     unsigned int max_block_size;
@@ -716,7 +757,6 @@ cudaError_t mpcd::gpu::compute_cell_list(unsigned int* d_cell_np,
                                                                    cell_indexer,
                                                                    global_cell_indexer,
                                                                    d_ghost_dir,
-                                                                   d_ghost_idx,
                                                                    rank_size,
                                                                    is_decomposition,
                                                                    N_mpcd,
@@ -901,11 +941,67 @@ cudaError_t mpcd::gpu::cell_check_migrate_embed(unsigned int* d_migrate_flag,
 /*!
  * \param d_tmp Temporary memory for sorting.
  * \param tmp_bytes Number of temporary bytes for sorting.
+ * \param d_ghost_dir The particle types to sort.
+ * \param d_ghost_dir_sorted The sorted particle types.
+ * \param N Number of particles.
+ */
+void mpcd::gpu::scan_for_ghosts(void* d_tmp,
+                                size_t& tmp_bytes,
+                                unsigned int* d_ghost_dir,
+                                unsigned int* d_ghost_dir_scan,
+                                unsigned int N)
+    {
+    cub::DeviceScan::ExclusiveSum(d_tmp,
+                                  tmp_bytes,
+                                  thrust::make_transform_iterator(d_ghost_dir, ValidDirection()),
+                                  d_ghost_dir_scan,
+                                  N);
+    }
+
+/*!
+ * \param d_ghost_dir_filter Filtered list of directions to send ghost
+ * \param d_ghost_idx_filter Filtered list of ghost particle indexes
+ * \param d_num_ghost_scan Total number of ghosts
+ * \param d_ghost_dir Unfiltered list of directions for ghost particles
+ * \param d_ghost_dir_scan Result of scanning list of directions (filter indexes)
+ * \param N Number of particles in group
+ * \param block_size Number of threads per block
+ *
+ * \sa mpcd::gpu::kernel::filter_ghosts
+ */
+cudaError_t mpcd::gpu::filter_ghosts(unsigned int* d_ghost_dir_filter,
+                                     unsigned int* d_ghost_idx_filter,
+                                     unsigned int* d_num_ghost_scan,
+                                     const unsigned int* d_ghost_dir,
+                                     const unsigned int* d_ghost_dir_scan,
+                                     unsigned int N,
+                                     unsigned int block_size)
+    {
+    unsigned int max_block_size;
+    cudaFuncAttributes attr;
+    cudaFuncGetAttributes(&attr, (const void*)mpcd::gpu::kernel::filter_ghosts);
+    max_block_size = attr.maxThreadsPerBlock;
+
+    unsigned int run_block_size = min(block_size, max_block_size);
+    dim3 grid(N / run_block_size + 1);
+    mpcd::gpu::kernel::filter_ghosts<<<grid, run_block_size>>>(d_ghost_dir_filter,
+                                                               d_ghost_idx_filter,
+                                                               d_num_ghost_scan,
+                                                               d_ghost_dir,
+                                                               d_ghost_dir_scan,
+                                                               N);
+
+    return cudaSuccess;
+    }
+
+/*!
+ * \param d_tmp Temporary memory for sorting.
+ * \param tmp_bytes Number of temporary bytes for sorting.
  * \param d_types The particle types to sort.
  * \param d_sorted_types The sorted particle types.
  * \param d_indexes The particle indexes to sort.
  * \param d_sorted_indexes The sorted particle indexes.
- * \param N Number of particle types to sort.
+ * \param N Number of particles to sort.
  * \returns A pair of flags saying if the output data needs to be swapped with the input.
  *
  * The sorting is done using CUB with the DoubleBuffer. On the first call, the temporary memory
@@ -940,7 +1036,7 @@ uchar2 mpcd::gpu::sort_ghosts_by_dir(void* d_tmp,
 
 /*!
  * \param d_mpcd_send_offsets starting index of points sent to each neighbor
- * \param d_mpcd_comm_key directions to send MPCD particles as ghosts
+ * \param d_ghost_dir_sorted directions to send MPCD particles as ghosts
  * \param N Number of particles in group
  * \param block_size Number of threads per block
  *
@@ -951,8 +1047,10 @@ cudaError_t mpcd::gpu::find_num_ghost_send(unsigned int* d_mpcd_send_offsets,
                                            const unsigned int N,
                                            const unsigned int block_size)
     {
-    // fill the starting indices with invalid values
-    cudaError_t error = cudaMemset(d_mpcd_send_offsets, 0xffffffff, sizeof(unsigned int) * 27);
+    // fill the offsets for *valid* directions with invalid sentinel
+    // the last one doesn't need to be filled because it is always assigned by
+    // the first thread
+    cudaError_t error = cudaMemset(d_mpcd_send_offsets, 0xff, sizeof(unsigned int) * 26);
     if (error != cudaSuccess)
         return error;
 
@@ -1061,7 +1159,7 @@ cudaError_t mpcd::gpu::add_ghost_cell_properties(unsigned int* d_cell_np,
 /*!
  * \param d_vel MPCD particle velocities
  * \param d_mpcd_vel_sendbuf buffer for MPCD ghost velocities to be sent
- * \param d_mpcd_comm_key indexes of MPCD particles to send as ghosts
+ * \param d_ghost_idx_sorted indexes of MPCD particles to send as ghosts
  * \param num_mpcd_ghosts_send the total number of MPCD particles being sent
  * \param block_size Number of threads per block
  *
